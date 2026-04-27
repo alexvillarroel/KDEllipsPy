@@ -5,11 +5,11 @@ Welcome to KDEllipsPy's documentation!
    :maxdepth: 2
    :caption: Tutoriales y Ejemplos:
 
-   notebooks/geometry
-   notebooks/inversion
-   notebooks/inversion_real
-   notebooks/regression
-   notebooks/04_forward_synthetic_misfit
+   ../examples/geometry
+   ../examples/inversion
+   ../examples/inversion_real
+   ../examples/regression
+   ../examples/04_forward_synthetic_misfit
 
 .. toctree::
    :maxdepth: 2

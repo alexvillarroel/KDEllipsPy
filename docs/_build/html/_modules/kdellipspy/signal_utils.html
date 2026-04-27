@@ -1,0 +1,702 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>kdellipspy.signal_utils &mdash; KDEllipsPy  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            KDEllipsPy
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Referencia de la API (Código):</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api_reference.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">KDEllipsPy</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">kdellipspy.signal_utils</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for kdellipspy.signal_utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Iterable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="k">try</span><span class="p">:</span>
+	<span class="kn">from</span> <span class="nn">.config_parser</span> <span class="kn">import</span> <span class="n">ConfigParser</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+	<span class="kn">from</span> <span class="nn">config_parser</span> <span class="kn">import</span> <span class="n">ConfigParser</span>
+
+<span class="k">try</span><span class="p">:</span>
+	<span class="kn">from</span> <span class="nn">obspy</span> <span class="kn">import</span> <span class="n">Stream</span><span class="p">,</span> <span class="n">Trace</span><span class="p">,</span> <span class="n">read</span><span class="p">,</span> <span class="n">read_inventory</span>
+<span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># pragma: no cover - handled at runtime when RAW mode is requested</span>
+	<span class="n">Stream</span> <span class="o">=</span> <span class="kc">None</span>
+	<span class="n">Trace</span> <span class="o">=</span> <span class="kc">None</span>
+	<span class="n">read</span> <span class="o">=</span> <span class="kc">None</span>
+	<span class="n">read_inventory</span> <span class="o">=</span> <span class="kc">None</span>
+
+<span class="k">try</span><span class="p">:</span>
+	<span class="kn">from</span> <span class="nn">obspy.taup</span> <span class="kn">import</span> <span class="n">TauPyModel</span>
+	<span class="kn">from</span> <span class="nn">obspy.geodetics.base</span> <span class="kn">import</span> <span class="n">gps2dist_azimuth</span><span class="p">,</span> <span class="n">kilometers2degrees</span>
+<span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># pragma: no cover - handled at runtime when azi_times is requested</span>
+	<span class="n">TauPyModel</span> <span class="o">=</span> <span class="kc">None</span>
+	<span class="n">gps2dist_azimuth</span> <span class="o">=</span> <span class="kc">None</span>
+	<span class="n">kilometers2degrees</span> <span class="o">=</span> <span class="kc">None</span>
+
+<span class="k">try</span><span class="p">:</span>
+	<span class="kn">from</span> <span class="nn">obspy.clients.iris</span> <span class="kn">import</span> <span class="n">Client</span> <span class="k">as</span> <span class="n">IrisClient</span>
+<span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># pragma: no cover - optional fallback to legacy web service</span>
+	<span class="n">IrisClient</span> <span class="o">=</span> <span class="kc">None</span>
+
+
+<span class="k">def</span> <span class="nf">_component_suffix_for_units</span><span class="p">(</span><span class="n">units</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+	<span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">units</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+		<span class="k">return</span> <span class="s2">&quot;disp&quot;</span>
+	<span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">units</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+		<span class="k">return</span> <span class="s2">&quot;vel&quot;</span>
+	<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported units=</span><span class="si">{</span><span class="n">units</span><span class="si">}</span><span class="s2">. Expected 1 (disp) or 2 (vel).&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_read_observed_flat_file</span><span class="p">(</span>
+	<span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+	<span class="n">t1</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+	<span class="n">delta</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+	<span class="n">npts</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+	<span class="n">n_stations</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">	</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">	Read flat observed waveform files in either format:</span>
+<span class="sd">	- Two columns: time value</span>
+<span class="sd">	- One column: value only (time is inferred from input.ctl)</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+	<span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+	<span class="c1"># Case A: value-only file (1D or Nx1)</span>
+	<span class="k">if</span> <span class="n">arr</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+		<span class="n">data</span> <span class="o">=</span> <span class="n">arr</span>
+		<span class="n">expected_rows</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">n_stations</span><span class="p">)</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(</span><span class="n">npts</span><span class="p">)</span>
+		<span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="n">expected_rows</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+				<span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: value-only file has </span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> rows, expected </span><span class="si">{</span><span class="n">expected_rows</span><span class="si">}</span><span class="s2"> &quot;</span>
+				<span class="sa">f</span><span class="s2">&quot;(npts=</span><span class="si">{</span><span class="n">npts</span><span class="si">}</span><span class="s2"> x nstations=</span><span class="si">{</span><span class="n">n_stations</span><span class="si">}</span><span class="s2">)&quot;</span>
+			<span class="p">)</span>
+		<span class="n">time_block</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">t1</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">npts</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span>
+		<span class="n">time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">time_block</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">n_stations</span><span class="p">))</span>
+	<span class="k">elif</span> <span class="n">arr</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+		<span class="n">data</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+		<span class="n">expected_rows</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">n_stations</span><span class="p">)</span> <span class="o">*</span> <span class="nb">int</span><span class="p">(</span><span class="n">npts</span><span class="p">)</span>
+		<span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="n">expected_rows</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+				<span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">: value-only file has </span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> rows, expected </span><span class="si">{</span><span class="n">expected_rows</span><span class="si">}</span><span class="s2"> &quot;</span>
+				<span class="sa">f</span><span class="s2">&quot;(npts=</span><span class="si">{</span><span class="n">npts</span><span class="si">}</span><span class="s2"> x nstations=</span><span class="si">{</span><span class="n">n_stations</span><span class="si">}</span><span class="s2">)&quot;</span>
+			<span class="p">)</span>
+		<span class="n">time_block</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">t1</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">npts</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span>
+		<span class="n">time</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">time_block</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">n_stations</span><span class="p">))</span>
+	<span class="c1"># Case B: classic time/value file</span>
+	<span class="k">elif</span> <span class="n">arr</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">arr</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+		<span class="n">time</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+		<span class="n">data</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span>
+	<span class="k">else</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+			<span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> must contain either one column (value) or at least two columns (time value)&quot;</span>
+		<span class="p">)</span>
+
+	<span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">time</span><span class="p">))</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">data</span><span class="p">)):</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> contains NaN/Inf values&quot;</span><span class="p">)</span>
+
+	<span class="k">return</span> <span class="n">time</span><span class="p">,</span> <span class="n">data</span>
+
+
+<span class="k">def</span> <span class="nf">_reshape_flat_component</span><span class="p">(</span>
+	<span class="n">time</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+	<span class="n">data</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+	<span class="n">n_stations</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+	<span class="n">npts</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+	<span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+	<span class="n">expected_rows</span> <span class="o">=</span> <span class="n">n_stations</span> <span class="o">*</span> <span class="n">npts</span>
+	<span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="n">expected_rows</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+			<span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: expected </span><span class="si">{</span><span class="n">expected_rows</span><span class="si">}</span><span class="s2"> rows (npts=</span><span class="si">{</span><span class="n">npts</span><span class="si">}</span><span class="s2"> x nstations=</span><span class="si">{</span><span class="n">n_stations</span><span class="si">}</span><span class="s2">), got </span><span class="si">{</span><span class="n">data</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2">&quot;</span>
+		<span class="p">)</span>
+
+	<span class="n">time_2d</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">n_stations</span><span class="p">,</span> <span class="n">npts</span><span class="p">)</span>
+	<span class="n">data_2d</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">n_stations</span><span class="p">,</span> <span class="n">npts</span><span class="p">)</span>
+
+	<span class="n">ref_t</span> <span class="o">=</span> <span class="n">time_2d</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+	<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">n_stations</span><span class="p">):</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">time_2d</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">ref_t</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">0.0</span><span class="p">):</span>
+			<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+				<span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: time column mismatch between station blocks 0 and </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span>
+			<span class="p">)</span>
+
+	<span class="k">return</span> <span class="n">ref_t</span><span class="p">,</span> <span class="n">data_2d</span>
+
+
+<span class="k">def</span> <span class="nf">_validate_time_axis</span><span class="p">(</span><span class="n">time</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">t1</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">delta</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">npts</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+	<span class="k">if</span> <span class="n">time</span><span class="o">.</span><span class="n">size</span> <span class="o">!=</span> <span class="n">npts</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Time axis has </span><span class="si">{</span><span class="n">time</span><span class="o">.</span><span class="n">size</span><span class="si">}</span><span class="s2"> samples, expected npts=</span><span class="si">{</span><span class="n">npts</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+	<span class="k">if</span> <span class="n">time</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+		<span class="n">dt_measured</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">time</span><span class="p">)))</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">dt_measured</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">delta</span><span class="p">),</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">):</span>
+			<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+				<span class="sa">f</span><span class="s2">&quot;Time step mismatch: measured dt=</span><span class="si">{</span><span class="n">dt_measured</span><span class="si">:</span><span class="s2">.6g</span><span class="si">}</span><span class="s2">, input.ctl delta=</span><span class="si">{</span><span class="nb">float</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span><span class="si">:</span><span class="s2">.6g</span><span class="si">}</span><span class="s2">&quot;</span>
+			<span class="p">)</span>
+
+	<span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">time</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">t1</span><span class="p">),</span> <span class="n">atol</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="mf">1e-6</span><span class="p">,</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">delta</span><span class="p">))</span> <span class="o">*</span> <span class="mf">0.51</span><span class="p">),</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">0.0</span><span class="p">):</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+			<span class="sa">f</span><span class="s2">&quot;Time start mismatch: file starts at </span><span class="si">{</span><span class="nb">float</span><span class="p">(</span><span class="n">time</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="si">:</span><span class="s2">.6g</span><span class="si">}</span><span class="s2">, expected t1=</span><span class="si">{</span><span class="nb">float</span><span class="p">(</span><span class="n">t1</span><span class="p">)</span><span class="si">:</span><span class="s2">.6g</span><span class="si">}</span><span class="s2">&quot;</span>
+		<span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_load_from_flat_files</span><span class="p">(</span><span class="n">data_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">cfg</span><span class="p">:</span> <span class="n">ConfigParser</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+	<span class="n">n_stations</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">stations</span><span class="o">.</span><span class="n">stations</span><span class="p">)</span>
+	<span class="n">npts</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">observed_data</span><span class="o">.</span><span class="n">npts</span><span class="p">)</span>
+	<span class="n">units_suffix</span> <span class="o">=</span> <span class="n">_component_suffix_for_units</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">observed_data</span><span class="o">.</span><span class="n">units</span><span class="p">)</span>
+
+	<span class="n">fx</span> <span class="o">=</span> <span class="n">data_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;real_</span><span class="si">{</span><span class="n">units_suffix</span><span class="si">}</span><span class="s2">_x&quot;</span>
+	<span class="n">fy</span> <span class="o">=</span> <span class="n">data_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;real_</span><span class="si">{</span><span class="n">units_suffix</span><span class="si">}</span><span class="s2">_y&quot;</span>
+	<span class="n">fz</span> <span class="o">=</span> <span class="n">data_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;real_</span><span class="si">{</span><span class="n">units_suffix</span><span class="si">}</span><span class="s2">_z&quot;</span>
+
+	<span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="p">(</span><span class="n">fx</span><span class="p">,</span> <span class="n">fy</span><span class="p">,</span> <span class="n">fz</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">p</span><span class="o">.</span><span class="n">exists</span><span class="p">()]</span>
+	<span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+			<span class="s2">&quot;Missing flat observed files for selected units in input.ctl: &quot;</span>
+			<span class="o">+</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span>
+		<span class="p">)</span>
+
+	<span class="n">tx</span><span class="p">,</span> <span class="n">x</span> <span class="o">=</span> <span class="n">_read_observed_flat_file</span><span class="p">(</span>
+		<span class="n">fx</span><span class="p">,</span>
+		<span class="n">t1</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">observed_data</span><span class="o">.</span><span class="n">t1</span><span class="p">),</span>
+		<span class="n">delta</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">observed_data</span><span class="o">.</span><span class="n">delta</span><span class="p">),</span>
+		<span class="n">npts</span><span class="o">=</span><span class="n">npts</span><span class="p">,</span>
+		<span class="n">n_stations</span><span class="o">=</span><span class="n">n_stations</span><span class="p">,</span>
+	<span class="p">)</span>
+	<span class="n">ty</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">_read_observed_flat_file</span><span class="p">(</span>
+		<span class="n">fy</span><span class="p">,</span>
+		<span class="n">t1</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">observed_data</span><span class="o">.</span><span class="n">t1</span><span class="p">),</span>
+		<span class="n">delta</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">observed_data</span><span class="o">.</span><span class="n">delta</span><span class="p">),</span>
+		<span class="n">npts</span><span class="o">=</span><span class="n">npts</span><span class="p">,</span>
+		<span class="n">n_stations</span><span class="o">=</span><span class="n">n_stations</span><span class="p">,</span>
+	<span class="p">)</span>
+	<span class="n">tz</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">_read_observed_flat_file</span><span class="p">(</span>
+		<span class="n">fz</span><span class="p">,</span>
+		<span class="n">t1</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">observed_data</span><span class="o">.</span><span class="n">t1</span><span class="p">),</span>
+		<span class="n">delta</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">observed_data</span><span class="o">.</span><span class="n">delta</span><span class="p">),</span>
+		<span class="n">npts</span><span class="o">=</span><span class="n">npts</span><span class="p">,</span>
+		<span class="n">n_stations</span><span class="o">=</span><span class="n">n_stations</span><span class="p">,</span>
+	<span class="p">)</span>
+
+	<span class="n">time</span><span class="p">,</span> <span class="n">x2</span> <span class="o">=</span> <span class="n">_reshape_flat_component</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">n_stations</span><span class="p">,</span> <span class="n">npts</span><span class="p">,</span> <span class="n">fx</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+	<span class="n">time_y</span><span class="p">,</span> <span class="n">y2</span> <span class="o">=</span> <span class="n">_reshape_flat_component</span><span class="p">(</span><span class="n">ty</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">n_stations</span><span class="p">,</span> <span class="n">npts</span><span class="p">,</span> <span class="n">fy</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+	<span class="n">time_z</span><span class="p">,</span> <span class="n">z2</span> <span class="o">=</span> <span class="n">_reshape_flat_component</span><span class="p">(</span><span class="n">tz</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">n_stations</span><span class="p">,</span> <span class="n">npts</span><span class="p">,</span> <span class="n">fz</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+	<span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">time_y</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">0.0</span><span class="p">):</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Time mismatch between </span><span class="si">{</span><span class="n">fx</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">fy</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+	<span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">time_z</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">0.0</span><span class="p">):</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Time mismatch between </span><span class="si">{</span><span class="n">fx</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">fz</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+	<span class="n">_validate_time_axis</span><span class="p">(</span>
+		<span class="n">time</span><span class="p">,</span>
+		<span class="nb">float</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">observed_data</span><span class="o">.</span><span class="n">t1</span><span class="p">),</span>
+		<span class="nb">float</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">observed_data</span><span class="o">.</span><span class="n">delta</span><span class="p">),</span>
+		<span class="n">npts</span><span class="p">,</span>
+	<span class="p">)</span>
+
+	<span class="c1"># (n_stations, 3, npts)</span>
+	<span class="n">observed</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">x2</span><span class="p">,</span> <span class="n">y2</span><span class="p">,</span> <span class="n">z2</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+	<span class="k">return</span> <span class="n">observed</span><span class="p">,</span> <span class="n">time</span>
+
+
+<span class="k">def</span> <span class="nf">_iter_raw_waveform_files</span><span class="p">(</span><span class="n">raw_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+	<span class="k">for</span> <span class="n">ext</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;*.sac&quot;</span><span class="p">,</span> <span class="s2">&quot;*.SAC&quot;</span><span class="p">,</span> <span class="s2">&quot;*.mseed&quot;</span><span class="p">,</span> <span class="s2">&quot;*.MSEED&quot;</span><span class="p">):</span>
+		<span class="k">yield from</span> <span class="n">raw_dir</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">ext</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_component_from_channel</span><span class="p">(</span><span class="n">channel</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+	<span class="n">ch</span> <span class="o">=</span> <span class="p">(</span><span class="n">channel</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+	<span class="k">if</span> <span class="ow">not</span> <span class="n">ch</span><span class="p">:</span>
+		<span class="k">return</span> <span class="s2">&quot;&quot;</span>
+	<span class="n">last</span> <span class="o">=</span> <span class="n">ch</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+	<span class="k">if</span> <span class="n">last</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;E&quot;</span><span class="p">,</span> <span class="s2">&quot;N&quot;</span><span class="p">,</span> <span class="s2">&quot;Z&quot;</span><span class="p">}:</span>
+		<span class="k">return</span> <span class="n">last</span>
+	<span class="k">if</span> <span class="n">last</span> <span class="o">==</span> <span class="s2">&quot;1&quot;</span><span class="p">:</span>
+		<span class="k">return</span> <span class="s2">&quot;N&quot;</span>
+	<span class="k">if</span> <span class="n">last</span> <span class="o">==</span> <span class="s2">&quot;2&quot;</span><span class="p">:</span>
+		<span class="k">return</span> <span class="s2">&quot;E&quot;</span>
+	<span class="k">return</span> <span class="s2">&quot;&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">_find_inventory</span><span class="p">(</span><span class="n">raw_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">):</span>
+	<span class="k">if</span> <span class="n">read_inventory</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+		<span class="k">return</span> <span class="kc">None</span>
+	<span class="n">inv_files</span> <span class="o">=</span> <span class="p">[]</span>
+	<span class="k">for</span> <span class="n">pat</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;*.xml&quot;</span><span class="p">,</span> <span class="s2">&quot;*.XML&quot;</span><span class="p">,</span> <span class="s2">&quot;*.stationxml&quot;</span><span class="p">,</span> <span class="s2">&quot;*.STATIONXML&quot;</span><span class="p">,</span> <span class="s2">&quot;RESP*&quot;</span><span class="p">,</span> <span class="s2">&quot;*.resp&quot;</span><span class="p">,</span> <span class="s2">&quot;*.RESP&quot;</span><span class="p">):</span>
+		<span class="n">inv_files</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">raw_dir</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">pat</span><span class="p">))</span>
+	<span class="k">if</span> <span class="ow">not</span> <span class="n">inv_files</span><span class="p">:</span>
+		<span class="k">return</span> <span class="kc">None</span>
+	<span class="n">inv</span> <span class="o">=</span> <span class="kc">None</span>
+	<span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">inv_files</span><span class="p">:</span>
+		<span class="n">cur</span> <span class="o">=</span> <span class="n">read_inventory</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">f</span><span class="p">))</span>
+		<span class="n">inv</span> <span class="o">=</span> <span class="n">cur</span> <span class="k">if</span> <span class="n">inv</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">(</span><span class="n">inv</span> <span class="o">+</span> <span class="n">cur</span><span class="p">)</span>
+	<span class="k">return</span> <span class="n">inv</span>
+
+
+<span class="k">def</span> <span class="nf">_preprocess_trace</span><span class="p">(</span>
+	<span class="n">tr</span><span class="p">,</span>
+	<span class="n">freq1</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+	<span class="n">freq2</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+	<span class="n">delta</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+	<span class="n">npts</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+	<span class="n">units</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+	<span class="n">inventory</span><span class="p">,</span>
+	<span class="n">starttime</span><span class="p">,</span>
+<span class="p">):</span>
+	<span class="n">tr</span> <span class="o">=</span> <span class="n">tr</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+	<span class="n">tr</span><span class="o">.</span><span class="n">detrend</span><span class="p">(</span><span class="s2">&quot;demean&quot;</span><span class="p">)</span>
+	<span class="n">tr</span><span class="o">.</span><span class="n">detrend</span><span class="p">(</span><span class="s2">&quot;linear&quot;</span><span class="p">)</span>
+	<span class="n">tr</span><span class="o">.</span><span class="n">taper</span><span class="p">(</span><span class="n">max_percentage</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;cosine&quot;</span><span class="p">)</span>
+
+	<span class="k">if</span> <span class="n">inventory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+		<span class="n">pre_filt</span> <span class="o">=</span> <span class="p">(</span>
+			<span class="nb">max</span><span class="p">(</span><span class="mf">0.001</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">freq1</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.5</span><span class="p">),</span>
+			<span class="nb">max</span><span class="p">(</span><span class="mf">0.002</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">freq1</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.8</span><span class="p">),</span>
+			<span class="nb">float</span><span class="p">(</span><span class="n">freq2</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1.2</span><span class="p">,</span>
+			<span class="nb">float</span><span class="p">(</span><span class="n">freq2</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1.8</span><span class="p">,</span>
+		<span class="p">)</span>
+		<span class="n">out</span> <span class="o">=</span> <span class="s2">&quot;DISP&quot;</span> <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">units</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="s2">&quot;VEL&quot;</span>
+		<span class="n">tr</span><span class="o">.</span><span class="n">remove_response</span><span class="p">(</span>
+			<span class="n">inventory</span><span class="o">=</span><span class="n">inventory</span><span class="p">,</span>
+			<span class="n">output</span><span class="o">=</span><span class="n">out</span><span class="p">,</span>
+			<span class="n">pre_filt</span><span class="o">=</span><span class="n">pre_filt</span><span class="p">,</span>
+			<span class="n">water_level</span><span class="o">=</span><span class="mi">60</span><span class="p">,</span>
+		<span class="p">)</span>
+
+	<span class="n">tr</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="s2">&quot;bandpass&quot;</span><span class="p">,</span> <span class="n">freqmin</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">freq1</span><span class="p">),</span> <span class="n">freqmax</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">freq2</span><span class="p">),</span> <span class="n">corners</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">zerophase</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+	<span class="n">tr</span><span class="o">.</span><span class="n">interpolate</span><span class="p">(</span><span class="n">sampling_rate</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">delta</span><span class="p">),</span> <span class="n">starttime</span><span class="o">=</span><span class="n">starttime</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;linear&quot;</span><span class="p">)</span>
+
+	<span class="n">endtime</span> <span class="o">=</span> <span class="n">starttime</span> <span class="o">+</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">npts</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span>
+	<span class="n">tr</span><span class="o">.</span><span class="n">trim</span><span class="p">(</span><span class="n">starttime</span><span class="o">=</span><span class="n">starttime</span><span class="p">,</span> <span class="n">endtime</span><span class="o">=</span><span class="n">endtime</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fill_value</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+
+	<span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">tr</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+	<span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">size</span> <span class="o">&lt;</span> <span class="nb">int</span><span class="p">(</span><span class="n">npts</span><span class="p">):</span>
+		<span class="n">pad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">npts</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+		<span class="n">pad</span><span class="p">[:</span> <span class="n">data</span><span class="o">.</span><span class="n">size</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+		<span class="n">data</span> <span class="o">=</span> <span class="n">pad</span>
+	<span class="k">elif</span> <span class="n">data</span><span class="o">.</span><span class="n">size</span> <span class="o">&gt;</span> <span class="nb">int</span><span class="p">(</span><span class="n">npts</span><span class="p">):</span>
+		<span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:</span> <span class="nb">int</span><span class="p">(</span><span class="n">npts</span><span class="p">)]</span>
+	<span class="k">return</span> <span class="n">data</span>
+
+
+<span class="k">def</span> <span class="nf">_load_from_raw</span><span class="p">(</span><span class="n">raw_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">cfg</span><span class="p">:</span> <span class="n">ConfigParser</span><span class="p">,</span> <span class="n">freq1</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">freq2</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+	<span class="k">if</span> <span class="n">read</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span>
+			<span class="s2">&quot;ObsPy is required for RAW mode (.sac/.mseed). Install with: pip install obspy&quot;</span>
+		<span class="p">)</span>
+
+	<span class="n">paths</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">_iter_raw_waveform_files</span><span class="p">(</span><span class="n">raw_dir</span><span class="p">))</span>
+	<span class="k">if</span> <span class="ow">not</span> <span class="n">paths</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No .sac/.mseed files found in </span><span class="si">{</span><span class="n">raw_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+	<span class="n">stream</span> <span class="o">=</span> <span class="n">Stream</span><span class="p">()</span>
+	<span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">paths</span><span class="p">:</span>
+		<span class="n">stream</span> <span class="o">+=</span> <span class="n">read</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+
+	<span class="n">station_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">cfg</span><span class="o">.</span><span class="n">stations</span><span class="o">.</span><span class="n">stations</span><span class="p">]</span>
+	<span class="n">inventory</span> <span class="o">=</span> <span class="n">_find_inventory</span><span class="p">(</span><span class="n">raw_dir</span><span class="p">)</span>
+
+	<span class="k">if</span> <span class="n">inventory</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+		<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;[signal_utils] WARNING: no instrument inventory found in DATA/RAW; response removal skipped.&quot;</span><span class="p">)</span>
+
+	<span class="c1"># Reference start from earliest available trace. Then apply t1 offset from input.ctl.</span>
+	<span class="n">global_start</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">tr</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">starttime</span> <span class="k">for</span> <span class="n">tr</span> <span class="ow">in</span> <span class="n">stream</span><span class="p">)</span>
+	<span class="n">starttime</span> <span class="o">=</span> <span class="n">global_start</span> <span class="o">+</span> <span class="nb">float</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">observed_data</span><span class="o">.</span><span class="n">t1</span><span class="p">)</span>
+
+	<span class="n">npts</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">observed_data</span><span class="o">.</span><span class="n">npts</span><span class="p">)</span>
+	<span class="n">delta</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">observed_data</span><span class="o">.</span><span class="n">delta</span><span class="p">)</span>
+	<span class="n">time</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">observed_data</span><span class="o">.</span><span class="n">t1</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">npts</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span> <span class="o">*</span> <span class="n">delta</span>
+
+	<span class="n">comp_idx</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;E&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;N&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Z&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">}</span>
+	<span class="n">observed</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">station_names</span><span class="p">),</span> <span class="mi">3</span><span class="p">,</span> <span class="n">npts</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+	<span class="n">missing</span> <span class="o">=</span> <span class="p">[]</span>
+	<span class="k">for</span> <span class="n">ista</span><span class="p">,</span> <span class="n">sta</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">station_names</span><span class="p">):</span>
+		<span class="n">st_sta</span> <span class="o">=</span> <span class="n">stream</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">station</span><span class="o">=</span><span class="n">sta</span><span class="p">)</span>
+		<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">st_sta</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+			<span class="n">missing</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">sta</span><span class="si">}</span><span class="s2">: all components&quot;</span><span class="p">)</span>
+			<span class="k">continue</span>
+
+		<span class="k">for</span> <span class="n">comp_name</span><span class="p">,</span> <span class="n">icomp</span> <span class="ow">in</span> <span class="n">comp_idx</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+			<span class="n">candidates</span> <span class="o">=</span> <span class="p">[</span><span class="n">tr</span> <span class="k">for</span> <span class="n">tr</span> <span class="ow">in</span> <span class="n">st_sta</span> <span class="k">if</span> <span class="n">_component_from_channel</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">tr</span><span class="o">.</span><span class="n">stats</span><span class="p">,</span> <span class="s2">&quot;channel&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">))</span> <span class="o">==</span> <span class="n">comp_name</span><span class="p">]</span>
+			<span class="k">if</span> <span class="ow">not</span> <span class="n">candidates</span><span class="p">:</span>
+				<span class="n">missing</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">sta</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">comp_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+				<span class="k">continue</span>
+
+			<span class="c1"># Prefer highest sample rate if duplicates exist.</span>
+			<span class="n">tr</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">candidates</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">stats</span><span class="p">,</span> <span class="s2">&quot;sampling_rate&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)),</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+			<span class="n">observed</span><span class="p">[</span><span class="n">ista</span><span class="p">,</span> <span class="n">icomp</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">_preprocess_trace</span><span class="p">(</span>
+				<span class="n">tr</span><span class="p">,</span>
+				<span class="n">freq1</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">freq1</span><span class="p">),</span>
+				<span class="n">freq2</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">freq2</span><span class="p">),</span>
+				<span class="n">delta</span><span class="o">=</span><span class="n">delta</span><span class="p">,</span>
+				<span class="n">npts</span><span class="o">=</span><span class="n">npts</span><span class="p">,</span>
+				<span class="n">units</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">observed_data</span><span class="o">.</span><span class="n">units</span><span class="p">),</span>
+				<span class="n">inventory</span><span class="o">=</span><span class="n">inventory</span><span class="p">,</span>
+				<span class="n">starttime</span><span class="o">=</span><span class="n">starttime</span><span class="p">,</span>
+			<span class="p">)</span>
+
+	<span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+			<span class="s2">&quot;Missing required station/components in RAW data: &quot;</span> <span class="o">+</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span>
+		<span class="p">)</span>
+
+	<span class="k">return</span> <span class="n">observed</span><span class="p">,</span> <span class="n">time</span>
+
+
+<span class="k">def</span> <span class="nf">_first_arrival_time</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">evdep_km</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">distdeg</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">phases</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+	<span class="k">for</span> <span class="n">phase</span> <span class="ow">in</span> <span class="n">phases</span><span class="p">:</span>
+		<span class="n">arrivals</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">get_travel_times</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">evdep_km</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">distdeg</span><span class="p">),</span> <span class="n">phase_list</span><span class="o">=</span><span class="p">[</span><span class="n">phase</span><span class="p">])</span>
+		<span class="k">if</span> <span class="n">arrivals</span><span class="p">:</span>
+			<span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">arrivals</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">time</span><span class="p">)</span>
+	<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No arrivals found for phases </span><span class="si">{</span><span class="n">phases</span><span class="si">}</span><span class="s2"> at distance </span><span class="si">{</span><span class="n">distdeg</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> deg&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_distance_azimuth_deg</span><span class="p">(</span>
+	<span class="n">stlat</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+	<span class="n">stlon</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+	<span class="n">evlat</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+	<span class="n">evlon</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+	<span class="n">use_iris</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+	<span class="n">iris_client</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+	<span class="k">if</span> <span class="n">use_iris</span><span class="p">:</span>
+		<span class="k">if</span> <span class="n">iris_client</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+			<span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;IRIS client is unavailable. Install/enable obspy.clients.iris or set use_iris=False.&quot;</span><span class="p">)</span>
+		<span class="n">result</span> <span class="o">=</span> <span class="n">iris_client</span><span class="o">.</span><span class="n">distaz</span><span class="p">(</span><span class="n">stlat</span><span class="p">,</span> <span class="n">stlon</span><span class="p">,</span> <span class="n">evlat</span><span class="p">,</span> <span class="n">evlon</span><span class="p">)</span>
+		<span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;distance&quot;</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;azimuth&quot;</span><span class="p">])</span>
+
+	<span class="k">if</span> <span class="n">gps2dist_azimuth</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">kilometers2degrees</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;ObsPy geodetics is unavailable. Install obspy to compute azimuth and distance.&quot;</span><span class="p">)</span>
+
+	<span class="n">dist_m</span><span class="p">,</span> <span class="n">azimuth_deg</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">gps2dist_azimuth</span><span class="p">(</span><span class="n">stlat</span><span class="p">,</span> <span class="n">stlon</span><span class="p">,</span> <span class="n">evlat</span><span class="p">,</span> <span class="n">evlon</span><span class="p">)</span>
+	<span class="n">distdeg</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">kilometers2degrees</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">dist_m</span><span class="p">)</span> <span class="o">/</span> <span class="mf">1000.0</span><span class="p">))</span>
+	<span class="k">return</span> <span class="n">distdeg</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="n">azimuth_deg</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="build_azi_times_array">
+<a class="viewcode-back" href="../../api_reference.html#kdellipspy.signal_utils.build_azi_times_array">[docs]</a>
+<span class="k">def</span> <span class="nf">build_azi_times_array</span><span class="p">(</span>
+	<span class="n">input_ctl_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">=</span> <span class="s2">&quot;input.ctl&quot;</span><span class="p">,</span>
+	<span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;iasp91&quot;</span><span class="p">,</span>
+	<span class="n">p_shift_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>
+	<span class="n">s_shift_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>
+	<span class="n">use_iris</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">	</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">	Build legacy-compatible azi_times values as an array with columns:</span>
+<span class="sd">	[azimuth_rad, tP, tS].</span>
+
+<span class="sd">	This reproduces the old script behavior while avoiding IRIS network</span>
+<span class="sd">	requirements by default (use_iris=False).</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="k">if</span> <span class="n">TauPyModel</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;ObsPy TauPyModel is unavailable. Install obspy to compute travel times.&quot;</span><span class="p">)</span>
+
+	<span class="n">input_ctl_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">input_ctl_path</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+	<span class="n">cfg</span> <span class="o">=</span> <span class="n">ConfigParser</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">input_ctl_path</span><span class="p">))</span>
+
+	<span class="n">evlat</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">source_position</span><span class="o">.</span><span class="n">latitude</span><span class="p">)</span>
+	<span class="n">evlon</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">source_position</span><span class="o">.</span><span class="n">longitude</span><span class="p">)</span>
+	<span class="n">evdep</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">source_position</span><span class="o">.</span><span class="n">depth</span><span class="p">)</span>
+	<span class="n">stations</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">stations</span><span class="o">.</span><span class="n">stations</span>
+
+	<span class="n">model</span> <span class="o">=</span> <span class="n">TauPyModel</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model_name</span><span class="p">)</span>
+	<span class="n">iris_client</span> <span class="o">=</span> <span class="n">IrisClient</span><span class="p">()</span> <span class="k">if</span> <span class="n">use_iris</span> <span class="ow">and</span> <span class="n">IrisClient</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+
+	<span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+	<span class="k">for</span> <span class="n">st</span> <span class="ow">in</span> <span class="n">stations</span><span class="p">:</span>
+		<span class="n">stlat</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">st</span><span class="o">.</span><span class="n">latitude</span><span class="p">)</span>
+		<span class="n">stlon</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">st</span><span class="o">.</span><span class="n">longitude</span><span class="p">)</span>
+
+		<span class="n">distdeg</span><span class="p">,</span> <span class="n">azi_deg</span> <span class="o">=</span> <span class="n">_distance_azimuth_deg</span><span class="p">(</span>
+			<span class="n">stlat</span><span class="o">=</span><span class="n">stlat</span><span class="p">,</span>
+			<span class="n">stlon</span><span class="o">=</span><span class="n">stlon</span><span class="p">,</span>
+			<span class="n">evlat</span><span class="o">=</span><span class="n">evlat</span><span class="p">,</span>
+			<span class="n">evlon</span><span class="o">=</span><span class="n">evlon</span><span class="p">,</span>
+			<span class="n">use_iris</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">use_iris</span><span class="p">),</span>
+			<span class="n">iris_client</span><span class="o">=</span><span class="n">iris_client</span><span class="p">,</span>
+		<span class="p">)</span>
+
+		<span class="n">pt</span> <span class="o">=</span> <span class="n">_first_arrival_time</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">evdep</span><span class="p">,</span> <span class="n">distdeg</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;P&quot;</span><span class="p">,</span> <span class="s2">&quot;p&quot;</span><span class="p">))</span>
+		<span class="n">stt</span> <span class="o">=</span> <span class="n">_first_arrival_time</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">evdep</span><span class="p">,</span> <span class="n">distdeg</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;S&quot;</span><span class="p">,</span> <span class="s2">&quot;s&quot;</span><span class="p">))</span>
+
+		<span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">([</span>
+			<span class="n">math</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">azi_deg</span><span class="p">)),</span>
+			<span class="nb">float</span><span class="p">(</span><span class="n">pt</span><span class="p">)</span> <span class="o">+</span> <span class="nb">float</span><span class="p">(</span><span class="n">p_shift_s</span><span class="p">),</span>
+			<span class="nb">float</span><span class="p">(</span><span class="n">stt</span><span class="p">)</span> <span class="o">+</span> <span class="nb">float</span><span class="p">(</span><span class="n">s_shift_s</span><span class="p">),</span>
+		<span class="p">])</span>
+
+	<span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="write_azi_times_file">
+<a class="viewcode-back" href="../../api_reference.html#kdellipspy.signal_utils.write_azi_times_file">[docs]</a>
+<span class="k">def</span> <span class="nf">write_azi_times_file</span><span class="p">(</span>
+	<span class="n">input_ctl_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">=</span> <span class="s2">&quot;input.ctl&quot;</span><span class="p">,</span>
+	<span class="n">output_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+	<span class="n">model_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;iasp91&quot;</span><span class="p">,</span>
+	<span class="n">p_shift_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>
+	<span class="n">s_shift_s</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span>
+	<span class="n">use_iris</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">	</span><span class="sd">&quot;&quot;&quot;Write Event/azi_times.txt with legacy-compatible 3-column format.&quot;&quot;&quot;</span>
+	<span class="n">input_ctl_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">input_ctl_path</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+	<span class="k">if</span> <span class="n">output_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+		<span class="n">output</span> <span class="o">=</span> <span class="n">input_ctl_path</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">&quot;Event&quot;</span> <span class="o">/</span> <span class="s2">&quot;azi_times.txt&quot;</span>
+	<span class="k">else</span><span class="p">:</span>
+		<span class="n">output</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_path</span><span class="p">)</span>
+		<span class="k">if</span> <span class="ow">not</span> <span class="n">output</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
+			<span class="n">output</span> <span class="o">=</span> <span class="p">(</span><span class="n">input_ctl_path</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="n">output</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+
+	<span class="n">arr</span> <span class="o">=</span> <span class="n">build_azi_times_array</span><span class="p">(</span>
+		<span class="n">input_ctl_path</span><span class="o">=</span><span class="n">input_ctl_path</span><span class="p">,</span>
+		<span class="n">model_name</span><span class="o">=</span><span class="n">model_name</span><span class="p">,</span>
+		<span class="n">p_shift_s</span><span class="o">=</span><span class="n">p_shift_s</span><span class="p">,</span>
+		<span class="n">s_shift_s</span><span class="o">=</span><span class="n">s_shift_s</span><span class="p">,</span>
+		<span class="n">use_iris</span><span class="o">=</span><span class="n">use_iris</span><span class="p">,</span>
+	<span class="p">)</span>
+
+	<span class="n">output</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+	<span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">output</span><span class="p">),</span> <span class="n">arr</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">%.4f</span><span class="s2"> </span><span class="si">%.1f</span><span class="s2"> </span><span class="si">%.1f</span><span class="s2">&quot;</span><span class="p">)</span>
+	<span class="k">return</span> <span class="n">output</span></div>
+
+
+
+<div class="viewcode-block" id="load_and_filter_observed_data">
+<a class="viewcode-back" href="../../api_reference.html#kdellipspy.signal_utils.load_and_filter_observed_data">[docs]</a>
+<span class="k">def</span> <span class="nf">load_and_filter_observed_data</span><span class="p">(</span>
+	<span class="n">freq1</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+	<span class="n">freq2</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+	<span class="n">input_ctl_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">=</span> <span class="s2">&quot;input.ctl&quot;</span><span class="p">,</span>
+	<span class="n">data_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">=</span> <span class="s2">&quot;DATA&quot;</span><span class="p">,</span>
+	<span class="n">prefer_raw</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">	</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">	Load observed data with two supported user workflows:</span>
+
+<span class="sd">	1) Flat files in DATA:</span>
+<span class="sd">	   - real_disp_x/y/z  (if input.ctl units=1)</span>
+<span class="sd">	   - real_vel_x/y/z   (if input.ctl units=2)</span>
+<span class="sd">	   Each file must contain 2 columns: time and data,</span>
+<span class="sd">	   and total rows must be npts * nstations.</span>
+
+<span class="sd">	2) RAW files in DATA/RAW:</span>
+<span class="sd">	   - .sac or .mseed files</span>
+<span class="sd">	   - station name extracted from waveform metadata</span>
+<span class="sd">	   - bandpass filtering using input.ctl frequency band</span>
+<span class="sd">	   - response removal attempted when inventory files are present in RAW</span>
+
+<span class="sd">	Returns:</span>
+<span class="sd">		observed_waveforms: ndarray with shape (n_stations, 3, npts)</span>
+<span class="sd">		time_array: ndarray with shape (npts,)</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="n">input_ctl_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">input_ctl_path</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+	<span class="n">base_dir</span> <span class="o">=</span> <span class="n">input_ctl_path</span><span class="o">.</span><span class="n">parent</span>
+	<span class="n">data_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
+	<span class="k">if</span> <span class="ow">not</span> <span class="n">data_dir</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
+		<span class="n">data_dir</span> <span class="o">=</span> <span class="p">(</span><span class="n">base_dir</span> <span class="o">/</span> <span class="n">data_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+
+	<span class="n">cfg</span> <span class="o">=</span> <span class="n">ConfigParser</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">input_ctl_path</span><span class="p">))</span>
+	<span class="n">freq1_eff</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">ellipse</span><span class="o">.</span><span class="n">freq1</span> <span class="k">if</span> <span class="n">freq1</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">freq1</span><span class="p">)</span>
+	<span class="n">freq2_eff</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">ellipse</span><span class="o">.</span><span class="n">freq2</span> <span class="k">if</span> <span class="n">freq2</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">freq2</span><span class="p">)</span>
+
+	<span class="k">if</span> <span class="n">freq1_eff</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">freq2_eff</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">freq2_eff</span> <span class="o">&lt;=</span> <span class="n">freq1_eff</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+			<span class="sa">f</span><span class="s2">&quot;Invalid frequency band: freq1=</span><span class="si">{</span><span class="n">freq1_eff</span><span class="si">}</span><span class="s2">, freq2=</span><span class="si">{</span><span class="n">freq2_eff</span><span class="si">}</span><span class="s2">. Require 0 &lt; freq1 &lt; freq2.&quot;</span>
+		<span class="p">)</span>
+
+	<span class="n">raw_dir</span> <span class="o">=</span> <span class="n">data_dir</span> <span class="o">/</span> <span class="s2">&quot;RAW&quot;</span>
+
+	<span class="k">if</span> <span class="n">prefer_raw</span> <span class="ow">and</span> <span class="n">raw_dir</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+		<span class="k">return</span> <span class="n">_load_from_raw</span><span class="p">(</span><span class="n">raw_dir</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="n">freq1_eff</span><span class="p">,</span> <span class="n">freq2_eff</span><span class="p">)</span>
+
+	<span class="c1"># Try flat-file mode first (fast and deterministic).</span>
+	<span class="k">try</span><span class="p">:</span>
+		<span class="k">return</span> <span class="n">_load_from_flat_files</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="n">cfg</span><span class="p">)</span>
+	<span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">flat_exc</span><span class="p">:</span>
+		<span class="k">if</span> <span class="n">raw_dir</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+			<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[signal_utils] INFO: flat DATA mode unavailable (</span><span class="si">{</span><span class="n">flat_exc</span><span class="si">}</span><span class="s2">); trying RAW mode...&quot;</span><span class="p">)</span>
+			<span class="k">return</span> <span class="n">_load_from_raw</span><span class="p">(</span><span class="n">raw_dir</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="n">freq1_eff</span><span class="p">,</span> <span class="n">freq2_eff</span><span class="p">)</span>
+		<span class="k">raise</span></div>
+
+
+
+<div class="viewcode-block" id="bandpass_filter_waveforms">
+<a class="viewcode-back" href="../../api_reference.html#kdellipspy.signal_utils.bandpass_filter_waveforms">[docs]</a>
+<span class="k">def</span> <span class="nf">bandpass_filter_waveforms</span><span class="p">(</span>
+	<span class="n">synthetic</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+	<span class="n">time</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+	<span class="n">freq1</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+	<span class="n">freq2</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+	<span class="n">corners</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+	<span class="n">zerophase</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">	</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">	Apply Butterworth bandpass filter to synthetic waveforms.</span>
+<span class="sd">	</span>
+<span class="sd">	This ensures synthetic waveforms match the frequency band of observed data,</span>
+<span class="sd">	maintaining consistency in the misfit calculation.</span>
+
+<span class="sd">	Args:</span>
+<span class="sd">		synthetic: waveform array with shape (n_stations, 3, npts)</span>
+<span class="sd">		time: time array with shape (npts,)</span>
+<span class="sd">		freq1: low frequency cutoff (Hz)</span>
+<span class="sd">		freq2: high frequency cutoff (Hz)</span>
+<span class="sd">		corners: filter order (default 4 = 4th order)</span>
+<span class="sd">		zerophase: if True, apply filter forward-backward for zero phase distortion</span>
+
+<span class="sd">	Returns:</span>
+<span class="sd">		filtered_synthetic: filtered waveforms with same shape as input</span>
+
+<span class="sd">	Raises:</span>
+<span class="sd">		ValueError: if time array has &lt; 2 points or freq2 &gt;= Nyquist frequency</span>
+<span class="sd">	&quot;&quot;&quot;</span>
+	<span class="k">try</span><span class="p">:</span>
+		<span class="kn">from</span> <span class="nn">scipy.signal</span> <span class="kn">import</span> <span class="n">butter</span><span class="p">,</span> <span class="n">sosfilt</span>
+	<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;scipy is required for bandpass filtering. Install with: pip install scipy&quot;</span><span class="p">)</span>
+
+	<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">time</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Need at least 2 time points, got </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">time</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+	<span class="c1"># Infer sampling rate from time</span>
+	<span class="n">dt</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">time</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">time</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+	<span class="k">if</span> <span class="n">dt</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid time step: </span><span class="si">{</span><span class="n">dt</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+	<span class="n">sr</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">dt</span>
+	<span class="n">nyquist</span> <span class="o">=</span> <span class="n">sr</span> <span class="o">/</span> <span class="mf">2.0</span>
+
+	<span class="c1"># Validate frequencies</span>
+	<span class="k">if</span> <span class="n">freq1</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">freq2</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Frequencies must be positive: freq1=</span><span class="si">{</span><span class="n">freq1</span><span class="si">}</span><span class="s2">, freq2=</span><span class="si">{</span><span class="n">freq2</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+	<span class="k">if</span> <span class="n">freq1</span> <span class="o">&gt;=</span> <span class="n">freq2</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;freq1 (</span><span class="si">{</span><span class="n">freq1</span><span class="si">}</span><span class="s2">) must be &lt; freq2 (</span><span class="si">{</span><span class="n">freq2</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+	<span class="k">if</span> <span class="n">freq2</span> <span class="o">&gt;=</span> <span class="n">nyquist</span><span class="p">:</span>
+		<span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+			<span class="sa">f</span><span class="s2">&quot;freq2 (</span><span class="si">{</span><span class="n">freq2</span><span class="si">}</span><span class="s2">) &gt;= Nyquist frequency (</span><span class="si">{</span><span class="n">nyquist</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">). &quot;</span>
+			<span class="sa">f</span><span class="s2">&quot;Increase sampling rate or reduce freq2.&quot;</span>
+		<span class="p">)</span>
+
+	<span class="c1"># Design Butterworth filter in SOS (second-order sections) form for better numerics</span>
+	<span class="n">sos</span> <span class="o">=</span> <span class="n">butter</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">corners</span><span class="p">),</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">freq1</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">freq2</span><span class="p">)],</span> <span class="n">btype</span><span class="o">=</span><span class="s1">&#39;band&#39;</span><span class="p">,</span> <span class="n">fs</span><span class="o">=</span><span class="n">sr</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="s1">&#39;sos&#39;</span><span class="p">)</span>
+
+	<span class="c1"># Apply to each station and component</span>
+	<span class="n">nstations</span><span class="p">,</span> <span class="n">ncomps</span><span class="p">,</span> <span class="n">npts</span> <span class="o">=</span> <span class="n">synthetic</span><span class="o">.</span><span class="n">shape</span>
+	<span class="n">filtered</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">synthetic</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
+
+	<span class="k">for</span> <span class="n">ista</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nstations</span><span class="p">):</span>
+		<span class="k">for</span> <span class="n">icomp</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ncomps</span><span class="p">):</span>
+			<span class="n">data</span> <span class="o">=</span> <span class="n">synthetic</span><span class="p">[</span><span class="n">ista</span><span class="p">,</span> <span class="n">icomp</span><span class="p">,</span> <span class="p">:]</span>
+
+			<span class="c1"># Forward pass</span>
+			<span class="n">filtered_fwd</span> <span class="o">=</span> <span class="n">sosfilt</span><span class="p">(</span><span class="n">sos</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+
+			<span class="k">if</span> <span class="n">zerophase</span><span class="p">:</span>
+				<span class="c1"># Reverse, filter again, reverse back (for zero phase)</span>
+				<span class="n">filtered_rev</span> <span class="o">=</span> <span class="n">sosfilt</span><span class="p">(</span><span class="n">sos</span><span class="p">,</span> <span class="n">filtered_fwd</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+				<span class="n">filtered</span><span class="p">[</span><span class="n">ista</span><span class="p">,</span> <span class="n">icomp</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">filtered_rev</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+			<span class="k">else</span><span class="p">:</span>
+				<span class="n">filtered</span><span class="p">[</span><span class="n">ista</span><span class="p">,</span> <span class="n">icomp</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">filtered_fwd</span>
+
+	<span class="k">return</span> <span class="n">filtered</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, alexvillarroel.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

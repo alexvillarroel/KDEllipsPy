@@ -1,0 +1,801 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Reference &mdash; KDEllipsPy  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Welcome to KDEllipsPy’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            KDEllipsPy
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Referencia de la API (Código):</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#kdellipspy.config_parser.ConfigParser"><code class="docutils literal notranslate"><span class="pre">ConfigParser</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.ConfigParser.filepath"><code class="docutils literal notranslate"><span class="pre">ConfigParser.filepath</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.ConfigParser.source_position"><code class="docutils literal notranslate"><span class="pre">ConfigParser.source_position</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.ConfigParser.stations"><code class="docutils literal notranslate"><span class="pre">ConfigParser.stations</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.ConfigParser.ellipse"><code class="docutils literal notranslate"><span class="pre">ConfigParser.ellipse</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.ConfigParser.inversion_process"><code class="docutils literal notranslate"><span class="pre">ConfigParser.inversion_process</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.ConfigParser.parse"><code class="docutils literal notranslate"><span class="pre">ConfigParser.parse()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#kdellipspy.config_parser.EllipseParams"><code class="docutils literal notranslate"><span class="pre">EllipseParams</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.EllipseParams.freq1"><code class="docutils literal notranslate"><span class="pre">EllipseParams.freq1</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.EllipseParams.freq2"><code class="docutils literal notranslate"><span class="pre">EllipseParams.freq2</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.EllipseParams.from_dict"><code class="docutils literal notranslate"><span class="pre">EllipseParams.from_dict()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.EllipseParams.initial_slip"><code class="docutils literal notranslate"><span class="pre">EllipseParams.initial_slip</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.EllipseParams.num_ellipses"><code class="docutils literal notranslate"><span class="pre">EllipseParams.num_ellipses</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.EllipseParams.slip_shape"><code class="docutils literal notranslate"><span class="pre">EllipseParams.slip_shape</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.EllipseParams.t0"><code class="docutils literal notranslate"><span class="pre">EllipseParams.t0</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#kdellipspy.config_parser.FaultPlaneParams"><code class="docutils literal notranslate"><span class="pre">FaultPlaneParams</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.FaultPlaneParams.from_dict"><code class="docutils literal notranslate"><span class="pre">FaultPlaneParams.from_dict()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.FaultPlaneParams.hx"><code class="docutils literal notranslate"><span class="pre">FaultPlaneParams.hx</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.FaultPlaneParams.hy"><code class="docutils literal notranslate"><span class="pre">FaultPlaneParams.hy</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.FaultPlaneParams.lx"><code class="docutils literal notranslate"><span class="pre">FaultPlaneParams.lx</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.FaultPlaneParams.ly"><code class="docutils literal notranslate"><span class="pre">FaultPlaneParams.ly</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.FaultPlaneParams.nx"><code class="docutils literal notranslate"><span class="pre">FaultPlaneParams.nx</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.FaultPlaneParams.ny"><code class="docutils literal notranslate"><span class="pre">FaultPlaneParams.ny</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#kdellipspy.config_parser.InversionParam"><code class="docutils literal notranslate"><span class="pre">InversionParam</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.InversionParam.flag"><code class="docutils literal notranslate"><span class="pre">InversionParam.flag</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.InversionParam.max_val"><code class="docutils literal notranslate"><span class="pre">InversionParam.max_val</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.InversionParam.min_val"><code class="docutils literal notranslate"><span class="pre">InversionParam.min_val</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.InversionParam.name"><code class="docutils literal notranslate"><span class="pre">InversionParam.name</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#kdellipspy.config_parser.InversionParams"><code class="docutils literal notranslate"><span class="pre">InversionParams</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.InversionParams.from_dict"><code class="docutils literal notranslate"><span class="pre">InversionParams.from_dict()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.InversionParams.parameters"><code class="docutils literal notranslate"><span class="pre">InversionParams.parameters</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#kdellipspy.config_parser.InversionProcessParams"><code class="docutils literal notranslate"><span class="pre">InversionProcessParams</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.InversionProcessParams.algorithm_type"><code class="docutils literal notranslate"><span class="pre">InversionProcessParams.algorithm_type</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.InversionProcessParams.cells_resample"><code class="docutils literal notranslate"><span class="pre">InversionProcessParams.cells_resample</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.InversionProcessParams.from_dict"><code class="docutils literal notranslate"><span class="pre">InversionProcessParams.from_dict()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.InversionProcessParams.num_iterations"><code class="docutils literal notranslate"><span class="pre">InversionProcessParams.num_iterations</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.InversionProcessParams.ss1"><code class="docutils literal notranslate"><span class="pre">InversionProcessParams.ss1</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.InversionProcessParams.ss_other"><code class="docutils literal notranslate"><span class="pre">InversionProcessParams.ss_other</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#kdellipspy.config_parser.MomentTensor"><code class="docutils literal notranslate"><span class="pre">MomentTensor</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.MomentTensor.exponent"><code class="docutils literal notranslate"><span class="pre">MomentTensor.exponent</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.MomentTensor.flag"><code class="docutils literal notranslate"><span class="pre">MomentTensor.flag</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.MomentTensor.from_dict"><code class="docutils literal notranslate"><span class="pre">MomentTensor.from_dict()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.MomentTensor.mpp"><code class="docutils literal notranslate"><span class="pre">MomentTensor.mpp</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.MomentTensor.mrp"><code class="docutils literal notranslate"><span class="pre">MomentTensor.mrp</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.MomentTensor.mrr"><code class="docutils literal notranslate"><span class="pre">MomentTensor.mrr</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.MomentTensor.mrt"><code class="docutils literal notranslate"><span class="pre">MomentTensor.mrt</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.MomentTensor.mtp"><code class="docutils literal notranslate"><span class="pre">MomentTensor.mtp</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.MomentTensor.mtt"><code class="docutils literal notranslate"><span class="pre">MomentTensor.mtt</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#kdellipspy.config_parser.ObservedDataParams"><code class="docutils literal notranslate"><span class="pre">ObservedDataParams</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.ObservedDataParams.delta"><code class="docutils literal notranslate"><span class="pre">ObservedDataParams.delta</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.ObservedDataParams.from_dict"><code class="docutils literal notranslate"><span class="pre">ObservedDataParams.from_dict()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.ObservedDataParams.npts"><code class="docutils literal notranslate"><span class="pre">ObservedDataParams.npts</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.ObservedDataParams.t1"><code class="docutils literal notranslate"><span class="pre">ObservedDataParams.t1</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.ObservedDataParams.t2"><code class="docutils literal notranslate"><span class="pre">ObservedDataParams.t2</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.ObservedDataParams.units"><code class="docutils literal notranslate"><span class="pre">ObservedDataParams.units</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#kdellipspy.config_parser.SourcePosition"><code class="docutils literal notranslate"><span class="pre">SourcePosition</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.SourcePosition.depth"><code class="docutils literal notranslate"><span class="pre">SourcePosition.depth</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.SourcePosition.dip"><code class="docutils literal notranslate"><span class="pre">SourcePosition.dip</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.SourcePosition.event_name"><code class="docutils literal notranslate"><span class="pre">SourcePosition.event_name</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.SourcePosition.from_dict"><code class="docutils literal notranslate"><span class="pre">SourcePosition.from_dict()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.SourcePosition.latitude"><code class="docutils literal notranslate"><span class="pre">SourcePosition.latitude</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.SourcePosition.longitude"><code class="docutils literal notranslate"><span class="pre">SourcePosition.longitude</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.SourcePosition.rake"><code class="docutils literal notranslate"><span class="pre">SourcePosition.rake</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.SourcePosition.strike"><code class="docutils literal notranslate"><span class="pre">SourcePosition.strike</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#kdellipspy.config_parser.Station"><code class="docutils literal notranslate"><span class="pre">Station</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.Station.height"><code class="docutils literal notranslate"><span class="pre">Station.height</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.Station.latitude"><code class="docutils literal notranslate"><span class="pre">Station.latitude</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.Station.longitude"><code class="docutils literal notranslate"><span class="pre">Station.longitude</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.Station.name"><code class="docutils literal notranslate"><span class="pre">Station.name</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#kdellipspy.config_parser.StationParams"><code class="docutils literal notranslate"><span class="pre">StationParams</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.StationParams.from_lines"><code class="docutils literal notranslate"><span class="pre">StationParams.from_lines()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.StationParams.stations"><code class="docutils literal notranslate"><span class="pre">StationParams.stations</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#kdellipspy.config_parser.VelocityLayer"><code class="docutils literal notranslate"><span class="pre">VelocityLayer</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.VelocityLayer.qp"><code class="docutils literal notranslate"><span class="pre">VelocityLayer.qp</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.VelocityLayer.qs"><code class="docutils literal notranslate"><span class="pre">VelocityLayer.qs</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.VelocityLayer.rho"><code class="docutils literal notranslate"><span class="pre">VelocityLayer.rho</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.VelocityLayer.thickness"><code class="docutils literal notranslate"><span class="pre">VelocityLayer.thickness</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.VelocityLayer.vp"><code class="docutils literal notranslate"><span class="pre">VelocityLayer.vp</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.VelocityLayer.vs"><code class="docutils literal notranslate"><span class="pre">VelocityLayer.vs</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#kdellipspy.config_parser.VelocityModel"><code class="docutils literal notranslate"><span class="pre">VelocityModel</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.VelocityModel.from_lines"><code class="docutils literal notranslate"><span class="pre">VelocityModel.from_lines()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.VelocityModel.layers"><code class="docutils literal notranslate"><span class="pre">VelocityModel.layers</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#kdellipspy.config_parser.VelocityModel.to_numpy"><code class="docutils literal notranslate"><span class="pre">VelocityModel.to_numpy()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#kdellipspy.config_parser.parse_velocity_model"><code class="docutils literal notranslate"><span class="pre">parse_velocity_model()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#kdellipspy.config_parser.read_input_ctl"><code class="docutils literal notranslate"><span class="pre">read_input_ctl()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#kdellipspy.config_parser.validate_input_ctl"><code class="docutils literal notranslate"><span class="pre">validate_input_ctl()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#kdellipspy.signal_utils.bandpass_filter_waveforms"><code class="docutils literal notranslate"><span class="pre">bandpass_filter_waveforms()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#kdellipspy.signal_utils.build_azi_times_array"><code class="docutils literal notranslate"><span class="pre">build_azi_times_array()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#kdellipspy.signal_utils.load_and_filter_observed_data"><code class="docutils literal notranslate"><span class="pre">load_and_filter_observed_data()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#kdellipspy.signal_utils.write_azi_times_file"><code class="docutils literal notranslate"><span class="pre">write_azi_times_file()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">KDEllipsPy</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">API Reference</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/api_reference.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-kdellipspy">
+<span id="api-reference"></span><h1>API Reference<a class="headerlink" href="#module-kdellipspy" title="Link to this heading"></a></h1>
+<dl class="py class" id="module-kdellipspy.config_parser">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.ConfigParser">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kdellipspy.config_parser.</span></span><span class="sig-name descname"><span class="pre">ConfigParser</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#ConfigParser"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.ConfigParser" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Parses and stores the inversion configuration from the ‘input.ctl’ file.
+(Parsea y almacena la configuración de la inversión desde el archivo ‘input.ctl’.)</p>
+<p>This class is responsible for reading seismic event parameters, station grids,
+filtering frequencies, and Neighbourhood Algorithm (NA) parameters, structuring
+them for use throughout the pipeline.
+(Esta clase es responsable de leer los parámetros del evento sísmico, la grilla
+de estaciones, las frecuencias de filtrado y los parámetros del algoritmo NA,
+estructurándolos para su uso en el pipeline.)</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.ConfigParser.filepath">
+<span class="sig-name descname"><span class="pre">filepath</span></span><a class="headerlink" href="#kdellipspy.config_parser.ConfigParser.filepath" title="Link to this definition"></a></dt>
+<dd><p>Path to the ‘input.ctl’ control file.
+(Ruta al archivo de control ‘input.ctl’.)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str or Path</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.ConfigParser.source_position">
+<span class="sig-name descname"><span class="pre">source_position</span></span><a class="headerlink" href="#kdellipspy.config_parser.ConfigParser.source_position" title="Link to this definition"></a></dt>
+<dd><p>Seismic source parameters.
+(Parámetros de la fuente sísmica.)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>SourceConfig</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.ConfigParser.stations">
+<span class="sig-name descname"><span class="pre">stations</span></span><a class="headerlink" href="#kdellipspy.config_parser.ConfigParser.stations" title="Link to this definition"></a></dt>
+<dd><p>List and information of stations.
+(Lista e información de las estaciones.)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>StationConfig</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.ConfigParser.ellipse">
+<span class="sig-name descname"><span class="pre">ellipse</span></span><a class="headerlink" href="#kdellipspy.config_parser.ConfigParser.ellipse" title="Link to this definition"></a></dt>
+<dd><p>Ellipse geometry parameters and frequencies.
+(Parámetros geométricos de la elipse y frecuencias.)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>EllipseConfig</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.ConfigParser.inversion_process">
+<span class="sig-name descname"><span class="pre">inversion_process</span></span><a class="headerlink" href="#kdellipspy.config_parser.ConfigParser.inversion_process" title="Link to this definition"></a></dt>
+<dd><p>NA algorithm parameters.
+(Parámetros del algoritmo de inversión NA.)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>InversionConfig</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.ConfigParser.parse">
+<span class="sig-name descname"><span class="pre">parse</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#ConfigParser.parse"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.ConfigParser.parse" title="Link to this definition"></a></dt>
+<dd><p>Parse the entire control file</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.EllipseParams">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kdellipspy.config_parser.</span></span><span class="sig-name descname"><span class="pre">EllipseParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_ellipses</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_slip</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slip_shape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">freq1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">freq2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#EllipseParams"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.EllipseParams" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Section 4: Ellipse Parameters &amp; Frequency Band</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.EllipseParams.freq1">
+<span class="sig-name descname"><span class="pre">freq1</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.EllipseParams.freq1" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.EllipseParams.freq2">
+<span class="sig-name descname"><span class="pre">freq2</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.EllipseParams.freq2" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.EllipseParams.from_dict">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kdellipspy.config_parser.EllipseParams" title="kdellipspy.config_parser.EllipseParams"><span class="pre">EllipseParams</span></a></span></span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#EllipseParams.from_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.EllipseParams.from_dict" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.EllipseParams.initial_slip">
+<span class="sig-name descname"><span class="pre">initial_slip</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kdellipspy.config_parser.EllipseParams.initial_slip" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.EllipseParams.num_ellipses">
+<span class="sig-name descname"><span class="pre">num_ellipses</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kdellipspy.config_parser.EllipseParams.num_ellipses" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.EllipseParams.slip_shape">
+<span class="sig-name descname"><span class="pre">slip_shape</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kdellipspy.config_parser.EllipseParams.slip_shape" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.EllipseParams.t0">
+<span class="sig-name descname"><span class="pre">t0</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.EllipseParams.t0" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.FaultPlaneParams">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kdellipspy.config_parser.</span></span><span class="sig-name descname"><span class="pre">FaultPlaneParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ly</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hy</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ny</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#FaultPlaneParams"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.FaultPlaneParams" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Section 3: Fault Plane Parameters</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.FaultPlaneParams.from_dict">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kdellipspy.config_parser.FaultPlaneParams" title="kdellipspy.config_parser.FaultPlaneParams"><span class="pre">FaultPlaneParams</span></a></span></span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#FaultPlaneParams.from_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.FaultPlaneParams.from_dict" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.FaultPlaneParams.hx">
+<span class="sig-name descname"><span class="pre">hx</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.FaultPlaneParams.hx" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.FaultPlaneParams.hy">
+<span class="sig-name descname"><span class="pre">hy</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.FaultPlaneParams.hy" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.FaultPlaneParams.lx">
+<span class="sig-name descname"><span class="pre">lx</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.FaultPlaneParams.lx" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.FaultPlaneParams.ly">
+<span class="sig-name descname"><span class="pre">ly</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.FaultPlaneParams.ly" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.FaultPlaneParams.nx">
+<span class="sig-name descname"><span class="pre">nx</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kdellipspy.config_parser.FaultPlaneParams.nx" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.FaultPlaneParams.ny">
+<span class="sig-name descname"><span class="pre">ny</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kdellipspy.config_parser.FaultPlaneParams.ny" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.InversionParam">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kdellipspy.config_parser.</span></span><span class="sig-name descname"><span class="pre">InversionParam</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_val</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_val</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">flag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#InversionParam"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.InversionParam" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Single parameter for inversion</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.InversionParam.flag">
+<span class="sig-name descname"><span class="pre">flag</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kdellipspy.config_parser.InversionParam.flag" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.InversionParam.max_val">
+<span class="sig-name descname"><span class="pre">max_val</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.InversionParam.max_val" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.InversionParam.min_val">
+<span class="sig-name descname"><span class="pre">min_val</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.InversionParam.min_val" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.InversionParam.name">
+<span class="sig-name descname"><span class="pre">name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#kdellipspy.config_parser.InversionParam.name" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.InversionParams">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kdellipspy.config_parser.</span></span><span class="sig-name descname"><span class="pre">InversionParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parameters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#kdellipspy.config_parser.InversionParam" title="kdellipspy.config_parser.InversionParam"><span class="pre">InversionParam</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#InversionParams"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.InversionParams" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Section 5: Parameters to Invert</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.InversionParams.from_dict">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_lines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kdellipspy.config_parser.InversionParams" title="kdellipspy.config_parser.InversionParams"><span class="pre">InversionParams</span></a></span></span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#InversionParams.from_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.InversionParams.from_dict" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.InversionParams.parameters">
+<span class="sig-name descname"><span class="pre">parameters</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#kdellipspy.config_parser.InversionParam" title="kdellipspy.config_parser.InversionParam"><span class="pre">InversionParam</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#kdellipspy.config_parser.InversionParams.parameters" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.InversionProcessParams">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kdellipspy.config_parser.</span></span><span class="sig-name descname"><span class="pre">InversionProcessParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">algorithm_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_iterations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ss1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ss_other</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cells_resample</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#InversionProcessParams"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.InversionProcessParams" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Section 6: Inversion Process Parameters</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.InversionProcessParams.algorithm_type">
+<span class="sig-name descname"><span class="pre">algorithm_type</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kdellipspy.config_parser.InversionProcessParams.algorithm_type" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.InversionProcessParams.cells_resample">
+<span class="sig-name descname"><span class="pre">cells_resample</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kdellipspy.config_parser.InversionProcessParams.cells_resample" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.InversionProcessParams.from_dict">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kdellipspy.config_parser.InversionProcessParams" title="kdellipspy.config_parser.InversionProcessParams"><span class="pre">InversionProcessParams</span></a></span></span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#InversionProcessParams.from_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.InversionProcessParams.from_dict" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.InversionProcessParams.num_iterations">
+<span class="sig-name descname"><span class="pre">num_iterations</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kdellipspy.config_parser.InversionProcessParams.num_iterations" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.InversionProcessParams.ss1">
+<span class="sig-name descname"><span class="pre">ss1</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kdellipspy.config_parser.InversionProcessParams.ss1" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.InversionProcessParams.ss_other">
+<span class="sig-name descname"><span class="pre">ss_other</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kdellipspy.config_parser.InversionProcessParams.ss_other" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.MomentTensor">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kdellipspy.config_parser.</span></span><span class="sig-name descname"><span class="pre">MomentTensor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">flag</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mrr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mtt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mpp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mrt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mrp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mtp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">exponent</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#MomentTensor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.MomentTensor" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Section 7: Moment Tensor (Full MT)</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.MomentTensor.exponent">
+<span class="sig-name descname"><span class="pre">exponent</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.MomentTensor.exponent" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.MomentTensor.flag">
+<span class="sig-name descname"><span class="pre">flag</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kdellipspy.config_parser.MomentTensor.flag" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.MomentTensor.from_dict">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kdellipspy.config_parser.MomentTensor" title="kdellipspy.config_parser.MomentTensor"><span class="pre">MomentTensor</span></a></span></span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#MomentTensor.from_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.MomentTensor.from_dict" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.MomentTensor.mpp">
+<span class="sig-name descname"><span class="pre">mpp</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.MomentTensor.mpp" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.MomentTensor.mrp">
+<span class="sig-name descname"><span class="pre">mrp</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.MomentTensor.mrp" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.MomentTensor.mrr">
+<span class="sig-name descname"><span class="pre">mrr</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.MomentTensor.mrr" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.MomentTensor.mrt">
+<span class="sig-name descname"><span class="pre">mrt</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.MomentTensor.mrt" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.MomentTensor.mtp">
+<span class="sig-name descname"><span class="pre">mtp</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.MomentTensor.mtp" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.MomentTensor.mtt">
+<span class="sig-name descname"><span class="pre">mtt</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.MomentTensor.mtt" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.ObservedDataParams">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kdellipspy.config_parser.</span></span><span class="sig-name descname"><span class="pre">ObservedDataParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">npts</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">units</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#ObservedDataParams"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.ObservedDataParams" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Section 1: Observed Data Parameters</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.ObservedDataParams.delta">
+<span class="sig-name descname"><span class="pre">delta</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.ObservedDataParams.delta" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.ObservedDataParams.from_dict">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kdellipspy.config_parser.ObservedDataParams" title="kdellipspy.config_parser.ObservedDataParams"><span class="pre">ObservedDataParams</span></a></span></span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#ObservedDataParams.from_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.ObservedDataParams.from_dict" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.ObservedDataParams.npts">
+<span class="sig-name descname"><span class="pre">npts</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kdellipspy.config_parser.ObservedDataParams.npts" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.ObservedDataParams.t1">
+<span class="sig-name descname"><span class="pre">t1</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.ObservedDataParams.t1" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.ObservedDataParams.t2">
+<span class="sig-name descname"><span class="pre">t2</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.ObservedDataParams.t2" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.ObservedDataParams.units">
+<span class="sig-name descname"><span class="pre">units</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#kdellipspy.config_parser.ObservedDataParams.units" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.SourcePosition">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kdellipspy.config_parser.</span></span><span class="sig-name descname"><span class="pre">SourcePosition</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">latitude</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">longitude</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">depth</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strike</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dip</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rake</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#SourcePosition"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.SourcePosition" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Section 2: Source Position &amp; Focal Mechanism</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.SourcePosition.depth">
+<span class="sig-name descname"><span class="pre">depth</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.SourcePosition.depth" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.SourcePosition.dip">
+<span class="sig-name descname"><span class="pre">dip</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.SourcePosition.dip" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.SourcePosition.event_name">
+<span class="sig-name descname"><span class="pre">event_name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#kdellipspy.config_parser.SourcePosition.event_name" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.SourcePosition.from_dict">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kdellipspy.config_parser.SourcePosition" title="kdellipspy.config_parser.SourcePosition"><span class="pre">SourcePosition</span></a></span></span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#SourcePosition.from_dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.SourcePosition.from_dict" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.SourcePosition.latitude">
+<span class="sig-name descname"><span class="pre">latitude</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.SourcePosition.latitude" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.SourcePosition.longitude">
+<span class="sig-name descname"><span class="pre">longitude</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.SourcePosition.longitude" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.SourcePosition.rake">
+<span class="sig-name descname"><span class="pre">rake</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.SourcePosition.rake" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.SourcePosition.strike">
+<span class="sig-name descname"><span class="pre">strike</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.SourcePosition.strike" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.Station">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kdellipspy.config_parser.</span></span><span class="sig-name descname"><span class="pre">Station</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">latitude</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">longitude</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#Station"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.Station" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Individual station parameters</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.Station.height">
+<span class="sig-name descname"><span class="pre">height</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.Station.height" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.Station.latitude">
+<span class="sig-name descname"><span class="pre">latitude</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.Station.latitude" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.Station.longitude">
+<span class="sig-name descname"><span class="pre">longitude</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.Station.longitude" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.Station.name">
+<span class="sig-name descname"><span class="pre">name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#kdellipspy.config_parser.Station.name" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.StationParams">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kdellipspy.config_parser.</span></span><span class="sig-name descname"><span class="pre">StationParams</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">stations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#kdellipspy.config_parser.Station" title="kdellipspy.config_parser.Station"><span class="pre">Station</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#StationParams"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.StationParams" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Section 8: Station Parameters</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.StationParams.from_lines">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_lines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">station_lines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kdellipspy.config_parser.StationParams" title="kdellipspy.config_parser.StationParams"><span class="pre">StationParams</span></a></span></span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#StationParams.from_lines"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.StationParams.from_lines" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.StationParams.stations">
+<span class="sig-name descname"><span class="pre">stations</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#kdellipspy.config_parser.Station" title="kdellipspy.config_parser.Station"><span class="pre">Station</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#kdellipspy.config_parser.StationParams.stations" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.VelocityLayer">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kdellipspy.config_parser.</span></span><span class="sig-name descname"><span class="pre">VelocityLayer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">thickness</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#VelocityLayer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.VelocityLayer" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Single velocity layer</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.VelocityLayer.qp">
+<span class="sig-name descname"><span class="pre">qp</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.VelocityLayer.qp" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.VelocityLayer.qs">
+<span class="sig-name descname"><span class="pre">qs</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.VelocityLayer.qs" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.VelocityLayer.rho">
+<span class="sig-name descname"><span class="pre">rho</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.VelocityLayer.rho" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.VelocityLayer.thickness">
+<span class="sig-name descname"><span class="pre">thickness</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.VelocityLayer.thickness" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.VelocityLayer.vp">
+<span class="sig-name descname"><span class="pre">vp</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.VelocityLayer.vp" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.VelocityLayer.vs">
+<span class="sig-name descname"><span class="pre">vs</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#kdellipspy.config_parser.VelocityLayer.vs" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.VelocityModel">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">kdellipspy.config_parser.</span></span><span class="sig-name descname"><span class="pre">VelocityModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">layers</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#kdellipspy.config_parser.VelocityLayer" title="kdellipspy.config_parser.VelocityLayer"><span class="pre">VelocityLayer</span></a><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#VelocityModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.VelocityModel" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Section 9: Velocity Model 1D</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.VelocityModel.from_lines">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_lines</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">layer_lines</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#kdellipspy.config_parser.VelocityModel" title="kdellipspy.config_parser.VelocityModel"><span class="pre">VelocityModel</span></a></span></span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#VelocityModel.from_lines"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.VelocityModel.from_lines" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.VelocityModel.layers">
+<span class="sig-name descname"><span class="pre">layers</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#kdellipspy.config_parser.VelocityLayer" title="kdellipspy.config_parser.VelocityLayer"><span class="pre">VelocityLayer</span></a><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#kdellipspy.config_parser.VelocityModel.layers" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.VelocityModel.to_numpy">
+<span class="sig-name descname"><span class="pre">to_numpy</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#VelocityModel.to_numpy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.VelocityModel.to_numpy" title="Link to this definition"></a></dt>
+<dd><p>Exporta las capas directamente como una matriz de NumPy (Nx6).
+Este es exactamente el formato que requiere el wrapper de Axitra.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.parse_velocity_model">
+<span class="sig-prename descclassname"><span class="pre">kdellipspy.config_parser.</span></span><span class="sig-name descname"><span class="pre">parse_velocity_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#parse_velocity_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.parse_velocity_model" title="Link to this definition"></a></dt>
+<dd><p>Compatibility helper for existing code path.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.read_input_ctl">
+<span class="sig-prename descclassname"><span class="pre">kdellipspy.config_parser.</span></span><span class="sig-name descname"><span class="pre">read_input_ctl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#read_input_ctl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.read_input_ctl" title="Link to this definition"></a></dt>
+<dd><p>Compatibility helper returning a flat dictionary used by the pipeline.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kdellipspy.config_parser.validate_input_ctl">
+<span class="sig-prename descclassname"><span class="pre">kdellipspy.config_parser.</span></span><span class="sig-name descname"><span class="pre">validate_input_ctl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filepath</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/kdellipspy/config_parser.html#validate_input_ctl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.config_parser.validate_input_ctl" title="Link to this definition"></a></dt>
+<dd><p>Return a concise parse summary for smoke testing.</p>
+</dd></dl>
+
+<dl class="py function" id="module-kdellipspy.signal_utils">
+<dt class="sig sig-object py" id="kdellipspy.signal_utils.bandpass_filter_waveforms">
+<span class="sig-prename descclassname"><span class="pre">kdellipspy.signal_utils.</span></span><span class="sig-name descname"><span class="pre">bandpass_filter_waveforms</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">synthetic</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">time</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">freq1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">freq2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">corners</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zerophase</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="_modules/kdellipspy/signal_utils.html#bandpass_filter_waveforms"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.signal_utils.bandpass_filter_waveforms" title="Link to this definition"></a></dt>
+<dd><p>Apply Butterworth bandpass filter to synthetic waveforms.</p>
+<p>This ensures synthetic waveforms match the frequency band of observed data,
+maintaining consistency in the misfit calculation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>synthetic</strong> – waveform array with shape (n_stations, 3, npts)</p></li>
+<li><p><strong>time</strong> – time array with shape (npts,)</p></li>
+<li><p><strong>freq1</strong> – low frequency cutoff (Hz)</p></li>
+<li><p><strong>freq2</strong> – high frequency cutoff (Hz)</p></li>
+<li><p><strong>corners</strong> – filter order (default 4 = 4th order)</p></li>
+<li><p><strong>zerophase</strong> – if True, apply filter forward-backward for zero phase distortion</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>filtered waveforms with same shape as input</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>filtered_synthetic</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – if time array has &lt; 2 points or freq2 &gt;= Nyquist frequency</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kdellipspy.signal_utils.build_azi_times_array">
+<span class="sig-prename descclassname"><span class="pre">kdellipspy.signal_utils.</span></span><span class="sig-name descname"><span class="pre">build_azi_times_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_ctl_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'input.ctl'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'iasp91'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p_shift_s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s_shift_s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_iris</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">ndarray</span></span></span><a class="reference internal" href="_modules/kdellipspy/signal_utils.html#build_azi_times_array"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.signal_utils.build_azi_times_array" title="Link to this definition"></a></dt>
+<dd><p>Build legacy-compatible azi_times values as an array with columns:
+[azimuth_rad, tP, tS].</p>
+<p>This reproduces the old script behavior while avoiding IRIS network
+requirements by default (use_iris=False).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kdellipspy.signal_utils.load_and_filter_observed_data">
+<span class="sig-prename descclassname"><span class="pre">kdellipspy.signal_utils.</span></span><span class="sig-name descname"><span class="pre">load_and_filter_observed_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">freq1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">freq2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_ctl_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'input.ctl'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'DATA'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prefer_raw</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">ndarray</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="_modules/kdellipspy/signal_utils.html#load_and_filter_observed_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.signal_utils.load_and_filter_observed_data" title="Link to this definition"></a></dt>
+<dd><p>Load observed data with two supported user workflows:</p>
+<ol class="arabic simple">
+<li><p>Flat files in DATA:
+- real_disp_x/y/z  (if input.ctl units=1)
+- real_vel_x/y/z   (if input.ctl units=2)
+Each file must contain 2 columns: time and data,
+and total rows must be npts * nstations.</p></li>
+<li><p>RAW files in DATA/RAW:
+- .sac or .mseed files
+- station name extracted from waveform metadata
+- bandpass filtering using input.ctl frequency band
+- response removal attempted when inventory files are present in RAW</p></li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>ndarray with shape (n_stations, 3, npts)
+time_array: ndarray with shape (npts,)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>observed_waveforms</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="kdellipspy.signal_utils.write_azi_times_file">
+<span class="sig-prename descclassname"><span class="pre">kdellipspy.signal_utils.</span></span><span class="sig-name descname"><span class="pre">write_azi_times_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_ctl_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'input.ctl'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'iasp91'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p_shift_s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">s_shift_s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_iris</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Path</span></span></span><a class="reference internal" href="_modules/kdellipspy/signal_utils.html#write_azi_times_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#kdellipspy.signal_utils.write_azi_times_file" title="Link to this definition"></a></dt>
+<dd><p>Write Event/azi_times.txt with legacy-compatible 3-column format.</p>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to KDEllipsPy’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, alexvillarroel.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
