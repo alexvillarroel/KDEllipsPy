@@ -328,7 +328,31 @@ class NAResult:
 
 
 class NAInversionModel:
-	"""Kinematic inversion orchestrator using neighpy NASearcher."""
+	"""
+	Kinematic Inversion Model using the Neighbourhood Algorithm (NA).
+	(Modelo de Inversión Cinemática utilizando el algoritmo Neighbourhood Algorithm.)
+
+	Integrates observed data, arrival times, and event configuration to evaluate 
+	different kinematic rupture models. It communicates with AXITRA to simulate 
+	synthetic seismograms and calculate the misfit against real data.
+	(Integra los datos observados, tiempos de llegada y configuración del evento 
+	para evaluar distintos modelos de ruptura. Se comunica con AXITRA para simular 
+	sismogramas sintéticos y calcular el error respecto a los datos reales.)
+
+	Attributes:
+		input_ctl_path (str): Path to the configuration file.
+		                      (Ruta al archivo de configuración.)
+		axitra_dir (str): Path to the AXITRA simulation binaries directory.
+		                  (Ruta al directorio de binarios de AXITRA.)
+		observed_waveforms (np.ndarray): Processed and filtered real seismograms.
+		                                 (Sismogramas reales procesados y filtrados.)
+		time_array (np.ndarray): Time vector corresponding to the waveforms.
+		                         (Vector de tiempo correspondiente a las formas de onda.)
+		azi_times_array (np.ndarray): Theoretical arrival times (P/S) per station.
+		                              (Tiempos de llegada teóricos P/S por estación.)
+		param_names (list): Names of the parameters being inverted.
+		                    (Nombres de los parámetros que se están invirtiendo.)
+	"""
 
 	def __init__(
 		self,

@@ -256,8 +256,27 @@ class VelocityModel:
 
 class ConfigParser:
     """
-    Complete parser for kinematic inversion control file (input.ctl)
-    Organizes all 9 sections into logical components
+    Parses and stores the inversion configuration from the 'input.ctl' file.
+    (Parsea y almacena la configuración de la inversión desde el archivo 'input.ctl'.)
+    
+    This class is responsible for reading seismic event parameters, station grids, 
+    filtering frequencies, and Neighbourhood Algorithm (NA) parameters, structuring 
+    them for use throughout the pipeline.
+    (Esta clase es responsable de leer los parámetros del evento sísmico, la grilla 
+    de estaciones, las frecuencias de filtrado y los parámetros del algoritmo NA, 
+    estructurándolos para su uso en el pipeline.)
+
+    Attributes:
+        filepath (str or Path): Path to the 'input.ctl' control file. 
+                                (Ruta al archivo de control 'input.ctl'.)
+        source_position (SourceConfig): Seismic source parameters. 
+                                        (Parámetros de la fuente sísmica.)
+        stations (StationConfig): List and information of stations. 
+                                  (Lista e información de las estaciones.)
+        ellipse (EllipseConfig): Ellipse geometry parameters and frequencies. 
+                                 (Parámetros geométricos de la elipse y frecuencias.)
+        inversion_process (InversionConfig): NA algorithm parameters. 
+                                             (Parámetros del algoritmo de inversión NA.)
     """
 
     def __init__(self, filepath: str):
