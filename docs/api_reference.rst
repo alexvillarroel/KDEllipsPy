@@ -26,11 +26,6 @@ API Reference
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: kdellipspy.inversion
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 .. automodule:: kdellipspy.inversion_na
    :members:
    :undoc-members:
