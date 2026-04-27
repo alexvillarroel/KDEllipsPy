@@ -1,0 +1,33 @@
+#-------------------------------------------------------------------------------
+#       Standard Makefile Macro Setup for NA program and utilities
+#      
+#       Note that you must edit this file to suit your platform 
+#
+#       Platforms where the code has been successfully run with 
+#       identical results: 
+#
+#                Platform                       Compiler
+#                SUN (Solaris)                  native 
+#                SUN (Solaris)                  g77,gcc 
+#                SUN (running SuSe Linux)       g77,gcc 
+#                Compaq Alpha (OSF1 V4.0)       native compiler
+#                PC  Linux                      g77,gcc compiler
+#                SGI                            native compiler
+#
+#       Below is a set of options that I have found work on 
+#       a Sun running Solaris 2.7
+#
+#-------------------------------------------------------------------------------
+#
+CC      = cc      # Replace with gcc if not available
+F77     = ifort    # Replace with gcc if not available
+# pour shadock
+FFLAGS = -fast
+# pour milne ou almaak
+#FFLAGS  = -fast -autopar  -xarch=v8plusa
+#FFLAGS  = -fast -O4 -autopar -xarch=v8plusa -fsimple=2 -xvector -xprefetch    # Compiler options
+#FFLAGS  = -fast -O4 -autopar -xcode=abs64 -xarch=v9a -fsimple=2 -xvector -xprefetch
+CFLAGS  = -O			    # Compiler options
+AR      = ar                        # Replace with equivalent archiver 
+XFLAGS  = -lX11 -lsocket 	    # X library flags 
+MACH    = sun                   # platform type (e.g. sun,dec,gcc,sgi)

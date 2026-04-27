@@ -1,0 +1,20 @@
+   160 160 160           = # grids
+    1600 NT               = # of timesteps           
+     200. DH               = spatial step (meters)      
+    0.005 DT               = time step (seconds)                
+    80  NXSC             = x nodal position for point source
+    80 NYSC             = y nodal position for point source
+    80 NZSC             = z nodal position for point source
+      1 NBGX             = first x node to contain surface receivers    
+    160 NEDX             = last x node to contain surface receivers     
+      1 NSKPX            = skip of nodes containing x receivers        
+      1 NBGY             = first y node to contain surface receivers           
+    160 NEDY             = last y node to contain surface receivers
+      1 NSKPY            = skip of nodes containing y receivers
+     40 NTISKP           = time skip of seismograms
+      0 NDAMP            = size of nodal region for exp damping 
+      0 IFRE             = =0 flat, <>0 irregular free surface
+0       IDEBUG
+0       IBC
+4     DMAX_OLD
+0.0     VMAX

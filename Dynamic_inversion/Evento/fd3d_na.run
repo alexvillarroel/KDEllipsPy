@@ -1,0 +1,19 @@
+#!/bin/sh
+
+#####################################
+#  SCRIPT TO RUN DYNAMIC INVERSION  #
+#####################################
+
+# Removing unecesary files:
+rm -f na.sum na.det na.nad
+rm -f result/*.res > fd3d_na_mpi.out
+
+# Defining number of cores for inversion:
+cores=6
+
+# Run inversion and saving the output:
+date | tee fd3d_na_mpi.out
+MPI_EXEC=/usr/local/openmpi-4.0.5/bin/mpirun
+${MPI_EXEC} --use-hwthread-cpus -np ${cores} ../fd3d_na_mpi | tee -a fd3d_na_mpi.out
+date | tee -a fd3d_na_mpi.out
+

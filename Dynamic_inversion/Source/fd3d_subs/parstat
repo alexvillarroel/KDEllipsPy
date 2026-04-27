@@ -1,0 +1,17 @@
+      parameter(nx=160,ny=160,nz=160,nt0=400)
+
+      common/disp/u1(nx,ny,nz),v1(nx,ny,nz),w1(nx,ny,nz),
+     +  u2(nx,ny,nz),v2(nx,ny,nz),w2(nx,ny,nz)
+     +	,a1(nx),a2(ny),a3(nz),jj1(nx,ny)
+     
+
+
+      real d1,mu1,lam1
+      common/model/d1(nx,ny,nz),mu1(nx,ny,nz),lam1(nx,ny,nz)
+
+      common/stress/xx(nx,ny,nz),zz(nx,ny,nz),yy(nx,ny,nz),
+     +	xy(nx,ny,nz),yz(nx,ny,nz),xz(nx,ny,nz)
+     
+      common/strini/strinix(nx,ny),striniy(nx,ny),
+     +  peak_xz(nx,ny),peak_yz(nx,ny)
+

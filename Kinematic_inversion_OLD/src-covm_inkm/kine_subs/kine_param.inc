@@ -1,0 +1,1 @@
+../kine_param.inc

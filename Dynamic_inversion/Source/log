@@ -1,0 +1,295 @@
+cd fd3d_subs; make -f Makefile
+make[1]: Entering directory `/home/carlos/TestNov2014/Source/fd3d_subs'
+make[1]: Nothing to be done for `fd3d_subs'.
+make[1]: Leaving directory `/home/carlos/TestNov2014/Source/fd3d_subs'
+/usr/local/pub/openmpiintel/bin/mpif77   -DMPI=1            -O4 -c NA_src/na.F
+NA_src/na.F:983.42:
+
+           call NA_sobol(lu_sob,nd*ncells,dummy,1,1)                    
+                                          1
+Warning: Rank mismatch in argument 'x' at (1) (rank-1 and scalar)
+NA_src/na.F:1133.17:
+
+     &           header,misfit,na_models)                               
+                 1
+Warning: Rank mismatch in argument 'header' at (1) (scalar and rank-1)
+NA_src/na.F:1844.34:
+
+           call NA_sobol(ldummy,i,ran,1,0)                              
+                                  1
+Warning: Rank mismatch in argument 'x' at (1) (rank-1 and scalar)
+NA_src/na.F:501.26:
+
+     &       (lu_nad,fnme,header,nh_max,nh,nd,                          
+                          1
+Warning: Rank mismatch in argument 'header' at (1) (scalar and rank-1)
+/usr/local/pub/openmpiintel/bin/mpif77   -DMPI=1            -O4 -o fd3d_na_mpi fd3d_na.f \
+na.o fd3d_subs/fd3d_theo.o  fd3d_subs/deriv.o fd3d_subs/fsource.o fd3d_subs/fft2cd.o fd3d_subs/four1.o fd3d_subs/XAPIIR.o fd3d_subs/forward_modelling.o fd3d_subs/calcmisfit.o fd3d_subs/display_model.o fd3d_subs/display_final.o fd3d_subs/ll2km.o fd3d_subs/convm_dynsource.o fd3d_subs/output_summary.o fd3d_subs/lofw.o fd3d_subs/mkpeak.o fd3d_subs/mkstress.o 
+fd3d_subs/fd3d_theo.o: In function `indyna3d_':
+fd3d_theo.f:(.text+0x95): undefined reference to `for_open'
+fd3d_theo.f:(.text+0xea): undefined reference to `for_open'
+fd3d_theo.f:(.text+0x164): undefined reference to `for_write_int_fmt'
+fd3d_theo.f:(.text+0x1b3): undefined reference to `for_open'
+fd3d_theo.f:(.text+0x201): undefined reference to `for_read_seq_lis'
+fd3d_theo.f:(.text+0x227): undefined reference to `for_read_seq_lis_xmit'
+fd3d_theo.f:(.text+0x24d): undefined reference to `for_read_seq_lis_xmit'
+fd3d_theo.f:(.text+0x28c): undefined reference to `for_read_seq_lis'
+fd3d_theo.f:(.text+0x2cf): undefined reference to `for_read_seq_lis'
+fd3d_theo.f:(.text+0x30e): undefined reference to `for_read_seq_lis'
+fd3d_theo.f:(.text+0x355): undefined reference to `for_read_seq_lis'
+fd3d_theo.f:(.text+0x39c): undefined reference to `for_read_seq_lis'
+fd3d_subs/fd3d_theo.o:fd3d_theo.f:(.text+0x3e3): more undefined references to `for_read_seq_lis' follow
+fd3d_subs/fd3d_theo.o: In function `indyna3d_':
+fd3d_theo.f:(.text+0x7a8): undefined reference to `for_close'
+fd3d_theo.f:(.text+0x803): undefined reference to `for_open'
+fd3d_theo.f:(.text+0x8a0): undefined reference to `for_read_seq_lis'
+fd3d_theo.f:(.text+0x8c2): undefined reference to `for_read_seq_lis_xmit'
+fd3d_theo.f:(.text+0x8e4): undefined reference to `for_read_seq_lis_xmit'
+fd3d_theo.f:(.text+0x98a): undefined reference to `for_close'
+fd3d_theo.f:(.text+0x1142): undefined reference to `for_write_seq_fmt'
+fd3d_theo.f:(.text+0x11bc): undefined reference to `for_write_seq_fmt_xmit'
+fd3d_theo.f:(.text+0x11f3): undefined reference to `for_write_seq_fmt_xmit'
+fd3d_theo.f:(.text+0x147c): undefined reference to `for_close'
+fd3d_theo.f:(.text+0x14ae): undefined reference to `for_close'
+fd3d_theo.f:(.text+0x14e0): undefined reference to `for_close'
+fd3d_theo.f:(.text+0x1512): undefined reference to `for_close'
+fd3d_theo.f:(.text+0x1544): undefined reference to `for_close'
+fd3d_subs/fd3d_theo.o:fd3d_theo.f:(.text+0x1576): more undefined references to `for_close' follow
+fd3d_subs/fd3d_theo.o: In function `indyna3d_':
+fd3d_theo.f:(.text+0x16f6): undefined reference to `for_open'
+fd3d_theo.f:(.text+0x1751): undefined reference to `for_open'
+fd3d_theo.f:(.text+0x17ac): undefined reference to `for_open'
+fd3d_theo.f:(.text+0x187e): undefined reference to `for_write_seq_lis'
+fd3d_theo.f:(.text+0x18d0): undefined reference to `for_write_seq_lis'
+fd3d_theo.f:(.text+0x1914): undefined reference to `for_write_seq_lis'
+fd3d_theo.f:(.text+0x199d): undefined reference to `for_close'
+fd3d_theo.f:(.text+0x19cf): undefined reference to `for_close'
+fd3d_theo.f:(.text+0x1a01): undefined reference to `for_close'
+fd3d_theo.f:(.text+0x1b2c): undefined reference to `for_write_seq_fmt'
+fd3d_theo.f:(.text+0x1c53): undefined reference to `for_write_seq_fmt'
+fd3d_theo.f:(.text+0x205f): undefined reference to `for_open'
+fd3d_theo.f:(.text+0x20ae): undefined reference to `for_open'
+fd3d_theo.f:(.text+0x20fd): undefined reference to `for_open'
+fd3d_subs/fd3d_theo.o: In function `wrss3d_':
+fd3d_theo.f:(.text+0x220b): undefined reference to `for_write_seq_fmt'
+fd3d_theo.f:(.text+0x2271): undefined reference to `for_write_seq_fmt_xmit'
+fd3d_theo.f:(.text+0x229c): undefined reference to `for_write_seq_fmt_xmit'
+fd3d_theo.f:(.text+0x23b2): undefined reference to `for_write_seq_fmt'
+fd3d_theo.f:(.text+0x2486): undefined reference to `for_write_seq_fmt'
+fd3d_subs/fd3d_theo.o: In function `rdmd3d_':
+fd3d_theo.f:(.text+0x2547): undefined reference to `for_open'
+fd3d_theo.f:(.text+0x25a0): undefined reference to `for_read_seq_lis'
+fd3d_theo.f:(.text+0x25c1): undefined reference to `for_read_seq_lis_xmit'
+fd3d_theo.f:(.text+0x25e2): undefined reference to `for_read_seq_lis_xmit'
+fd3d_theo.f:(.text+0x26b8): undefined reference to `for_close'
+fd3d_subs/fd3d_theo.o: In function `rddt3d_':
+fd3d_theo.f:(.text+0x291b): undefined reference to `for_read_seq_lis'
+fd3d_theo.f:(.text+0x2933): undefined reference to `for_read_seq_lis_xmit'
+fd3d_theo.f:(.text+0x294b): undefined reference to `for_read_seq_lis_xmit'
+fd3d_theo.f:(.text+0x297c): undefined reference to `for_read_seq_lis'
+fd3d_theo.f:(.text+0x29ad): undefined reference to `for_read_seq_lis'
+fd3d_theo.f:(.text+0x29de): undefined reference to `for_read_seq_lis'
+fd3d_theo.f:(.text+0x2a17): undefined reference to `for_read_seq_lis'
+fd3d_theo.f:(.text+0x2a50): undefined reference to `for_read_seq_lis'
+fd3d_subs/fd3d_theo.o:fd3d_theo.f:(.text+0x2a8f): more undefined references to `for_read_seq_lis' follow
+fd3d_subs/fd3d_theo.o: In function `rddt3d_':
+fd3d_theo.f:(.text+0x2dec): undefined reference to `for_close'
+fd3d_subs/fd3d_theo.o: In function `open3d_':
+fd3d_theo.f:(.text+0x2ea8): undefined reference to `for_close'
+fd3d_theo.f:(.text+0x2eda): undefined reference to `for_close'
+fd3d_theo.f:(.text+0x2f0c): undefined reference to `for_close'
+fd3d_theo.f:(.text+0x2f3e): undefined reference to `for_close'
+fd3d_subs/fd3d_theo.o:fd3d_theo.f:(.text+0x2f70): more undefined references to `for_close' follow
+fd3d_subs/fd3d_theo.o: In function `open3d_':
+fd3d_theo.f:(.text+0x30f7): undefined reference to `for_open'
+fd3d_theo.f:(.text+0x3146): undefined reference to `for_open'
+fd3d_theo.f:(.text+0x31bc): undefined reference to `for_write_int_fmt'
+fd3d_theo.f:(.text+0x320b): undefined reference to `for_open'
+fd3d_theo.f:(.text+0x3264): undefined reference to `for_open'
+fd3d_theo.f:(.text+0x32b3): undefined reference to `for_open'
+fd3d_theo.f:(.text+0x3302): undefined reference to `for_open'
+fd3d_subs/fd3d_theo.o: In function `wrpm3d_':
+fd3d_theo.f:(.text+0x339b): undefined reference to `for_write_seq_fmt'
+fd3d_theo.f:(.text+0x33db): undefined reference to `for_write_seq_fmt'
+fd3d_theo.f:(.text+0x3419): undefined reference to `for_write_seq_fmt'
+fd3d_theo.f:(.text+0x3458): undefined reference to `for_write_seq_fmt'
+fd3d_theo.f:(.text+0x349d): undefined reference to `for_write_seq_fmt'
+fd3d_subs/fd3d_theo.o:fd3d_theo.f:(.text+0x34da): more undefined references to `for_write_seq_fmt' follow
+fd3d_subs/fd3d_theo.o: In function `wrpm3d_':
+fd3d_theo.f:(.text+0x3c4c): undefined reference to `for_write_seq_lis'
+fd3d_theo.f:(.text+0x3c8a): undefined reference to `for_write_seq_lis'
+fd3d_theo.f:(.text+0x3cc8): undefined reference to `for_write_seq_lis'
+fd3d_theo.f:(.text+0x3d06): undefined reference to `for_write_seq_lis'
+fd3d_theo.f:(.text+0x3d24): undefined reference to `for_write_seq_lis_xmit'
+fd3d_theo.f:(.text+0x3d42): undefined reference to `for_write_seq_lis_xmit'
+fd3d_theo.f:(.text+0x3d60): undefined reference to `for_write_seq_lis_xmit'
+fd3d_theo.f:(.text+0x3d9e): undefined reference to `for_write_seq_lis'
+fd3d_theo.f:(.text+0x3dbc): undefined reference to `for_write_seq_lis_xmit'
+fd3d_theo.f:(.text+0x3dd9): undefined reference to `for_write_seq_lis_xmit'
+fd3d_theo.f:(.text+0x3df6): undefined reference to `for_write_seq_lis_xmit'
+fd3d_theo.f:(.text+0x3e3d): undefined reference to `for_write_seq_lis'
+fd3d_theo.f:(.text+0x3e64): undefined reference to `for_write_seq_lis_xmit'
+fd3d_theo.f:(.text+0x3eab): undefined reference to `for_write_seq_lis'
+fd3d_theo.f:(.text+0x3ed2): undefined reference to `for_write_seq_lis_xmit'
+fd3d_subs/deriv.o: In function `dxyz3d_':
+deriv.f:(.text+0x215): undefined reference to `__svml_expf4'
+deriv.f:(.text+0x320): undefined reference to `__svml_expf4'
+deriv.f:(.text+0x3f2): undefined reference to `__svml_expf4'
+fd3d_subs/deriv.o: In function `dazz3d_':
+deriv.f:(.text+0x5e4): undefined reference to `__svml_expf4'
+deriv.f:(.text+0x6cc): undefined reference to `__svml_expf4'
+fd3d_subs/deriv.o:deriv.f:(.text+0x76d): more undefined references to `__svml_expf4' follow
+fd3d_subs/fsource.o: In function `fsource_':
+fsource.f:(.text+0xaad): undefined reference to `for_read_seq_lis'
+fsource.f:(.text+0xaca): undefined reference to `for_read_seq_lis_xmit'
+fd3d_subs/fft2cd.o: In function `fft2cd_':
+fft2cd.f:(.text+0x292): undefined reference to `__libm_sse2_sincos'
+fd3d_subs/XAPIIR.o: In function `design_..0':
+XAPIIR.f:(.text+0x427): undefined reference to `for_cpstr'
+XAPIIR.f:(.text+0x447): undefined reference to `for_cpstr'
+XAPIIR.f:(.text+0x467): undefined reference to `for_cpstr'
+XAPIIR.f:(.text+0x487): undefined reference to `for_cpstr'
+XAPIIR.f:(.text+0x594): undefined reference to `__libm_sse2_sincosf'
+XAPIIR.f:(.text+0x64b): undefined reference to `__powr4i4'
+XAPIIR.f:(.text+0x75a): undefined reference to `__libm_sse2_sincosf'
+XAPIIR.f:(.text+0x938): undefined reference to `__libm_sse2_sincosf'
+XAPIIR.f:(.text+0x9aa): undefined reference to `for_cpstr'
+XAPIIR.f:(.text+0xa91): undefined reference to `for_cpstr'
+XAPIIR.f:(.text+0xf15): undefined reference to `for_cpstr'
+XAPIIR.f:(.text+0x10ae): undefined reference to `for_cpstr'
+XAPIIR.f:(.text+0x1215): undefined reference to `for_cpstr'
+fd3d_subs/XAPIIR.o:XAPIIR.f:(.text+0x13d1): more undefined references to `for_cpstr' follow
+fd3d_subs/XAPIIR.o: In function `design_':
+XAPIIR.f:(.text+0x3274): undefined reference to `__libm_sse2_sincosf'
+XAPIIR.f:(.text+0x332b): undefined reference to `__powr4i4'
+XAPIIR.f:(.text+0x343a): undefined reference to `__libm_sse2_sincosf'
+XAPIIR.f:(.text+0x3618): undefined reference to `__libm_sse2_sincosf'
+XAPIIR.f:(.text+0x368a): undefined reference to `for_cpstr'
+XAPIIR.f:(.text+0x3771): undefined reference to `for_cpstr'
+XAPIIR.f:(.text+0x3bf5): undefined reference to `for_cpstr'
+XAPIIR.f:(.text+0x3d8e): undefined reference to `for_cpstr'
+XAPIIR.f:(.text+0x3ef5): undefined reference to `for_cpstr'
+fd3d_subs/XAPIIR.o:XAPIIR.f:(.text+0x40b1): more undefined references to `for_cpstr' follow
+fd3d_subs/XAPIIR.o: In function `c2roots_':
+XAPIIR.f:(.text+0x6c8e): undefined reference to `__libm_sse2_sincosf'
+fd3d_subs/XAPIIR.o: In function `c1roots_':
+XAPIIR.f:(.text+0x6ea8): undefined reference to `__libm_sse2_sincosf'
+fd3d_subs/XAPIIR.o: In function `chebparm_':
+XAPIIR.f:(.text+0x6fd3): undefined reference to `__powr4i4'
+fd3d_subs/XAPIIR.o: In function `buroots_':
+XAPIIR.f:(.text+0x7433): undefined reference to `__libm_sse2_sincosf'
+fd3d_subs/forward_modelling.o: In function `forward_modelling_':
+forward_modelling.f:(.text+0x26b): undefined reference to `_intel_fast_memset'
+fd3d_subs/display_model.o: In function `display_model_':
+display_model.f:(.text+0x4c): undefined reference to `for_write_seq_fmt'
+display_model.f:(.text+0x66): undefined reference to `for_write_seq_fmt_xmit'
+display_model.f:(.text+0xad): undefined reference to `for_write_seq_fmt'
+display_model.f:(.text+0xc9): undefined reference to `for_write_seq_fmt_xmit'
+fd3d_subs/display_final.o: In function `display_final_':
+display_final.f:(.text+0x3d): undefined reference to `for_write_seq_fmt'
+display_final.f:(.text+0x8f): undefined reference to `for_write_seq_fmt'
+display_final.f:(.text+0xaa): undefined reference to `for_write_seq_fmt_xmit'
+fd3d_subs/ll2km.o: In function `projlcc_':
+ll2km.f:(.text+0x159): undefined reference to `__libm_sse2_sincosf'
+fd3d_subs/convm_dynsource.o: In function `seismograms_':
+convm_dynsource.f:(.text+0xb6): undefined reference to `for_open'
+convm_dynsource.f:(.text+0x2c0): undefined reference to `for_read_seq_nml'
+convm_dynsource.f:(.text+0x3c7): undefined reference to `for_open'
+convm_dynsource.f:(.text+0x43a): undefined reference to `for_open'
+convm_dynsource.f:(.text+0x4ad): undefined reference to `for_open'
+convm_dynsource.f:(.text+0x4df): undefined reference to `for_read_seq_lis'
+convm_dynsource.f:(.text+0x547): undefined reference to `for_read_seq_lis'
+convm_dynsource.f:(.text+0x57d): undefined reference to `for_read_seq_lis_xmit'
+convm_dynsource.f:(.text+0x5b3): undefined reference to `for_read_seq_lis_xmit'
+convm_dynsource.f:(.text+0x5e9): undefined reference to `for_read_seq_lis_xmit'
+convm_dynsource.f:(.text+0x61f): undefined reference to `for_read_seq_lis_xmit'
+convm_dynsource.f:(.text+0x655): undefined reference to `for_read_seq_lis_xmit'
+convm_dynsource.f:(.text+0x693): undefined reference to `for_read_seq_lis'
+convm_dynsource.f:(.text+0x700): undefined reference to `for_read_seq_lis'
+convm_dynsource.f:(.text+0x736): undefined reference to `for_read_seq_lis_xmit'
+convm_dynsource.f:(.text+0x76c): undefined reference to `for_read_seq_lis_xmit'
+convm_dynsource.f:(.text+0x7a2): undefined reference to `for_read_seq_lis_xmit'
+convm_dynsource.f:(.text+0x85b): undefined reference to `for_read_seq_lis'
+convm_dynsource.f:(.text+0x889): undefined reference to `for_read_seq_lis_xmit'
+convm_dynsource.f:(.text+0x8b7): undefined reference to `for_read_seq_lis_xmit'
+convm_dynsource.f:(.text+0x8e5): undefined reference to `for_read_seq_lis_xmit'
+convm_dynsource.f:(.text+0x913): undefined reference to `for_read_seq_lis_xmit'
+convm_dynsource.f:(.text+0x941): undefined reference to `for_read_seq_lis_xmit'
+fd3d_subs/convm_dynsource.o:convm_dynsource.f:(.text+0x96f): more undefined references to `for_read_seq_lis_xmit' follow
+fd3d_subs/convm_dynsource.o: In function `seismograms_':
+convm_dynsource.f:(.text+0xa55): undefined reference to `for_read_seq_lis'
+convm_dynsource.f:(.text+0xa8b): undefined reference to `for_read_seq_lis_xmit'
+convm_dynsource.f:(.text+0xac1): undefined reference to `for_read_seq_lis_xmit'
+convm_dynsource.f:(.text+0xaff): undefined reference to `for_close'
+convm_dynsource.f:(.text+0xb31): undefined reference to `for_close'
+convm_dynsource.f:(.text+0xb63): undefined reference to `for_close'
+convm_dynsource.f:(.text+0xb95): undefined reference to `for_close'
+convm_dynsource.f:(.text+0xd24): undefined reference to `__libm_sse2_sincosf'
+convm_dynsource.f:(.text+0xd44): undefined reference to `__libm_sse2_sincosf'
+convm_dynsource.f:(.text+0xd64): undefined reference to `__libm_sse2_sincosf'
+convm_dynsource.f:(.text+0xfef): undefined reference to `for_write_int_fmt'
+convm_dynsource.f:(.text+0x1062): undefined reference to `for_open'
+convm_dynsource.f:(.text+0x1121): undefined reference to `_intel_fast_memset'
+convm_dynsource.f:(.text+0x1394): undefined reference to `for_read_seq_lis'
+convm_dynsource.f:(.text+0x143e): undefined reference to `_intel_fast_memset'
+convm_dynsource.f:(.text+0x14f0): undefined reference to `_intel_fast_memset'
+convm_dynsource.f:(.text+0x159d): undefined reference to `for_close'
+convm_dynsource.f:(.text+0x20ed): undefined reference to `for_write_int_fmt'
+convm_dynsource.f:(.text+0x2486): undefined reference to `_intel_fast_memcpy'
+convm_dynsource.f:(.text+0x24ae): undefined reference to `_intel_fast_memcpy'
+convm_dynsource.f:(.text+0x24d5): undefined reference to `_intel_fast_memcpy'
+convm_dynsource.f:(.text+0x2534): undefined reference to `for_close'
+convm_dynsource.f:(.text+0x26ce): undefined reference to `for_close'
+convm_dynsource.f:(.text+0x2700): undefined reference to `for_close'
+convm_dynsource.f:(.text+0x2732): undefined reference to `for_close'
+convm_dynsource.f:(.text+0x279b): undefined reference to `for_write_seq_lis'
+convm_dynsource.f:(.text+0x2807): undefined reference to `for_write_seq_lis'
+convm_dynsource.f:(.text+0x284e): undefined reference to `for_write_seq_lis'
+convm_dynsource.f:(.text+0x2895): undefined reference to `for_write_seq_lis'
+convm_dynsource.f:(.text+0x2921): undefined reference to `for_open'
+convm_dynsource.f:(.text+0x2994): undefined reference to `for_open'
+convm_dynsource.f:(.text+0x2a07): undefined reference to `for_open'
+convm_dynsource.f:(.text+0x2a77): undefined reference to `for_open'
+convm_dynsource.f:(.text+0x2d7c): undefined reference to `for_open'
+fd3d_subs/convm_dynsource.o: In function `cmoment_':
+convm_dynsource.f:(.text+0x2f66): undefined reference to `__libm_sse2_sincosf'
+convm_dynsource.f:(.text+0x2f7d): undefined reference to `__libm_sse2_sincosf'
+convm_dynsource.f:(.text+0x2f94): undefined reference to `__libm_sse2_sincosf'
+fd3d_subs/convm_dynsource.o: In function `readaxires_':
+convm_dynsource.f:(.text+0x31d0): undefined reference to `for_open'
+convm_dynsource.f:(.text+0x33d9): undefined reference to `for_read_seq_nml'
+convm_dynsource.f:(.text+0x340b): undefined reference to `for_close'
+convm_dynsource.f:(.text+0x347e): undefined reference to `for_open'
+convm_dynsource.f:(.text+0x355e): undefined reference to `for_read_seq'
+convm_dynsource.f:(.text+0x35d2): undefined reference to `for_read_seq'
+convm_dynsource.f:(.text+0x3646): undefined reference to `for_read_seq'
+convm_dynsource.f:(.text+0x385b): undefined reference to `for_close'
+convm_dynsource.f:(.text+0x38c4): undefined reference to `for_write_seq_lis'
+fd3d_subs/output_summary.o: In function `output_summary_':
+output_summary.f:(.text+0x60): undefined reference to `for_write_seq_fmt'
+output_summary.f:(.text+0x96): undefined reference to `for_write_seq_fmt'
+output_summary.f:(.text+0xb0): undefined reference to `for_write_seq_fmt_xmit'
+output_summary.f:(.text+0xd1): undefined reference to `for_write_seq_fmt_xmit'
+output_summary.f:(.text+0xf2): undefined reference to `for_write_seq_fmt_xmit'
+output_summary.f:(.text+0x113): undefined reference to `for_write_seq_fmt_xmit'
+output_summary.f:(.text+0x134): undefined reference to `for_write_seq_fmt_xmit'
+output_summary.f:(.text+0x18a): undefined reference to `for_write_seq_fmt'
+output_summary.f:(.text+0x1a6): undefined reference to `for_write_seq_fmt_xmit'
+output_summary.f:(.text+0x1dd): undefined reference to `for_write_seq_lis'
+fd3d_subs/mkpeak.o: In function `mkpeak_':
+mkpeak.f:(.text+0xa3): undefined reference to `_intel_fast_memset'
+mkpeak.f:(.text+0x281): undefined reference to `__svml_sincosf4'
+mkpeak.f:(.text+0x3c7): undefined reference to `__svml_sincosf4'
+mkpeak.f:(.text+0x575): undefined reference to `__svml_sincosf4'
+mkpeak.f:(.text+0x689): undefined reference to `for_write_seq_lis'
+mkpeak.f:(.text+0x6ed): undefined reference to `for_close'
+mkpeak.f:(.text+0x7a7): undefined reference to `for_open'
+fd3d_subs/mkstress.o: In function `mkstress_':
+mkstress.f:(.text+0x27d): undefined reference to `__svml_sincosf4'
+mkstress.f:(.text+0x3c1): undefined reference to `__svml_sincosf4'
+mkstress.f:(.text+0x572): undefined reference to `__svml_sincosf4'
+mkstress.f:(.text+0x6c6): undefined reference to `for_write_seq_lis'
+mkstress.f:(.text+0x73f): undefined reference to `for_close'
+mkstress.f:(.text+0x7c1): undefined reference to `for_open'
+collect2: error: ld returned 1 exit status
+make: *** [fd3d_na_mpi] Error 1

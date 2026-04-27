@@ -1,0 +1,38 @@
+
+   Summary information of Neighbourhood algorithm performance
+
+------------------------------------------------------------------------
+
+  Options set:
+
+  Neighbourhood Algorithm
+  Initial sample size           :            6
+  Sample size                   :            6
+  Total number of iterations    :         5000
+  Number of cells re-sampled    :            6
+  Total number of models        :        30006
+  Random seed value             :       113341
+  Pseudo-random sequence 
+  Starting models generated randomly 
+
+------------------------------------------------------------------------
+
+Parameter space details:
+
+  Number of dimensions           :           10
+  
+  Parameter ranges
+    Number   Minimum     Maximum    A-prior cov Scaled min  Scaled max
+      1    0.250000E+02   0.700000E+02   0.450000E+02   0.000000E+00   0.100000E+01
+      2    0.250000E+02   0.700000E+02   0.450000E+02   0.000000E+00   0.100000E+01
+      3    0.300000E+02   0.130000E+03   0.100000E+03   0.000000E+00   0.100000E+01
+      4    0.300000E+02   0.130000E+03   0.100000E+03   0.000000E+00   0.100000E+01
+      5    0.000000E+00   0.628000E+01   0.628000E+01   0.000000E+00   0.100000E+01
+      6    0.500000E+01   0.200000E+02   0.150000E+02   0.000000E+00   0.100000E+01
+      7    0.105000E+01   0.150000E+01   0.450000E+00   0.000000E+00   0.100000E+01
+      8    0.105000E+01   0.150000E+01   0.450000E+00   0.000000E+00   0.100000E+01
+      9    0.600000E+01   0.110000E+02   0.500000E+01   0.000000E+00   0.100000E+01
+     10    0.100000E+00   0.600000E+00   0.500000E+00   0.000000E+00   0.100000E+01
+
+------------------------------------------------------------------------
+

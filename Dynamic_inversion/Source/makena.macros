@@ -1,0 +1,31 @@
+#-------------------------------------------------------------------------------
+#       Standard Makefile Macro Setup for NA program and utilities
+#      
+#       Note that you must edit this file to suit your platform 
+#
+#       Platforms where the code has been successfully run with 
+#       identical results: 
+#
+#                Platform                       Compiler
+#                SUN (Solaris)                  native 
+#                SUN (Solaris)                  g77,gcc 
+#                SUN (running SuSe Linux)       g77,gcc 
+#                Compaq Alpha (OSF1 V4.0)       native compiler
+#                PC  Linux                      g77,gcc compiler
+#                SGI                            native compiler
+#
+#	Options that have worked on a linux system using GNU compilers gcc, g77
+#
+#-------------------------------------------------------------------------------
+#
+CC      = gcc                   # C compiler
+F77     = gofrtran                 # Fortran compiler
+FFLAGS  = -O3                   # Fortran compiler options
+CFLAGS  = -O		        # C compiler options
+AR      = /usr/bin/ar           # Archiver
+XFLAGS  =-L/usr/lib64 -lX11     # X library flags
+X       = yes                   # Compile X-utility programs (yes,no)
+MACH    = lin                   # Platform type (e.g. sun,dec,gnu,sgi,lin)
+TYPE    = mpi                   # installation type (e.g. serial or mpi)
+MF77    = /usr/local/openmpi-4.0.5/bin/mpif77        # MPI fortran compiler (only used if TYPE=mpi)
+saclib  = /home/sladen/sacio.a

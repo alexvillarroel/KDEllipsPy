@@ -1,0 +1,6 @@
+#
+# Input file for receiver function inversion specific information
+#
+fd3d_param                              /* input model */
+512
+8

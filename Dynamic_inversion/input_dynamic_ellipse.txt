@@ -1,0 +1,65 @@
+INPUT PARAMETERS FOR DYNAMIC INVERSION:
+=======================================
+
+
+-------------------------------------------------------------------------------------------------
+ OBSERVED DATA PARAMETERS: (Time window (t1-t2); Npts; Delta; Units (displacement=1, velocity=2))
+0.0 128 512 0.25 2
+
+
+-----------------------------------------
+ SOURCE POSITION: (Lat; Lon; Depth; Name)
+-23.2470  -68.530  123.400  Event Calama 2020 INTRAPLATE
+
+
+---------------------------------------------------------
+ SELECTED PLANE FROM FOCAL MECHANISM: (Strike; Dip; Rake)
+333 60 -91
+
+
+--------------------------------------------------------------------------------
+ FAULT PLANE PARAMETERS: (Length along strike and dip [km]; Hipocenter position; 
+ Number of subfaults along strike and dip):
+32000 32000
+16000 16000
+40 40
+
+
+-------------------------------
+ FREQUENCY BAND: (Freq1; Freq2)
+0.02 0.1
+
+
+------------------------------------------------------------------------------------
+ INVERSION PROCESS PARAMETERS: (Algorithm type (NA=0 or MC=1); Number of iterations; 
+ sample size for iterations; cells to re-sample; number of cores)
+0 5000 6 6 6
+
+
+---------------------------------------------------------------------------------------------------
+ PARAMETERS TO INVERT: (Length of axis 1 and 2 [points]; Position of center (x,y); Angle [radians]; 
+ Te [MPa]; cte1 (Tu=cte1*Te); cte2 (Tu'=cte2*Tu); Nucleation radius [points]; Dc/2 [m])
+10 10 0 -1
+25 70 1
+25 70 1
+30 130 1
+30 130 1
+0 6.28 1
+5 20 1  
+1.05 1.5 1 
+1.05 1.5 1 
+6 11 1
+0.1 0.6 1 
+
+
+--------------------------------------------------------------------------------------
+ STATION PARAMETERS: (Number of stations; Positions and names (Lat; Lon; Height; Name)
+8
+dst -27.3612  -70.3390  0.00000 A05C
+dst -26.1479  -70.5987  0.00000 AC01
+dst -26.8355  -69.1291  0.00000 AC02
+dst -22.8528  -70.2023  0.00000 PB05
+dst -22.7058  -69.5717  0.00000 PB06
+dst -20.1411  -69.1535  0.00000 PB08
+dst -23.9048  -69.2900  0.00000 PB19
+dst -20.2393  -70.0540  0.00000 T15A

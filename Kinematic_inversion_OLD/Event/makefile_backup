@@ -1,0 +1,38 @@
+FFLAGS= -g
+#FF= f77 -fast -O4 -autopar -xarch=v8plusa -fsimple=2 -xvector -xprefetch
+FF= g77 -ff90  -O4
+LIBSAC= /usr/local/SAC2000/lib/sacio.a
+#LIBSAC= /net/quake/local/lib/libsac.a
+#LIBSAC= sac.a
+
+faille:faille.o
+	$(FF) faille.o -o faille
+
+stations:stations.o
+	$(FF) stations.o -o stations
+
+axitra:axitra.o initdata.o reflect0.o reflect1.o reflect2.o reflect3.o reflect4.o reflect5.o ff0ad.o
+	$(FF) -O axitra.o initdata.o reflect0.o reflect1.o reflect2.o reflect3.o reflect4.o reflect5.o ff0ad.o -o axitra
+
+convm:convm.o fsource.o ll2km.o fft2cd.o
+	$(FF) -O convm.o fsource.o ll2km.o fft2cd.o -o convm $(LIBSAC)
+
+convmdat:convmdat.o fsource.o ll2km.o fft2cd.o
+	$(FF) -O convmdat.o fsource.o ll2km.o fft2cd.o -o convmdat
+
+convmtest:convmtest.o fsource.o ll2km.o fft2cd.o
+	$(FF) -O convmtest.o fsource.o ll2km.o fft2cd.o -o convmtest
+
+convm_old:convm_old.o fsource.o ll2km.o fft2cd.o
+	$(FF) -O convm_old.o fsource.o ll2km.o fft2cd.o -o convm_old $(LIBSAC)
+
+convm_dyn:convm_dyn.o fsource.o ll2km.o fft2cd.o convolution.o
+	$(FF) -O convm_dyn.o fsource.o ll2km.o fft2cd.o convolution.o -o convm_dyn $(LIBSAC)
+
+convm_decomp:convm_decomp.o fsource.o ll2km.o fft2cd.o convolution2.o
+	$(FF) -O convm_decomp.o fsource.o ll2km.o fft2cd.o convolution2.o -o convm_decomp $(LIBSAC)
+
+SUFFIXES: .f .o
+.f.o:
+	$(FF)  -c  ${FFLAGS}  $*.f
+

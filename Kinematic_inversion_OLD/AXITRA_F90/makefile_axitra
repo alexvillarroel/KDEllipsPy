@@ -1,0 +1,36 @@
+#!make
+
+include ~/.rctmp/makefile_compiler_options_f
+include ~/.rctmp/makefile_compiler_options_c
+include ~/.rctmp/makefile_building
+include ~/.rctmp/makefile_job_managing
+include ~/.rctmp/makefile_clean_compile
+
+axitra:
+	$(FLf90) -c axitra_module.f90
+	$(FLf90) -c axitra.f90
+	$(FLf90) -c initdata.f90
+	$(FLf90) -c reflect0.f90
+	$(FLf90) -c reflect1.f90
+	$(FLf90) -c reflect2.f90
+	$(FLf90) -c reflect3.f90
+	$(FLf90) -c reflect4.f90
+	$(FLf90) -c reflect5.f90
+	$(FLf90) -c ff01ad.f90
+	$(FLf90) -c ff02ad.f90
+	$(FFf90)$ -o axitra.out axitra_module.o axitra.o initdata.o reflect0.o reflect1.o reflect2.o reflect3.o reflect4.o reflect5.o ff01ad.o ff02ad.o 
+
+convm:
+	$(FLf90) -c convm.f90
+	$(FLf90) -c fsource.f90
+	$(FLf90) -c fft2cd.f90
+	$(FLf90) -o convm.out convm.o fsource.o fft2cd.o
+sismo:
+	$(FFf90) -o sismo.out sismo.f90
+
+all:	clean_compile axitra convm sismo
+	/bin/rm -f *.mod *.o > /dev/null
+
+clean:	clean_compile
+	/bin/rm -f axitra.out convm.out sismo.out > /dev/null
+

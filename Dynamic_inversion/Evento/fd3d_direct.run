@@ -1,0 +1,9 @@
+#!/bin/sh
+
+####################################
+#  SCRIPT TO RUN FORWARD MODELING  #
+####################################
+
+# Run forward modeling:
+../fd3d_direct | tee fd3d_direct.out
+
