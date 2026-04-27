@@ -391,6 +391,95 @@ class ConfigParser:
                 lines.append(line)
         return lines
 
+    @classmethod
+    def from_dict(cls, params: Dict[str, Any]) -> 'ConfigParser':
+        """
+        Create a ConfigParser from a dictionary of parameters instead of parsing a file.
+        
+        The params dict should contain keys for each section:
+        - 'observed_data': dict with time window and sampling
+        - 'source_position': dict with location and focal mechanism
+        - 'fault_plane': dict with geometry discretization
+        - 'ellipse': dict with ellipse model and frequencies
+        - 'inversion_params': dict with parameter ranges
+        - 'inversion_process': dict with algorithm settings
+        - 'moment_tensor': dict with MT components
+        - 'stations': list of station dicts
+        - 'velocity_model': list of layer dicts
+        """
+        # Create instance without parsing
+        instance = cls.__new__(cls)
+        instance.filepath = '<from_dict>'
+        
+        # Build each dataclass from provided dicts
+        instance.observed_data = ObservedDataParams.from_dict(
+            params.get('observed_data', {})
+        )
+        instance.source_position = SourcePosition.from_dict(
+            params.get('source_position', {})
+        )
+        instance.fault_plane = FaultPlaneParams.from_dict(
+            params.get('fault_plane', {})
+        )
+        instance.ellipse = EllipseParams.from_dict(
+            params.get('ellipse', {})
+        )
+        
+        # For inversion_params, need param_lines
+        inversion_dict = params.get('inversion_params', {})
+        if isinstance(inversion_dict, dict) and 'parameters' in inversion_dict:
+            # Already structured as InversionParams
+            instance.inversion_params = InversionParams(
+                parameters=inversion_dict['parameters']
+            )
+        else:
+            # Build from dict
+            instance.inversion_params = InversionParams.from_dict(inversion_dict, [])
+        
+        instance.inversion_process = InversionProcessParams.from_dict(
+            params.get('inversion_process', {})
+        )
+        instance.moment_tensor = MomentTensor.from_dict(
+            params.get('moment_tensor', {})
+        )
+        
+        # Stations and velocity model need special handling
+        stations_data = params.get('stations', {})
+        if isinstance(stations_data, dict) and 'stations' in stations_data:
+            instance.stations = stations_data
+        else:
+            # Convert dict list to Station objects
+            station_list = []
+            for st_dict in (stations_data if isinstance(stations_data, list) else []):
+                if isinstance(st_dict, dict):
+                    station_list.append(Station(
+                        latitude=float(st_dict.get('latitude', 0.0)),
+                        longitude=float(st_dict.get('longitude', 0.0)),
+                        height=float(st_dict.get('height', 0.0)),
+                        name=str(st_dict.get('name', 'UNKNOWN'))
+                    ))
+            instance.stations = StationParams(stations=station_list)
+        
+        velocity_model_data = params.get('velocity_model', [])
+        if isinstance(velocity_model_data, dict) and 'layers' in velocity_model_data:
+            instance.velocity_model = velocity_model_data
+        else:
+            # Convert dict list to VelocityLayer objects
+            layer_list = []
+            for layer_dict in (velocity_model_data if isinstance(velocity_model_data, list) else []):
+                if isinstance(layer_dict, dict):
+                    layer_list.append(VelocityLayer(
+                        thickness=float(layer_dict.get('thickness', 0.0)),
+                        vp=float(layer_dict.get('vp', 0.0)),
+                        vs=float(layer_dict.get('vs', 0.0)),
+                        rho=float(layer_dict.get('rho', 0.0)),
+                        qp=float(layer_dict.get('qp', 0.0)),
+                        qs=float(layer_dict.get('qs', 0.0))
+                    ))
+            instance.velocity_model = VelocityModel(layers=layer_list)
+        
+        return instance
+
     def __repr__(self) -> str:
         return f"ConfigParser({self.filepath})"
 

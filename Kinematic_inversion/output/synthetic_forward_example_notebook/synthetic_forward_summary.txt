@@ -1,0 +1,18 @@
+Synthetic forward example summary
+========================================================================
+Event: Event Copiapo 2025 INTRAPLATE
+Stations: 10
+Noise ratio: 0.3000
+Noise std (global): 3.752065e-04
+Misfit (clean vs noisy-observed): 1.602524e-02
+M0 total [N.m]: 1.838062e+19
+Mw total: 6.7762
+Midpoint model (a1,a2,theta,np,tp,dmax,vr):
+  7.500000, 7.500000, 1.000000, 0.500000, 0.500000, 2.000000, 2.000000
+
+Misfit diagnostics:
+[MISFIT DIAG] rms_global(obs)=1.308e-03 rms_global(syn)=1.251e-03 syn/obs=9.563e-01
+[MISFIT DIAG] sta=01 P(R): obs=1.057e-02 syn=1.060e-02 | P(Z): obs=5.773e-03 syn=5.738e-03 | S(T): obs=1.628e-03 syn=1.591e-03
+[MISFIT DIAG] sta=02 P(R): obs=6.772e-03 syn=6.720e-03 | P(Z): obs=3.774e-03 syn=3.835e-03 | S(T): obs=6.648e-03 syn=6.529e-03
+[MISFIT DIAG] sta=03 P(R): obs=2.073e-03 syn=2.093e-03 | P(Z): obs=1.768e-03 syn=1.751e-03 | S(T): obs=2.877e-03 syn=2.863e-03
+[MISFIT DIAG] window_energy(obs)=2.209e-02 window_energy(syn)=2.171e-02 syn/obs=9.829e-01

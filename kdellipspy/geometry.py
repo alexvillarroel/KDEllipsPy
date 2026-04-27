@@ -113,6 +113,9 @@ class Subfault:
     rupture_time_s: float
     mu_pa: float = 0.0
     area_m2: float = 0.0
+    slip_m: float = 0.0
+    lat: float = 0.0
+    lon: float = 0.0
 
 
 @dataclass
@@ -348,6 +351,11 @@ class GeometryBuilder:
         y0 = (dys + dyd) / 2.0 - fp.hx * sin(phi) - fp.hy * cos(delta) * cos(phi)
         z0 = dzd / 2.0 - fp.hy * sin(delta) + depth_m
 
+        # Create projection to compute lat/lon for each subfault
+        projection = UTMProjection(float(src.latitude), float(src.longitude))
+        # Get event UTM coordinates (absolute)
+        event_utm_x, event_utm_y = projection.latlon_to_xy(float(src.latitude), float(src.longitude))
+
         subfaults: List[Subfault] = []
         for idip in range(1, fp.ny + 1):
             for istk in range(1, fp.nx + 1):
@@ -356,6 +364,11 @@ class GeometryBuilder:
                 y = y0 + (istk - 1) * dys + (idip - 1) * dyd
                 z = z0 + (idip - 1) * dzd
                 mu_pa = get_rigidity_at_depth(z)
+                # Convert local cartesian (x, y) to UTM absolute, then to lat/lon
+                # Note: x=north, y=east (local convention)
+                subfault_utm_x = event_utm_x + x
+                subfault_utm_y = event_utm_y + y
+                lat_deg, lon_deg = projection.xy_to_latlon(subfault_utm_x, subfault_utm_y)
                 subfaults.append(
                     Subfault(
                         index=idx,
@@ -365,6 +378,8 @@ class GeometryBuilder:
                         rupture_time_s=0.0,
                         mu_pa=mu_pa,
                         area_m2=area_subfault_m2,
+                        lat=lat_deg,
+                        lon=lon_deg,
                     )
                 )
 
@@ -571,17 +586,27 @@ class EllipticalSlipMapper:
 
         sf_by_index = {int(sf.index): sf for sf in geom.subfaults}
 
-        for sf in sf_by_index.values():
-            tr = sqrt(
-                sf.x_m * sf.x_m
-                + sf.y_m * sf.y_m
-                + (sf.z_m - source_depth_m) * (sf.z_m - source_depth_m)
-            ) / vr_m_s
-            sf.rupture_time_s = float(tr)
-
+        # Calculate slip factors first
         slip_factor_by_subfault = {}
         for sf_idx in sf_by_index.keys():
             slip_factor_by_subfault[sf_idx] = self._slip_factor_for_subfault(sf_idx, prepared)
+
+        # Assign slip and rupture time only to subfaults inside the ellipse (slip_factor > 0)
+        for sf_idx, slip_factor in slip_factor_by_subfault.items():
+            sf = sf_by_index.get(sf_idx)
+            if sf is not None:
+                sf.slip_m = float(dmax * slip_factor)
+                
+                # Only calculate rupture time for points inside the ellipse
+                if slip_factor > 0.0:
+                    tr = sqrt(
+                        sf.x_m * sf.x_m
+                        + sf.y_m * sf.y_m
+                        + (sf.z_m - source_depth_m) * (sf.z_m - source_depth_m)
+                    ) / vr_m_s
+                    sf.rupture_time_s = float(tr)
+                else:
+                    sf.rupture_time_s = 0.0
 
         mt_weights = self._mt_component_weights() if geom.mt_enabled else None
         for sp in geom.source_points:
@@ -598,7 +623,7 @@ class EllipticalSlipMapper:
                 moment_total = float(sf.mu_pa * sf.area_m2 * slip_real)
                 k = int(sp.basis_slot) % 6
                 sp.moment = float(moment_total * mt_weights[k])
-                sp.displacement = 0.0
+                sp.displacement = slip_real  # Store slip even in MT mode for analysis
             else:
                 sp.moment = 0.0
                 sp.displacement = slip_real

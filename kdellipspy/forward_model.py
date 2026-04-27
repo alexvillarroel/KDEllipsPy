@@ -51,6 +51,92 @@ class AxitraForwardModel:
 			else (self.base_dir / "AXITRA2024").resolve()
 		)
 
+	@classmethod
+	def from_params(cls, params: dict, axitra_dir: Optional[str] = None) -> 'AxitraForwardModel':
+		"""
+		Create AxitraForwardModel from a dictionary of parameters instead of an input.ctl file.
+		
+		This allows building the forward model programmatically without file I/O.
+		
+		Parameters:
+		-----------
+		params : dict
+			Dictionary containing all configuration sections:
+			- 'observed_data': Dictionary with time window and sampling parameters
+			- 'source_position': Dictionary with event location and focal mechanism
+			- 'fault_plane': Dictionary with fault geometry discretization
+			- 'ellipse': Dictionary with ellipse model and frequency band
+			- 'inversion_params': Dictionary with inversion parameter ranges
+			- 'inversion_process': Dictionary with algorithm settings
+			- 'moment_tensor': Dictionary with moment tensor components
+			- 'stations': List of station dictionaries (lat, lon, height, name)
+			- 'velocity_model': List of velocity layer dictionaries
+		
+		axitra_dir : str, optional
+			Path to AXITRA2024 directory. If not provided, assumes it's a sibling folder.
+		
+		Returns:
+		--------
+		AxitraForwardModel
+			Initialized forward model instance with all configuration loaded from params.
+		
+		Example:
+		--------
+		>>> params = {
+		...     'observed_data': {'Time window start (t1)': 0.0, ...},
+		...     'source_position': {'Latitude': -20.0, 'Longitude': -70.0, ...},
+		...     'fault_plane': {'Length along strike (Lx)': 100000.0, ...},
+		...     'ellipse': {'Number of ellipses': 1, ...},
+		...     'stations': [
+		...         {'latitude': -19.5, 'longitude': -69.5, 'height': 0.0, 'name': 'SL01'},
+		...         ...
+		...     ],
+		...     'velocity_model': [
+		...         {'thickness': 10000.0, 'vp': 5500.0, 'vs': 3200.0, 'rho': 2700.0, 'qp': 100.0, 'qs': 50.0},
+		...         ...
+		...     ],
+		...     'inversion_params': {...},
+		...     'inversion_process': {...},
+		...     'moment_tensor': {...},
+		... }
+		>>> fm = AxitraForwardModel.from_params(params, axitra_dir='/path/to/AXITRA2024')
+		"""
+		# Create ConfigParser from dict
+		cfg = ConfigParser.from_dict(params)
+		
+		# Create instance without calling __init__ (avoid file parsing)
+		instance = cls.__new__(cls)
+		instance.input_ctl_path = Path('<from_params>')
+		instance.base_dir = Path.cwd()
+		instance.cfg = cfg
+		instance.geometry_builder = GeometryBuilder(cfg)
+		instance.ellipse_mapper = EllipticalSlipMapper(cfg)
+		instance._projection = UTMProjection(
+			float(cfg.source_position.latitude),
+			float(cfg.source_position.longitude),
+		)
+		src_east, src_north = instance._projection.latlon_to_xy(
+			float(cfg.source_position.latitude),
+			float(cfg.source_position.longitude),
+		)
+		instance._src_east_m = float(src_east)
+		instance._src_north_m = float(src_north)
+		
+		# Set AXITRA directory
+		if axitra_dir:
+			instance.axitra_dir = Path(axitra_dir).resolve()
+		else:
+			# Try to find AXITRA2024 relative to cwd
+			axitra_candidate = Path.cwd() / "AXITRA2024"
+			if axitra_candidate.exists():
+				instance.axitra_dir = axitra_candidate.resolve()
+			else:
+				raise FileNotFoundError(
+					"AXITRA2024 directory not found. Please provide axitra_dir parameter."
+				)
+		
+		return instance
+
 	def _import_axitra(self):
 		if str(self.axitra_dir) not in sys.path:
 			sys.path.append(str(self.axitra_dir))
