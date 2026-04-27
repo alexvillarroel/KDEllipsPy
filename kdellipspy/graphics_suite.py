@@ -27,6 +27,23 @@ class GraphicsConfig:
 
 
 class GraphicsSuite:
+    """
+    Visualization suite for the Kinematic Inversion results.
+    (Suite de visualización para los resultados de la Inversión Cinemática.)
+
+    Generates and saves convergence plots, waveform fits, and visualizations 
+    of the spatial distribution of the rupture.
+    (Genera y guarda gráficos de convergencia, ajuste de formas de onda, y 
+    visualizaciones de la distribución espacial de la ruptura.)
+
+    Attributes:
+        base_dir (Path): Current run directory where plots will be saved.
+                         (Directorio de ejecución actual donde se guardarán los plots.)
+        show (bool): If True, displays interactive plots in addition to saving them.
+                     (Si es True, muestra los gráficos interactivamente además de guardarlos.)
+        output_dir (Path): Output folder within base_dir for exporting images.
+                           (Carpeta 'output' dentro de base_dir para exportar imágenes.)
+    """
     def __init__(self, base_dir: str | Path = "..", units_param: int = 1, show: bool = True):
         self.base_dir = Path(base_dir).resolve()
         self.cfg = GraphicsConfig(base_dir=self.base_dir, units_param=units_param, show=show)
