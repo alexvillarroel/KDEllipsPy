@@ -1,6 +1,6 @@
 """Unified graphics module for kinematic inversion outputs.
 
-This module centralizes plotting tasks previously split across Graphics/*.py.
+This module centralizes plotting tasks previously split across Graphics/\*.py.
 It provides both a Python API and a CLI entrypoint.
 """
 

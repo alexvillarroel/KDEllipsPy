@@ -2,4 +2,6 @@ sphinx
 nbsphinx
 sphinx-rtd-theme
 jupyter
+ipython
 ipykernel
+neighpy

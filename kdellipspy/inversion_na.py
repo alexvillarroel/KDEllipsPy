@@ -3,9 +3,10 @@ NA inversion driver using neighpy as search backend.
 
 This module replaces the local prototype search implementation and keeps a
 compatible API for notebook usage:
-  - NAConfig
-  - NAInversionModel.run_na_search(...)
-  - result.best_model / result.all_models / result.export_results(...)
+
+- NAConfig
+- NAInversionModel.run_na_search(...)
+- result.best_model / result.all_models / result.export_results(...)
 """
 
 from dataclasses import dataclass

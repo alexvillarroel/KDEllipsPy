@@ -1,7 +1,27 @@
 API Reference
 =============
 
+.. automodule:: kdellipspy
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. automodule:: kdellipspy.config_parser
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: kdellipspy.forward_model
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: kdellipspy.geometry
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: kdellipspy.graphics_suite
    :members:
    :undoc-members:
    :show-inheritance:
@@ -11,7 +31,12 @@ API Reference
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: kdellipspy.graphics_suite
+.. automodule:: kdellipspy.signal_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+.. automodule:: kdellipspy.cli
    :members:
    :undoc-members:
    :show-inheritance:

@@ -5,9 +5,12 @@ Welcome to KDEllipsPy's documentation!
    :maxdepth: 2
    :caption: Tutoriales y Ejemplos:
 
-   # Añade aquí la ruta a tus Jupyter Notebooks cuando existan. Ejemplo:
-   # ../examples/ejemplo_inversion.ipynb
-   
+   notebooks/geometry
+   notebooks/inversion
+   notebooks/inversion_real
+   notebooks/regression
+   notebooks/04_forward_synthetic_misfit
+
 .. toctree::
    :maxdepth: 2
    :caption: Referencia de la API (Código):
