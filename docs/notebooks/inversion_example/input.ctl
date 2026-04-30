@@ -8,10 +8,10 @@
 # 1. Observed Data Parameters                   :     Values                   |
 #===============================================:===============================
  Time window start (t1)                         :     0.0
- Time window end (t2)                           :   128.0
- Number of points (Npts)                        :     512
- Delta / Time step                              :    0.25
- Units                        (1:disp, 2:vel)   :       1
+ Time window end (t2)                           :   204.8
+ Number of points (Npts)                        :     1024
+ Delta / Time step                              :    0.2
+ Units                        (1:disp, 2:vel)   :       2
 
 #===============================================:===============================
 # 2. Source Position & Focal Mechanism          :     Values                   |
@@ -27,12 +27,12 @@
 #===============================================:===============================
 # 3. Fault Plane Parameters                     :     Values                   |
 #===============================================:===============================
- Length along strike (Lx)                  (m)  : 40000.0
- Length along dip (Ly)                     (m)  : 40000.0
- Hypocenter position strike (Hx)           (m)  : 20000.0
- Hypocenter position dip (Hy)              (m)  : 20000.0
- Number of subfaults along strike (Nx)          :       100
- Number of subfaults along dip (Ny)             :       100
+ Length along strike (Lx)                  (m)  : 20000.0
+ Length along dip (Ly)                     (m)  : 20000.0
+ Hypocenter position strike (Hx)           (m)  : 10000.0
+ Hypocenter position dip (Hy)              (m)  : 10000.0
+ Number of subfaults along strike (Nx)          :       20
+ Number of subfaults along dip (Ny)             :       20
 
 #===============================================:===============================
 # 4. Ellipse Parameters & Frequency Band        :     Values                   |
@@ -40,35 +40,35 @@
  Number of ellipses                             :       1
  Initial slip                 (0:no, 1:yes)     :       0
  Slip shape            (0:cst, 1:gauss, 2:ell)  :       1
- Frequency 1 (Freq1)                      (Hz)  :    0.02
- Frequency 2 (Freq2)                      (Hz)  :    0.10
+ Frequency 1 (Freq1)                      (Hz)  :    0.03
+ Frequency 2 (Freq2)                      (Hz)  :    0.1
  Time shift (T0)                           (s)  :     0.0
 
 #===============================================:===============================
 # 5. Parameters to Invert (Min, Max, Flag)      :   Min      Max     Flag      |
 #===============================================:===============================
  Number of parameters                           :       7
- Param 1: Length of axis 1                 (km) :     5.0    10.0      1
- Param 2: Length of axis 2                 (km) :     5.0    10.0      1
- Param 3: Rotation angle                 (x pi) :     0.0    2.0       1
- Param 4: Position of the center np             :     0.0    1.0       1
+ Param 1: Length of axis 1                 (km) :     6.0    9.0      1
+ Param 2: Length of axis 2                 (km) :     4.0    7.0      1
+ Param 3: Rotation angle                 (x pi) :     0.0    1.0       1
+ Param 4: Position of the center np             :     0.2    1.0       1
  Param 5: Position of the center tp     (x 2pi) :     0.0    1.0       1
- Param 6: Maximum slip (Dmax)               (m) :     1.0    3.0       1
- Param 7: Rupture velocity (Vr)          (km/s) :     0.5    3.5       1
+ Param 6: Maximum slip (Dmax)               (m) :     0.5    2.0       1
+ Param 7: Rupture velocity (Vr)          (km/s) :     1.5    3.0       1
 
 #===============================================:===============================
 # 6. Inversion Process Parameters               :     Values                   |
 #===============================================:===============================
  Algorithm type                 (0:NA, 1:MC)    :      0
  Number of iterations                           :      10
- Sample size for first iteration (SS1)          :      100
- Sample size for other iterations               :      30
+ Sample size for first iteration (SS1)          :      10
+ Sample size for other iterations               :      10
  Cells to resample                              :      7
 
 #===============================================:===============================
 # 7. Optional: Moment Tensor (Full MT)          :     Values                   |
 #===============================================:===============================
- Moment Tensor Flag           (0:no, 1:yes)     :       1
+ Moment Tensor Flag           (0:no, 1:yes)     :       0
  Mrr                                            :  -2.486
  Mtt                                            :   7.932
  Mpp                                            :   0.083
@@ -81,16 +81,16 @@
 # 8. Station Parameters (Lat, Lon, Height, Name):     Values                   |
 #===============================================:===============================
  Number of stations                             :       10
- -26.148 -70.599 0.0 AC01
- -27.070 -70.820 0.0 A30C
- -27.503 -70.887 0.0 A18C
- -25.162 -69.590 0.0 GO02
- -28.205 -71.074 0.0 AC04
- -28.580 -70.758 0.0 A10C
- -28.836 -70.274 0.0 AC05
- -29.102 -71.410 0.0 A32C
- -23.905 -69.291 0.0 PB19
- -23.610 -70.262 0.0 A24F
+ -23.61000 -70.26200 0.0 A24F
+ -23.90500 -69.29100 0.0 PB19
+ -25.16260 -69.59040 0.0 GO02
+ -26.14800 -70.59900 0.0 AC01
+ -27.07000 -70.82000 0.0 A30C
+ -27.50300 -70.88700 0.0 A18C
+ -28.20500 -71.07400 0.0 AC04
+ -28.58000 -70.75800 0.0 A10C
+ -28.83600 -70.27400 0.0 AC05
+ -29.10200 -71.41000 0.0 A32C
 #===============================================:===============================
 # 9. Velocity Model 1D                              : Thickness Vp Vs Rho Qp Qs |
 #===============================================:===============================

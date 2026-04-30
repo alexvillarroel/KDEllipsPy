@@ -201,6 +201,99 @@ class GraphicsSuite:
         fig.savefig(self.fig_dir / "NA_results_summary.png", dpi=self.cfg.dpi)
         if self.cfg.show:
             plt.show()
+        else:
+            plt.close(fig)
+
+        # Convergencia por parámetro
+        self.plot_parameter_convergence(rows, param_names, misfits, iterations)
+
+    def plot_parameter_convergence(
+        self,
+        rows: list[dict],
+        param_names: list[str],
+        misfits: np.ndarray,
+        iterations: np.ndarray,
+    ) -> None:
+        """Una figura con 7 subplots (uno por parámetro): valor vs índice de modelo,
+        coloreado por misfit, con la línea del mejor modelo superpuesta.
+        """
+        if not param_names:
+            return
+
+        n_params = len(param_names)
+        # Distribuir en filas de 4 columnas máximo → para 7 params: 2 filas (4+3)
+        ncols = 4
+        nrows = math.ceil(n_params / ncols)
+
+        fig, axes = plt.subplots(
+            nrows, ncols,
+            figsize=(ncols * 3.5, nrows * 3.0),
+            squeeze=False,
+        )
+
+        model_indices = np.arange(len(rows))
+        best_idx = int(np.argmin(misfits))
+
+        # Normalizar misfit para colormap
+        vmin, vmax = float(np.nanmin(misfits)), float(np.nanmax(misfits))
+        norm = plt.Normalize(vmin=vmin, vmax=vmax)
+        cmap = plt.cm.get_cmap("plasma_r")
+
+        for k, name in enumerate(param_names):
+            row_i, col_i = divmod(k, ncols)
+            ax = axes[row_i][col_i]
+
+            values = np.array([row.get(name, np.nan) for row in rows], dtype=float)
+            best_val = float(rows[best_idx].get(name, np.nan))
+
+            sc = ax.scatter(
+                model_indices,
+                values,
+                c=misfits,
+                cmap=cmap,
+                norm=norm,
+                s=12,
+                alpha=0.75,
+                zorder=2,
+            )
+            # Línea horizontal del mejor modelo
+            ax.axhline(best_val, color="crimson", lw=1.2, ls="--", zorder=3,
+                       label=f"best = {best_val:.3g}")
+
+            # Marcar separación de iteraciones con líneas verticales tenues
+            iter_changes = np.where(np.diff(iterations.astype(int)) > 0)[0] + 1
+            for xc in iter_changes:
+                ax.axvline(xc, color="gray", lw=0.5, alpha=0.4, zorder=1)
+
+            ax.set_title(name, fontsize=9, pad=3)
+            ax.set_xlabel("Model index", fontsize=7)
+            ax.set_ylabel("Value", fontsize=7)
+            ax.tick_params(labelsize=7)
+            ax.legend(fontsize=6, loc="upper right", framealpha=0.6)
+            ax.grid(True, alpha=0.2)
+
+        # Ocultar subplots sobrantes
+        for k in range(n_params, nrows * ncols):
+            row_i, col_i = divmod(k, ncols)
+            axes[row_i][col_i].axis("off")
+
+        # Colorbar global
+        fig.subplots_adjust(right=0.88, hspace=0.55, wspace=0.4)
+        cbar_ax = fig.add_axes([0.91, 0.15, 0.02, 0.7])
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])
+        cbar = fig.colorbar(sm, cax=cbar_ax)
+        cbar.set_label("Misfit", fontsize=9)
+
+        fig.suptitle("Parameter convergence — NA search", fontsize=11, y=1.01)
+
+        out_path = self.fig_dir / "NA_parameter_convergence.png"
+        fig.savefig(out_path, dpi=self.cfg.dpi, bbox_inches="tight")
+        print(f"✓ Gráfico guardado: {out_path}", flush=True)
+        if self.cfg.show:
+            plt.show()
+        else:
+            plt.close(fig)
 
     def load_na_results(self, source: Any) -> tuple[list[dict[str, float]], list[str]]:
         return self._normalize_na_rows(source)

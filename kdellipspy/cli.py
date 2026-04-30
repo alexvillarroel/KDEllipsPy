@@ -37,21 +37,22 @@ def validate_run_dir(run_dir: Path) -> None:
 
 def get_axitra_dir(run_dir: Path, src_root: Path) -> Path:
     """
-    Resolve AXITRA directory: try run_dir first, then fallback to src/AXITRA2024.
+    Resolve AXITRA directory: try run_dir first, then kdellipspy/, then parent directory.
     """
-    axitra_in_run = run_dir / "AXITRA2024"
-    if axitra_in_run.is_dir():
-        return axitra_in_run
+    search_paths = [
+        run_dir / "AXITRA2024",           # Check in run directory first
+        src_root / "AXITRA2024",          # Check in kdellipspy/ (src_root)
+        src_root.parent / "AXITRA2024",   # Check in KDEllipsPy/ (parent)
+    ]
     
-    axitra_in_src = src_root / "src" / "AXITRA2024"
-    if axitra_in_src.is_dir():
-        return axitra_in_src
+    for path in search_paths:
+        if path.is_dir():
+            return path
     
     raise RuntimeError(
-        f"AXITRA2024 directory not found in:\n"
-        f"  - {axitra_in_run}\n"
-        f"  - {axitra_in_src}\n"
-        "Please ensure AXITRA2024 is available in one of these locations."
+        f"AXITRA2024 directory not found in:\n" +
+        "\n".join(f"  - {p}" for p in search_paths) +
+        "\nPlease ensure AXITRA2024 is available in one of these locations."
     )
 
 def main() -> None:
@@ -159,6 +160,19 @@ def main() -> None:
         
         graphics = GraphicsSuite(base_dir=run_dir, show=show_plots)
         graphics.plot_na_results(result)
+
+        # --- Gráfico de sismogramas observados vs sintéticos del mejor modelo ---
+        if inversion.best_synthetics is not None:
+            station_names = [st.name for st in cfg.stations.stations]
+            graphics.plot_waveform_fit(
+                observed=inversion.observed_waveforms,
+                synthetic=inversion.best_synthetics,
+                time_array=inversion.time_array,
+                station_names=station_names,
+                misfit=result.best_model.misfit if result.best_model else None,
+            )
+        else:
+            print("⚠ No se generaron sintéticos del mejor modelo (best_synthetics es None).", flush=True)
         
         if show_plots:
             print("✓ Gráficos mostrados", flush=True)

@@ -408,6 +408,7 @@ class NAInversionModel:
 		self._eval_count: int = 0
 		self._best_misfit_seen: float = np.inf
 		self._axitra_id_counter: int = 0
+		self.best_synthetics: Optional[np.ndarray] = None  # shape (nsta, 3, npts), best model so far
 
 	def _next_axitra_id(self) -> int:
 		"""Generate a large unique-enough AXITRA ID to avoid file collisions."""
@@ -453,9 +454,23 @@ class NAInversionModel:
 			synthetics = np.array([sx, sy, sz])
 			synthetics = np.transpose(synthetics, (1, 2, 0))
 			synthetics = np.transpose(synthetics, (0, 2, 1))
+
+			# Filtrar sintéticos a la misma banda de frecuencia que el observado
+			try:
+				from signal_utils import bandpass_filter_waveforms
+			except ImportError:
+				from .signal_utils import bandpass_filter_waveforms
+			synthetics = bandpass_filter_waveforms(
+				synthetics,
+				self.time_array,
+				freq1=float(self.cfg.ellipse.freq1),
+				freq2=float(self.cfg.ellipse.freq2),
+			)
+
 			misfit = float(self.misfit_calc.l2_misfit(synthetics))
 			if misfit < self._best_misfit_seen:
 				self._best_misfit_seen = misfit
+				self.best_synthetics = synthetics.copy()
 			print(
 				f"[NA] iter={iter_est:03d} eval={self._eval_count:05d} "
 				f"misfit={misfit:.6e} best={self._best_misfit_seen:.6e}"

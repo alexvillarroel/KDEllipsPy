@@ -4,6 +4,7 @@ import importlib
 import sys
 import io
 import os
+import math
 from contextlib import redirect_stderr, redirect_stdout
 
 import numpy as np
@@ -320,6 +321,98 @@ class AxitraForwardModel:
 			quiet=quiet,
 		)
 
+	def _estimate_npt(self) -> int:
+		"""
+		Estimate npt using the same formula as Axitra.__init__ and convm.f90,
+		without needing to build a full Axitra instance.
+		"""
+		fmax, duration = self.suggested_fmax_duration()
+		nfreq = int(fmax * duration)
+		xmm = math.log(nfreq) / math.log(2.)
+		mm = int(xmm) + 1
+		if (xmm - mm + 1) > 0:
+			mm += 1
+		return 2 ** mm
+
+	def select_source_function(self) -> dict:
+		"""
+		Interactive prompt to select source time function, rise time and output type,
+		mirroring the AXITRA Fortran convms behavior.
+
+		Source types (passed directly to moment.conv as source_type):
+		  0  : Dirac
+		  1  : Ricker          -> requires rise time (t0)
+		  2  : Smooth step     -> requires rise time (t0)
+		  3  : From file <axi_id.sou> -> sfunc array must be supplied externally
+		  4  : Triangle        -> requires rise time (t0)
+		  5  : Ramp            -> requires rise time (t0)
+		  7  : True step       -> requires rise time (t0)
+		  8  : Trapezoid       -> requires rise time (t0) AND flat time (t1)
+		  +10: compute only the source time function, no convolution
+
+		Returns a dict with keys:
+		  source_type : int   (may include +10 flag)
+		  t0          : float (rise time, or delta for Dirac)
+		  t1          : float (flat time for Trapezoid, 0.0 otherwise)
+		  unit        : int   (1=disp, 2=vel, 3=acc)
+		  sfunc       : None  (caller must set this for source_type=3)
+		"""
+		# Source types that need a rise time from the user
+		NEEDS_T0 = {1, 2, 4, 5, 7, 8}
+		# Source types that also need a secondary time (flat top of trapezoid)
+		NEEDS_T1 = {8}
+
+		print()
+		print(" Select the Source time function")
+		print(" Add +10 to compute only the time function (no convolution)")
+		print(" 0 : Dirac")
+		print(" 1 : Ricker")
+		print(" 2 : Smooth step (not causal)")
+		print(" 3 : Function stored in file <axi_id.sou>")
+		print(" 4 : Integral of triangle step")
+		print(" 5 : Ramp step")
+		print(" 7 : True step (watch high frequencies cutoff!!)")
+		print(" 8 : Trapezoid (~Haskell model)")
+
+		source_type_raw = int(input("\n> "))
+		only_time_function = source_type_raw >= 10
+		source_type = source_type_raw % 10
+
+		# Default t0: use delta as safe fallback (needed even for Dirac by convmPy)
+		t0 = float(self.cfg.observed_data.delta)
+		t1 = 0.0
+
+		if source_type in NEEDS_T0:
+			print(" rise time?")
+			t0 = float(input("> "))
+
+		if source_type in NEEDS_T1:
+			print(" flat time (t1)?")
+			t1 = float(input("> "))
+
+		if source_type == 3:
+			npt = self._estimate_npt()
+			print(f" NOTE: source_type=3 requires sfunc to be passed as a numpy array of length {npt}")
+			print(" Pass it via fm.conv(..., sfunc=your_array)")
+
+		print()
+		print(" output is ?")
+		print(" 1: displacement (m)")
+		print(" 2: velocity (m/s)")
+		print(" 3: acceleration (m/s/s)")
+		unit = int(input("> "))
+
+		# Preserve the +10 flag in source_type if only_time_function was requested
+		final_source_type = source_type_raw if only_time_function else source_type
+
+		return {
+			"source_type": final_source_type,
+			"t0": t0,
+			"t1": t1,
+			"unit": unit,
+			"sfunc": None,
+		}
+
 
 def precompute_greens_functions(params, v_model):
 	"""
@@ -330,4 +423,3 @@ def precompute_greens_functions(params, v_model):
 		"mode": "wrapper",
 		"status": "use AxitraForwardModel.build_geometry -> build_axitra -> green",
 	}
-
