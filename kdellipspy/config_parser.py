@@ -137,21 +137,52 @@ class InversionParams:
 @dataclass
 class InversionProcessParams:
     """Section 6: Inversion Process Parameters"""
-    algorithm_type: int  # 0: NA, 1: MC
+    algorithm_type: int  # 0: NA, 1: MCMC (Metropolis-Hastings)
     num_iterations: int
-    ss1: int             # Sample size for first iteration
-    ss_other: int        # Sample size for other iterations
+    ss1: int             # Sample size for first iteration (NA) / unused default for MCMC
+    ss_other: int        # Sample size for other iterations (NA)
     cells_resample: int
+    # MCMC (only used when algorithm_type == 1); optional lines in input.ctl
+    mcmc_total_steps: int = 500
+    mcmc_burn_in: int = 0
+    mcmc_proposal_scale: float = 0.08  # Gaussian RW std as fraction of (max-min) per parameter
+    mcmc_thin: int = 1
+    mcmc_chains: int = 1  # PyMC only; use 1 if AXITRA is not fork-safe
 
     @classmethod
     def from_dict(cls, params: Dict) -> 'InversionProcessParams':
         get = lambda key, default: _get_param_value(params, key, default)
+        algorithm_type = int(get('Algorithm type', 0))
+        num_iterations = int(get('Number of iterations', 1))
+        ss1 = int(get('Sample size for first iteration (SS1)', 30))
+        ss_other = int(get('Sample size for other iterations', 30))
+        cells_resample = int(get('Cells to resample', 7))
+        mcmc_total_steps = int(get('MCMC total steps', 500))
+        if mcmc_total_steps < 1:
+            mcmc_total_steps = max(100, ss1 * max(1, num_iterations))
+        mcmc_burn_in = int(get('MCMC burn-in', 0))
+        if mcmc_burn_in < 0:
+            mcmc_burn_in = 0
+        mcmc_proposal_scale = float(get('MCMC proposal scale', 0.08))
+        if mcmc_proposal_scale <= 0.0:
+            mcmc_proposal_scale = 0.08
+        mcmc_thin = int(get('MCMC thinning', 1))
+        if mcmc_thin < 1:
+            mcmc_thin = 1
+        mcmc_chains = int(get('MCMC chains', 1))
+        if mcmc_chains < 1:
+            mcmc_chains = 1
         return cls(
-            algorithm_type=int(get('Algorithm type', 0)),
-            num_iterations=int(get('Number of iterations', 1)),
-            ss1=int(get('Sample size for first iteration (SS1)', 30)),
-            ss_other=int(get('Sample size for other iterations', 30)),
-            cells_resample=int(get('Cells to resample', 7))
+            algorithm_type=algorithm_type,
+            num_iterations=num_iterations,
+            ss1=ss1,
+            ss_other=ss_other,
+            cells_resample=cells_resample,
+            mcmc_total_steps=mcmc_total_steps,
+            mcmc_burn_in=mcmc_burn_in,
+            mcmc_proposal_scale=mcmc_proposal_scale,
+            mcmc_thin=mcmc_thin,
+            mcmc_chains=mcmc_chains,
         )
 
 
@@ -166,19 +197,24 @@ class MomentTensor:
     mrp: float
     mtp: float
     exponent: float
+    scaling_mode: str = "no_mt"
 
     @classmethod
     def from_dict(cls, params: Dict) -> 'MomentTensor':
         get = lambda key, default: _get_param_value(params, key, default)
+        flag = int(get('Moment Tensor Flag', 0))
+        raw_mode = str(get('MT Scaling Mode', '')).strip()
+        scaling_mode = _normalize_mt_scaling_mode(flag=flag, raw_mode=raw_mode)
         return cls(
-            flag=int(get('Moment Tensor Flag', 0)),
+            flag=flag,
             mrr=float(get('Mrr', 0.0)),
             mtt=float(get('Mtt', 0.0)),
             mpp=float(get('Mpp', 0.0)),
             mrt=float(get('Mrt', 0.0)),
             mrp=float(get('Mrp', 0.0)),
             mtp=float(get('Mtp', 0.0)),
-            exponent=float(get('Exponent (iexp)', 18.0))
+            exponent=float(get('Exponent (iexp)', 18.0)),
+            scaling_mode=scaling_mode,
         )
 
 
@@ -500,6 +536,34 @@ def _get_param_value(params: Dict[str, str], key: str, default: Any) -> Any:
     return default
 
 
+def _normalize_mt_scaling_mode(flag: int, raw_mode: str) -> str:
+    """
+    Normalize MT scaling mode to one of:
+    - no_mt
+    - mt_strict   (target M0 fixed by full MT)
+    - mt_factored (full MT shape with free scalar scale)
+    """
+    if int(flag) == 0:
+        return "no_mt"
+
+    mode = str(raw_mode).strip().lower().replace("-", "_").replace(" ", "_")
+    aliases = {
+        "": "mt_factored",
+        "mt": "mt_factored",
+        "full_mt": "mt_factored",
+        "factored": "mt_factored",
+        "mt_factored": "mt_factored",
+        "strict": "mt_strict",
+        "mt_strict": "mt_strict",
+        "fixed_m0": "mt_strict",
+        "mt_fixed_m0": "mt_strict",
+        "no_mt": "no_mt",
+        "off": "no_mt",
+        "none": "no_mt",
+    }
+    return aliases.get(mode, "mt_factored")
+
+
 def read_input_ctl(filepath: str) -> Dict[str, Any]:
     """Compatibility helper returning a flat dictionary used by the pipeline."""
     cfg = ConfigParser(filepath)
@@ -534,6 +598,11 @@ def read_input_ctl(filepath: str) -> Dict[str, Any]:
         'ss1': cfg.inversion_process.ss1,
         'ss_other': cfg.inversion_process.ss_other,
         'cells_resample': cfg.inversion_process.cells_resample,
+        'mcmc_total_steps': cfg.inversion_process.mcmc_total_steps,
+        'mcmc_burn_in': cfg.inversion_process.mcmc_burn_in,
+        'mcmc_proposal_scale': cfg.inversion_process.mcmc_proposal_scale,
+        'mcmc_thin': cfg.inversion_process.mcmc_thin,
+        'mcmc_chains': cfg.inversion_process.mcmc_chains,
         'moment_tensor_flag': cfg.moment_tensor.flag,
         'mrr': cfg.moment_tensor.mrr,
         'mtt': cfg.moment_tensor.mtt,
@@ -542,6 +611,7 @@ def read_input_ctl(filepath: str) -> Dict[str, Any]:
         'mrp': cfg.moment_tensor.mrp,
         'mtp': cfg.moment_tensor.mtp,
         'iexp': cfg.moment_tensor.exponent,
+        'mt_scaling_mode': cfg.moment_tensor.scaling_mode,
         'inversion_params': cfg.inversion_params.parameters,
         'stations': cfg.stations.stations,
         'velocity_layers': cfg.velocity_model.layers,

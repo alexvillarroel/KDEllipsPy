@@ -11,7 +11,7 @@
  Time window end (t2)                           :   128
  Number of points (Npts)                        :     512
  Delta / Time step                              :    0.25
- Units                        (1:disp, 2:vel)   :       2
+ Units                        (1:disp, 2:vel)   :       1
 
 #===============================================:===============================
 # 2. Source Position & Focal Mechanism          :     Values                   |
@@ -40,8 +40,8 @@
  Number of ellipses                             :       1
  Initial slip                 (0:no, 1:yes)     :       0
  Slip shape            (0:cst, 1:gauss, 2:ell)  :       1
- Frequency 1 (Freq1)                      (Hz)  :    0.03
- Frequency 2 (Freq2)                      (Hz)  :    0.18
+ Frequency 1 (Freq1)                      (Hz)  :    0.08
+ Frequency 2 (Freq2)                      (Hz)  :    0.13
  Time shift (T0)                           (s)  :     0.0
 
 #===============================================:===============================
@@ -69,6 +69,7 @@
 # 7. Optional: Moment Tensor (Full MT)          :     Values                   |
 #===============================================:===============================
  Moment Tensor Flag           (0:no, 1:yes)     :       1
+ MT Scaling Mode (mt_strict/mt_factored)      : mt_factored
  Mrr                                            :  -2.486
  Mtt                                            :   7.932
  Mpp                                            :   0.083

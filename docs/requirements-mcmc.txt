@@ -1,0 +1,5 @@
+# Dependencias para MCMC con PyMC + ArviZ (cuando input.ctl tiene Algorithm type=1).
+# Instalación: pip install -r docs/requirements-mcmc.txt
+pymc>=5.10
+# arviz es dependencia de pymc; se lista explícito por claridad
+arviz>=0.18

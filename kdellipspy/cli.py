@@ -5,6 +5,7 @@ import argparse
 from config_parser import ConfigParser
 from signal_utils import load_and_filter_observed_data, build_azi_times_array
 from inversion_na import NAInversionModel, NAConfig
+from inversion_mcmc import MCMCInversionModel, MCMCConfig
 from graphics_suite import GraphicsSuite
 
 def step(number: int, total: int, title: str) -> None:
@@ -112,32 +113,72 @@ def main() -> None:
         ) from e
     print(f"Datos listos con forma: {observed_waveforms.shape}", flush=True)
 
-    step(4, 6, "Inicializando inversión NA con neighpy")
+    algo = int(cfg.inversion_process.algorithm_type)
+    if algo == 0:
+        step(4, 6, "Inicializando inversión (NA / neighpy)")
+    elif algo == 1:
+        step(4, 6, "Inicializando inversión MCMC (PyMC + ArviZ)")
+    else:
+        print(f"ERROR: Algorithm type {algo} not supported (0=NA, 1=MCMC).", flush=True)
+        sys.exit(1)
+
     axitra_dir = get_axitra_dir(run_dir, src_root)
-    inversion = NAInversionModel(
-        str(input_ctl),
-        axitra_dir=str(axitra_dir),
-        observed_waveforms=observed_waveforms,
-        time_array=time_array,
-        azi_times_array=azi_times_array,
-    )
+
+    if algo == 0:
+        inversion = NAInversionModel(
+            str(input_ctl),
+            axitra_dir=str(axitra_dir),
+            observed_waveforms=observed_waveforms,
+            time_array=time_array,
+            azi_times_array=azi_times_array,
+        )
+    else:
+        inversion = MCMCInversionModel(
+            str(input_ctl),
+            axitra_dir=str(axitra_dir),
+            observed_waveforms=observed_waveforms,
+            time_array=time_array,
+            azi_times_array=azi_times_array,
+        )
 
     step(5, 6, "Ejecutando inversión")
-    na_config = NAConfig(
-        n_samples_initial=cfg.inversion_process.ss1,
-        n_samples_iteration=cfg.inversion_process.ss_other,
-        n_iterations=cfg.inversion_process.num_iterations,
-        n_cells_resample=cfg.inversion_process.cells_resample,
-        random_seed=None,
-    )
-
-    result = inversion.run_na_search(na_config)
+    if algo == 0:
+        na_config = NAConfig(
+            n_samples_initial=cfg.inversion_process.ss1,
+            n_samples_iteration=cfg.inversion_process.ss_other,
+            n_iterations=cfg.inversion_process.num_iterations,
+            n_cells_resample=cfg.inversion_process.cells_resample,
+            random_seed=None,
+        )
+        result = inversion.run_na_search(na_config)
+    else:
+        mc_config = MCMCConfig(
+            total_steps=cfg.inversion_process.mcmc_total_steps,
+            burn_in=cfg.inversion_process.mcmc_burn_in,
+            proposal_scale=cfg.inversion_process.mcmc_proposal_scale,
+            thin=cfg.inversion_process.mcmc_thin,
+            random_seed=None,
+            keep_axitra_files=False,
+            chains=cfg.inversion_process.mcmc_chains,
+        )
+        result = inversion.run_mcmc_search(mc_config)
 
     best = result.best_model
+    if best is None:
+        print("ERROR: la inversión no devolvió modelos evaluados.", flush=True)
+        sys.exit(1)
+
     print(f"Mejor misfit: {best.misfit:.6e}", flush=True)
     print(f"Parámetros del mejor modelo:", flush=True)
     for name, value in zip(inversion.param_names, best.model):
         print(f"  {name:20s} = {value:8.3f}", flush=True)
+
+    best_geom = inversion._build_geometry_from_parameters(best.model)
+    diag = getattr(best_geom, "slip_scale_diagnostics", None)
+    if isinstance(diag, dict):
+        print("\n--- Slip / MT scaling (mejor modelo) ---", flush=True)
+        for key in sorted(diag.keys()):
+            print(f"  {key}: {diag[key]}", flush=True)
 
     step(6, 6, "Exportando resultados y generando gráficos")
     output_dir = run_dir / "output"

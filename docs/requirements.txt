@@ -5,3 +5,4 @@ jupyter
 ipython
 ipykernel
 neighpy
+# MCMC con PyMC (opcional): pip install -r docs/requirements-mcmc.txt

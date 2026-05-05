@@ -1,0 +1,137 @@
+################################################################################
+#  Ejemplo de input.ctl — KDEllipsPy (v2025+)
+#
+#  Sección 7 — Moment Tensor:
+#    Moment Tensor Flag (0:no, 1:yes)
+#
+#    Si Flag = 0  →  no_mt: fuentes por strike/dip/rake del evento (slip en hist).
+#
+#    Si Flag = 1  →  full MT en 6 bases AXITRA. Línea opcional:
+#      MT Scaling Mode ... : mt_strict | mt_factored
+#
+#      mt_strict   — M0 escalar del tensor (Mrr..Mtp + iexp) fija la escala;
+#                    el parámetro invertido Dmax solo define la FORMA (gauss/elipse);
+#                    el código recalcula Dmax efectivo para cerrar sum(mu*A*slip).
+#
+#      mt_factored — Dmax invertido gobierna la amplitud; el tensor define la forma
+#                    relativa (y signos) entre las 6 bases. Si omites "MT Scaling Mode",
+#                    el valor por defecto es mt_factored (compatible con runs antiguos).
+#
+#  Logs: cada evaluación NA imprime mt_mode, dmax_req, dmax_eff, M0_target, M0_L1.
+#        Al finalizar, cli.py imprime slip_scale_diagnostics del mejor modelo.
+################################################################################
+
+#===============================================:===============================
+# 1. Observed Data Parameters                   :     Values                   |
+#===============================================:===============================
+ Time window start (t1)                         :     0.0
+ Time window end (t2)                           :   128
+ Number of points (Npts)                        :     512
+ Delta / Time step                              :    0.25
+ Units                        (1:disp, 2:vel)   :       2
+
+#===============================================:===============================
+# 2. Source Position & Focal Mechanism          :     Values                   |
+#===============================================:===============================
+ Event Name                                     :     Example event
+ Latitude                                       :   -26.639
+ Longitude                                      :   -70.404
+ Depth                                     (km) :      75.0
+ Strike                                  (deg.) :      72.0
+ Dip                                     (deg.) :      47.0
+ Rake                                    (deg.) :    -111.0
+
+#===============================================:===============================
+# 3. Fault Plane Parameters                     :     Values                   |
+#===============================================:===============================
+ Length along strike (Lx)                  (m)  : 30000.0
+ Length along dip (Ly)                     (m)  : 30000.0
+ Hypocenter position strike (Hx)           (m)  : 15000.0
+ Hypocenter position dip (Hy)              (m)  : 15000.0
+ Number of subfaults along strike (Nx)          :       10
+ Number of subfaults along dip (Ny)             :       10
+
+#===============================================:===============================
+# 4. Ellipse Parameters & Frequency Band        :     Values                   |
+#===============================================:===============================
+ Number of ellipses                             :       1
+ Initial slip                 (0:no, 1:yes)     :       0
+ Slip shape            (0:cst, 1:gauss, 2:ell)  :       1
+ Frequency 1 (Freq1)                      (Hz)  :    0.03
+ Frequency 2 (Freq2)                      (Hz)  :    0.18
+ Time shift (T0)                           (s)  :     0.0
+
+#===============================================:===============================
+# 5. Parameters to Invert (Min, Max, Flag)      :   Min      Max     Flag      |
+#===============================================:===============================
+ Number of parameters                           :       7
+ Param 1: Length of axis 1                 (km) :     2.0    10.0      1
+ Param 2: Length of axis 2                 (km) :     2.0    10.0      1
+ Param 3: Rotation angle                 (x pi) :     0.0    1.0       1
+ Param 4: Position of the center np             :     0.2    1.0       1
+ Param 5: Position of the center tp     (x 2pi) :     0.0    1.0       1
+ Param 6: Maximum slip (Dmax)               (m) :     0.5    2.0       1
+ Param 7: Rupture velocity (Vr)          (km/s) :     1.5    3.0       1
+
+#===============================================:===============================
+# 6. Inversion Process Parameters               :     Values                   |
+#===============================================:===============================
+# Algorithm type: 0 = NA (neighpy), 1 = MCMC (Metropolis-Hastings, prior uniforme en la caja).
+ Algorithm type                 (0:NA, 1:MC)    :      0
+ Number of iterations                           :      40
+ Sample size for first iteration (SS1)          :      200
+ Sample size for other iterations               :      50
+ Cells to resample                              :       3
+# --- Solo si Algorithm type = 1 (MCMC), opcionales ---
+# MCMC total steps                               :     800
+# MCMC burn-in                                   :     100
+# MCMC proposal scale                            :     0.08
+# MCMC thinning                                  :       2
+# MCMC chains                                    :       1
+
+#===============================================:===============================
+# 7. Optional: Moment Tensor (Full MT)          :     Values                   |
+#===============================================:===============================
+ Moment Tensor Flag           (0:no, 1:yes)     :       1
+# Cambia a mt_factored si quieres que el Param 6 Dmax controle la escala total.
+ MT Scaling Mode (mt_strict/mt_factored)      : mt_strict
+# Con Flag = 0, ignora MT Scaling Mode y los componentes Mij.
+ Mrr                                            :  -2.486
+ Mtt                                            :   7.932
+ Mpp                                            :   0.083
+ Mrt                                            :   0.038
+ Mrp                                            :  -0.739
+ Mtp                                            :   0.473
+ Exponent (iexp)                                :    18.0
+
+#===============================================:===============================
+# 8. Station Parameters (Lat, Lon, Height, Name):     Values                   |
+#===============================================:===============================
+ Number of stations                             :       6
+-23.61000 -70.26200 0.0 A24F
+-23.90500 -69.29100 0.0 PB19
+-26.14800 -70.59900 0.0 AC01
+-27.50300 -70.88700 0.0 A18C
+-28.83600 -70.27400 0.0 AC05
+-29.10200 -71.41000 0.0 A32C
+
+#===============================================:===============================
+# 9. Velocity Model 1D                              : Thickness Vp Vs Rho Qp Qs |
+#===============================================:===============================
+ Number of layers                               :       16
+ 0.000 5210.000 2990.000 2500.000  600.000  400.000
+ 2500.000 5370.000 3090.000 2500.000  600.000  400.000
+ 4500.000 5550.000 3190.000 2500.000  600.000  400.000
+ 6500.000 5720.000 3290.000 2600.000  600.000  400.000
+ 8500.000 5890.000 3390.000 2600.000  600.000  400.000
+ 10500.000 5980.000 3440.000 2600.000  600.000  400.000
+ 15000.000 6800.000 3750.000 2800.000  600.000  400.000
+ 20000.000 6810.000 3880.000 2800.000  600.000  400.000
+ 25000.000 6950.000 3940.000 3000.000  600.000  400.000
+ 30000.000 6980.000 4050.000 3000.000  600.000  400.000
+ 35000.000 7110.000 4110.000 3100.000  600.000  400.000
+ 40000.000 7410.000 4180.000 3300.000  600.000  400.000
+ 45000.000 7690.000 4300.000 3300.000  600.000  400.000
+ 50000.000 8050.000 4390.000 3300.000  600.000  400.000
+ 60000.000 8480.000 4730.000 3400.000  600.000  400.000
+ 70000.000 8480.000 4780.000 3400.000  600.000  400.000

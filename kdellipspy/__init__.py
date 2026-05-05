@@ -29,9 +29,24 @@ from .graphics_suite import (
     GraphicsConfig, GraphicsSuite
 )
 
-# --- Inversión (Neighborhood Algorithm) ---
+# --- Inversión: módulo base (compartido) ---
+from .inversion_base import (
+    NAModel,
+    MisfitCalculator,
+    NAResult,
+    BaseInversionModel,
+)
+
+# --- Inversión: Neighbourhood Algorithm ---
 from .inversion_na import (
-    NAConfig, NAModel, MisfitCalculator, NAResult, NAInversionModel
+    NAConfig,
+    NAInversionModel,
+)
+
+# --- Inversión: MCMC (PyMC + ArviZ) ---
+from .inversion_mcmc import (
+    MCMCConfig,
+    MCMCInversionModel,
 )
 
 # --- Procesamiento de Señales ---
@@ -59,8 +74,17 @@ __all__ = [
     # Gráficos
     "GraphicsConfig", "GraphicsSuite",
     
-    # Inversión
-    "NAConfig", "NAModel", "MisfitCalculator", "NAResult", "NAInversionModel",
+    # Inversión base
+    "NAModel",
+    "MisfitCalculator",
+    "NAResult",
+    "BaseInversionModel",
+    # NA
+    "NAConfig",
+    "NAInversionModel",
+    # MCMC
+    "MCMCConfig",
+    "MCMCInversionModel",
     
     # Procesamiento de Señales
     "build_azi_times_array", "write_azi_times_file",

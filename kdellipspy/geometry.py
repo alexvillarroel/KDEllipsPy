@@ -283,6 +283,15 @@ class GeometryBuilder:
 
         return vals, b_str, b_dip, b_rak, b_wd, b_len
 
+    def _mt_mode(self) -> str:
+        mt = self.config.moment_tensor
+        mode = str(getattr(mt, "scaling_mode", "no_mt")).strip().lower()
+        if int(mt.flag) == 0:
+            return "no_mt"
+        if mode not in {"no_mt", "mt_strict", "mt_factored"}:
+            return "mt_factored"
+        return mode
+
     def build(
         self,
         slip_geom: float = 1.0,
@@ -384,7 +393,7 @@ class GeometryBuilder:
                 )
 
         source_points: List[SourcePoint] = []
-        mt_enabled = int(mt.flag) == 1
+        mt_enabled = self._mt_mode() != "no_mt"
 
         if mt_enabled:
             _, b_str, b_dip, b_rak, b_wd, b_len = self._mt_basis_and_amplitudes(len(subfaults))
@@ -543,7 +552,16 @@ class EllipticalSlipMapper:
             return float(np.exp(-d))
         return float(np.sqrt(max(0.0, 1.0 - d)))
 
-    def _mt_component_weights(self) -> List[float]:
+    def _mt_mode(self) -> str:
+        mt = self.config.moment_tensor
+        mode = str(getattr(mt, "scaling_mode", "no_mt")).strip().lower()
+        if int(mt.flag) == 0:
+            return "no_mt"
+        if mode not in {"no_mt", "mt_strict", "mt_factored"}:
+            return "mt_factored"
+        return mode
+
+    def _mt_component_weights_signed(self) -> List[float]:
         mt = self.config.moment_tensor
 
         scale = 10.0 ** float(mt.exponent)
@@ -562,17 +580,39 @@ class EllipticalSlipMapper:
         c4 = mtt + mpp - 2.0 * mrr
 
         vals = [
-            abs(c1),
-            abs(c2),
-            abs(c3),
-            abs(c4),
-            abs(c5),
-            abs(c6) * sqrt(1.5),
+            c1,
+            c2,
+            c3,
+            c4,
+            c5,
+            c6 * sqrt(1.5),
         ]
-        total = float(sum(vals))
+        total = float(sum(abs(v) for v in vals))
         if total <= 0.0:
             return [1.0 / 6.0] * 6
         return [v / total for v in vals]
+
+    def _mt_target_m0_nm(self) -> float:
+        mt = self.config.moment_tensor
+        scale = 10.0 ** float(mt.exponent)
+        mrr = float(mt.mrr) * scale
+        mtt = float(mt.mtt) * scale
+        mpp = float(mt.mpp) * scale
+        mrt = float(mt.mrt) * scale
+        mrp = float(mt.mrp) * scale
+        mtp = float(mt.mtp) * scale
+        # Scalar moment from second invariant of symmetric moment tensor.
+        return float(
+            sqrt(
+                0.5
+                * (
+                    mrr * mrr
+                    + mtt * mtt
+                    + mpp * mpp
+                    + 2.0 * (mrt * mrt + mrp * mrp + mtp * mtp)
+                )
+            )
+        )
 
     def apply_to_geometry(
         self,
@@ -591,11 +631,30 @@ class EllipticalSlipMapper:
         for sf_idx in sf_by_index.keys():
             slip_factor_by_subfault[sf_idx] = self._slip_factor_for_subfault(sf_idx, prepared)
 
+        mt_mode = self._mt_mode()
+        dmax_effective = dmax
+        target_m0_nm: Optional[float] = None
+        denom_mu_a_slipfactor: Optional[float] = None
+        strict_scale_ok = True
+        if geom.mt_enabled and mt_mode == "mt_strict":
+            target_m0_nm = self._mt_target_m0_nm()
+            denom = 0.0
+            for sf_idx, slip_factor in slip_factor_by_subfault.items():
+                sf = sf_by_index.get(sf_idx)
+                if sf is None:
+                    continue
+                denom += float(sf.mu_pa) * float(sf.area_m2) * float(slip_factor)
+            denom_mu_a_slipfactor = float(denom)
+            if denom > 0.0 and target_m0_nm > 0.0:
+                dmax_effective = float(target_m0_nm / denom)
+            else:
+                strict_scale_ok = False
+
         # Assign slip and rupture time only to subfaults inside the ellipse (slip_factor > 0)
         for sf_idx, slip_factor in slip_factor_by_subfault.items():
             sf = sf_by_index.get(sf_idx)
             if sf is not None:
-                sf.slip_m = float(dmax * slip_factor)
+                sf.slip_m = float(dmax_effective * slip_factor)
                 
                 # Only calculate rupture time for points inside the ellipse
                 if slip_factor > 0.0:
@@ -608,7 +667,7 @@ class EllipticalSlipMapper:
                 else:
                     sf.rupture_time_s = 0.0
 
-        mt_weights = self._mt_component_weights() if geom.mt_enabled else None
+        mt_weights = self._mt_component_weights_signed() if geom.mt_enabled else None
         for sp in geom.source_points:
             sf_idx = int(sp.subfault_index)
             sf = sf_by_index.get(sf_idx)
@@ -617,7 +676,7 @@ class EllipticalSlipMapper:
 
             sp.rupture_time_s = float(sf.rupture_time_s)
             slip_factor = slip_factor_by_subfault[sf_idx]
-            slip_real = float(dmax * slip_factor)
+            slip_real = float(dmax_effective * slip_factor)
 
             if geom.mt_enabled and mt_weights is not None:
                 moment_total = float(sf.mu_pa * sf.area_m2 * slip_real)
@@ -630,7 +689,7 @@ class EllipticalSlipMapper:
 
         # Filter source points with near-zero source terms that do not contribute to synthetics.
         if geom.mt_enabled:
-            threshold_moment = 1e14
+            threshold_moment = 1e-20
             geom.source_points = [sp for sp in geom.source_points if abs(sp.moment) > threshold_moment]
         else:
             threshold_disp = 1e-14
@@ -641,6 +700,26 @@ class EllipticalSlipMapper:
             sp.index = i
 
         geom.rupture_velocity_km_s = float(prepared["vr_km_s"])
+
+        # Diagnostics for logging (set after moments/slip and filtering).
+        mode_label = mt_mode if geom.mt_enabled else "no_mt"
+        m0_tensor_nm = float(self._mt_target_m0_nm()) if geom.mt_enabled else None
+        geom.slip_scale_diagnostics = {
+            "mt_scaling_mode": mode_label,
+            "dmax_requested_m": float(dmax),
+            "dmax_effective_m": float(dmax_effective),
+            "m0_target_nm": m0_tensor_nm,
+            "mu_a_slipfactor_sum": denom_mu_a_slipfactor,
+            "m0_L1_sum_abs_moments_nm": float(geom.total_moment_nm()),
+            "mt_strict_scale_applied": bool(
+                geom.mt_enabled and mt_mode == "mt_strict" and strict_scale_ok
+            ),
+        }
+        if geom.mt_enabled and mt_mode == "mt_strict" and not strict_scale_ok:
+            geom.slip_scale_diagnostics["strict_scale_warning"] = (
+                "mt_strict: sum(mu*A*slip_factor)<=0 or M0_target<=0; "
+                "dmax_effective equals requested dmax"
+            )
 
         return geom
 
