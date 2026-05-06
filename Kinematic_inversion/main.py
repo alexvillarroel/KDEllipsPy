@@ -3,7 +3,7 @@ import sys
 import argparse
 
 from src.config_parser import ConfigParser
-from src.signal_utils import load_and_filter_observed_data, build_azi_times_array
+from src.signal_utils import load_observed_flat, load_observed_raw, build_azi_times_array
 from src.inversion_na import NAInversionModel, NAConfig
 from src.graphics_suite import GraphicsSuite
 
@@ -72,6 +72,12 @@ def main() -> None:
         action="store_true",
         help="Skip plot generation"
     )
+    parser.add_argument(
+        "--data-mode",
+        choices=("flat", "raw"),
+        default="flat",
+        help="Observed data mode to load from DATA/ or DATA/RAW/"
+    )
     
     args = parser.parse_args()
     run_dir = Path(args.run).resolve()
@@ -93,13 +99,18 @@ def main() -> None:
     print(f"Frecuencia: {cfg.ellipse.freq1} - {cfg.ellipse.freq2} Hz", flush=True)
 
     step(3, 6, "Preparando datos observados")
-    observed_waveforms, time_array = load_and_filter_observed_data(
-        freq1=cfg.ellipse.freq1,
-        freq2=cfg.ellipse.freq2,
-        input_ctl_path=input_ctl,
-        data_dir=run_dir / "DATA",
-        prefer_raw=False,
-    )
+    if args.data_mode == "raw":
+        observed_waveforms, time_array = load_observed_raw(
+            freq1=cfg.ellipse.freq1,
+            freq2=cfg.ellipse.freq2,
+            input_ctl_path=input_ctl,
+            data_dir=run_dir / "DATA",
+        )
+    else:
+        observed_waveforms, time_array = load_observed_flat(
+            input_ctl_path=input_ctl,
+            data_dir=run_dir / "DATA",
+        )
 
     azi_times_array = None
     try:

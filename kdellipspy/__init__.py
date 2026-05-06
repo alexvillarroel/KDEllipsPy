@@ -10,6 +10,20 @@ from .config_parser import (
 # Renombramos Station para evitar colisión con geometry.py
 from .config_parser import Station as ConfigStation 
 
+# --- Procesamiento de señales sísmicas (SAC/MiniSEED) ---
+from .sac_processor import (
+    ProcessingConfig,
+    WaveformExtractor,
+    process_trace,
+    acausal_bandpass,
+    polynomial_baseline_correction,
+)
+
+# --- Carga de datos RAW para inversion ---
+from .raw_loader import (
+    load_observed_from_raw,
+)
+
 # --- Modelado Foward ---
 from .forward_model import (
     AxitraForwardModel, precompute_greens_functions

@@ -17,6 +17,8 @@
 # 2. Source Position & Focal Mechanism          :     Values                   |
 #===============================================:===============================
  Event Name                                     :     Event Copiapo 2025 INTRAPLATE
+ Event Origin Date (UTC, YYYY-MM-DD)           :     2025-06-06
+ Event Origin Time (UTC, HH:MM:SS[.sss])       :     17:15:06.000
  Latitude                                       :   -26.639
  Longitude                                      :   -70.404
  Depth                                     (km) :      75.0
@@ -42,7 +44,7 @@
  Slip shape            (0:cst, 1:gauss, 2:ell)  :       1
  Frequency 1 (Freq1)                      (Hz)  :    0.08
  Frequency 2 (Freq2)                      (Hz)  :    0.13
- Time shift (T0)                           (s)  :     0.0
+ Time shift (T0)                           (s)  :     3.0
 
 #===============================================:===============================
 # 5. Parameters to Invert (Min, Max, Flag)      :   Min      Max     Flag      |

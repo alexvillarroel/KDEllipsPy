@@ -29,6 +29,8 @@ class ObservedDataParams:
 class SourcePosition:
     """Section 2: Source Position & Focal Mechanism"""
     event_name: str
+    event_origin_date: str
+    event_origin_time: str
     latitude: float
     longitude: float
     depth: float
@@ -41,6 +43,8 @@ class SourcePosition:
         get = lambda key, default: _get_param_value(params, key, default)
         return cls(
             event_name=str(get('Event Name', 'Unknown')),
+            event_origin_date=str(get('Event Origin Date (UTC, YYYY-MM-DD)', '')).strip(),
+            event_origin_time=str(get('Event Origin Time (UTC, HH:MM:SS[.sss])', '')).strip(),
             latitude=float(get('Latitude', 0.0)),
             longitude=float(get('Longitude', 0.0)),
             depth=float(get('Depth', 0.0)),
@@ -346,8 +350,9 @@ class ConfigParser:
         params = {}
         for line in section.split('\n'):
             if ':' in line:
-                # Use right split because labels can include ':' (e.g. 'Param 1: ... : val')
-                parts = line.rsplit(':', 1)
+                # Split on the structural separator between label and value.
+                # This preserves internal ':' characters in values like HH:MM:SS.
+                parts = re.split(r"\s+:\s+", line, maxsplit=1)
                 if len(parts) == 2:
                     key = parts[0].strip()
                     value = parts[1].strip()
@@ -403,6 +408,8 @@ def read_input_ctl(filepath: str) -> Dict[str, Any]:
         'delta': cfg.observed_data.delta,
         'units': cfg.observed_data.units,
         'event_name': cfg.source_position.event_name,
+        'event_origin_date': cfg.source_position.event_origin_date,
+        'event_origin_time': cfg.source_position.event_origin_time,
         'lat': cfg.source_position.latitude,
         'lon': cfg.source_position.longitude,
         'depth': cfg.source_position.depth,

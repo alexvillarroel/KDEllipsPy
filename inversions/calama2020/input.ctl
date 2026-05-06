@@ -14,9 +14,11 @@
  Units                        (1:disp, 2:vel)   :       2
 
 #===============================================:===============================
-# 2. Source Position & Focal Mechanism          :     Values                   |
+# 2. Source & Focal Mechanism          :     Values                   |
 #===============================================:===============================
  Event Name                                     :     Calama 2020 Intraplate
+ Event Origin Date (UTC, YYYY-MM-DD)           :     2020-06-03
+ Event Origin Time (UTC, HH:MM:SS[.sss])       :     07:35:34.000
  Latitude                                       :   -23.2470
  Longitude                                      :   -68.530
  Depth                                     (km) :      123.400

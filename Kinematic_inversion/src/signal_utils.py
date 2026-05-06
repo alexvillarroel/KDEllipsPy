@@ -1,36 +1,18 @@
 from __future__ import annotations
-
 import math
 from pathlib import Path
 from typing import Dict, Iterable, Optional, Tuple
-
 import numpy as np
-
+# Local imports
 try:
-	from .config_parser import ConfigParser
+    from .config_parser import ConfigParser
 except ImportError:
-	from config_parser import ConfigParser
-
-try:
-	from obspy import Stream, Trace, read, read_inventory
-except Exception:  # pragma: no cover - handled at runtime when RAW mode is requested
-	Stream = None
-	Trace = None
-	read = None
-	read_inventory = None
-
-try:
-	from obspy.taup import TauPyModel
-	from obspy.geodetics.base import gps2dist_azimuth, kilometers2degrees
-except Exception:  # pragma: no cover - handled at runtime when azi_times is requested
-	TauPyModel = None
-	gps2dist_azimuth = None
-	kilometers2degrees = None
-
-try:
-	from obspy.clients.iris import Client as IrisClient
-except Exception:  # pragma: no cover - optional fallback to legacy web service
-	IrisClient = None
+    from config_parser import ConfigParser
+# ObsPy (required dependency)
+from obspy import Stream, Trace, UTCDateTime, read, read_inventory
+from obspy.taup import TauPyModel
+from obspy.geodetics.base import gps2dist_azimuth, kilometers2degrees
+from obspy.clients.iris import Client as IrisClient
 
 
 def _component_suffix_for_units(units: int) -> str:
@@ -39,6 +21,27 @@ def _component_suffix_for_units(units: int) -> str:
 	if int(units) == 2:
 		return "vel"
 	raise ValueError(f"Unsupported units={units}. Expected 1 (disp) or 2 (vel).")
+
+
+def _resolve_data_dir(input_ctl_path: str | Path, data_dir: str | Path) -> Path:
+	input_ctl_path = Path(input_ctl_path).resolve()
+	base_dir = input_ctl_path.parent
+	data_dir = Path(data_dir)
+	if not data_dir.is_absolute():
+		data_dir = (base_dir / data_dir).resolve()
+	if not data_dir.is_dir():
+		raise FileNotFoundError(f"Data directory not found: {data_dir}")
+	return data_dir
+
+
+def _validate_frequency_band(freq1: float, freq2: float) -> Tuple[float, float]:
+	freq1_eff = float(freq1)
+	freq2_eff = float(freq2)
+	if freq1_eff <= 0 or freq2_eff <= 0 or freq2_eff <= freq1_eff:
+		raise ValueError(
+			f"Invalid frequency band: freq1={freq1_eff}, freq2={freq2_eff}. Require 0 < freq1 < freq2."
+		)
+	return freq1_eff, freq2_eff
 
 
 def _read_observed_flat_file(
@@ -136,6 +139,9 @@ def _validate_time_axis(time: np.ndarray, t1: float, delta: float, npts: int) ->
 
 
 def _load_from_flat_files(data_dir: Path, cfg: ConfigParser) -> Tuple[np.ndarray, np.ndarray]:
+	if not data_dir.is_dir():
+		raise FileNotFoundError(f"Data directory not found: {data_dir}")
+
 	n_stations = len(cfg.stations.stations)
 	npts = int(cfg.observed_data.npts)
 	units_suffix = _component_suffix_for_units(cfg.observed_data.units)
@@ -192,6 +198,26 @@ def _load_from_flat_files(data_dir: Path, cfg: ConfigParser) -> Tuple[np.ndarray
 	# (n_stations, 3, npts)
 	observed = np.stack([x2, y2, z2], axis=1)
 	return observed, time
+
+
+def load_observed_flat(
+	input_ctl_path: str | Path = "input.ctl",
+	data_dir: str | Path = "DATA",
+) -> Tuple[np.ndarray, np.ndarray]:
+	"""
+	Load already processed observed waveforms from flat files in DATA/.
+
+	Expected files:
+	- real_disp_x/y/z when units=1
+	- real_vel_x/y/z when units=2
+
+	These files are assumed to be filtered and time-aligned already, so this
+	function only loads and validates them.
+	"""
+	input_ctl_path = Path(input_ctl_path).resolve()
+	data_dir = _resolve_data_dir(input_ctl_path, data_dir)
+	cfg = ConfigParser(str(input_ctl_path))
+	return _load_from_flat_files(data_dir, cfg)
 
 
 def _iter_raw_waveform_files(raw_dir: Path) -> Iterable[Path]:
@@ -274,11 +300,38 @@ def _preprocess_trace(
 	return data
 
 
+def _event_origin_starttime(cfg: ConfigParser):
+	"""Return ObsPy UTCDateTime for event origin + t1 when available in input.ctl."""
+	date = getattr(cfg.source_position, "event_origin_date", "") or ""
+	time = getattr(cfg.source_position, "event_origin_time", "") or ""
+
+	if not str(date).strip() or not str(time).strip():
+		return None
+
+	if UTCDateTime is None:
+		return None
+
+	origin_str = f"{str(date).strip()}T{str(time).strip()}"
+	try:
+		origin = UTCDateTime(origin_str)
+	except Exception:
+		raise ValueError(
+			"Invalid event origin date/time in input.ctl. "
+			"Expected date=YYYY-MM-DD and time=HH:MM:SS[.sss] (UTC)."
+		)
+
+	return origin + float(cfg.observed_data.t1)
+
+
 def _load_from_raw(raw_dir: Path, cfg: ConfigParser, freq1: float, freq2: float) -> Tuple[np.ndarray, np.ndarray]:
 	if read is None:
 		raise ImportError(
 			"ObsPy is required for RAW mode (.sac/.mseed). Install with: pip install obspy"
 		)
+	if not raw_dir.is_dir():
+		raise FileNotFoundError(f"RAW directory not found: {raw_dir}")
+
+	freq1, freq2 = _validate_frequency_band(freq1, freq2)
 
 	paths = sorted(_iter_raw_waveform_files(raw_dir))
 	if not paths:
@@ -294,9 +347,12 @@ def _load_from_raw(raw_dir: Path, cfg: ConfigParser, freq1: float, freq2: float)
 	if inventory is None:
 		print("[signal_utils] WARNING: no instrument inventory found in DATA/RAW; response removal skipped.")
 
-	# Reference start from earliest available trace. Then apply t1 offset from input.ctl.
-	global_start = min(tr.stats.starttime for tr in stream)
-	starttime = global_start + float(cfg.observed_data.t1)
+	# Prefer explicit event origin from input.ctl for reproducible alignment.
+	# Fallback keeps previous behavior anchored to earliest trace start.
+	starttime = _event_origin_starttime(cfg)
+	if starttime is None:
+		global_start = min(tr.stats.starttime for tr in stream)
+		starttime = global_start + float(cfg.observed_data.t1)
 
 	npts = int(cfg.observed_data.npts)
 	delta = float(cfg.observed_data.delta)
@@ -337,6 +393,30 @@ def _load_from_raw(raw_dir: Path, cfg: ConfigParser, freq1: float, freq2: float)
 		)
 
 	return observed, time
+
+
+def load_observed_raw(
+	freq1: Optional[float] = None,
+	freq2: Optional[float] = None,
+	input_ctl_path: str | Path = "input.ctl",
+	data_dir: str | Path = "DATA",
+) -> Tuple[np.ndarray, np.ndarray]:
+	"""
+	Load raw waveform data from DATA/RAW/ and preprocess it for inversion.
+
+	This function expects unprocessed waveform files in DATA/RAW/ (.sac or .mseed)
+	and applies detrending, tapering, optional response removal, bandpass filtering,
+	interpolation, and trimming to the requested time window.
+	"""
+	input_ctl_path = Path(input_ctl_path).resolve()
+	data_dir = _resolve_data_dir(input_ctl_path, data_dir)
+	cfg = ConfigParser(str(input_ctl_path))
+	freq1_eff, freq2_eff = _validate_frequency_band(
+		cfg.ellipse.freq1 if freq1 is None else freq1,
+		cfg.ellipse.freq2 if freq2 is None else freq2,
+	)
+	raw_dir = data_dir / "RAW"
+	return _load_from_raw(raw_dir, cfg, freq1_eff, freq2_eff)
 
 
 def _first_arrival_time(model, evdep_km: float, distdeg: float, phases: Tuple[str, str]) -> float:
@@ -461,52 +541,32 @@ def load_and_filter_observed_data(
 	prefer_raw: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray]:
 	"""
-	Load observed data with two supported user workflows:
-
-	1) Flat files in DATA:
-	   - real_disp_x/y/z  (if input.ctl units=1)
-	   - real_vel_x/y/z   (if input.ctl units=2)
-	   Each file must contain 2 columns: time and data,
-	   and total rows must be npts * nstations.
-
-	2) RAW files in DATA/RAW:
-	   - .sac or .mseed files
-	   - station name extracted from waveform metadata
-	   - bandpass filtering using input.ctl frequency band
-	   - response removal attempted when inventory files are present in RAW
-
-	Returns:
-		observed_waveforms: ndarray with shape (n_stations, 3, npts)
-		time_array: ndarray with shape (npts,)
+	Backward-compatible wrapper around load_observed_flat/load_observed_raw.
 	"""
-	input_ctl_path = Path(input_ctl_path).resolve()
-	base_dir = input_ctl_path.parent
-	data_dir = Path(data_dir)
-	if not data_dir.is_absolute():
-		data_dir = (base_dir / data_dir).resolve()
-
-	cfg = ConfigParser(str(input_ctl_path))
-	freq1_eff = float(cfg.ellipse.freq1 if freq1 is None else freq1)
-	freq2_eff = float(cfg.ellipse.freq2 if freq2 is None else freq2)
-
-	if freq1_eff <= 0 or freq2_eff <= 0 or freq2_eff <= freq1_eff:
-		raise ValueError(
-			f"Invalid frequency band: freq1={freq1_eff}, freq2={freq2_eff}. Require 0 < freq1 < freq2."
+	if prefer_raw:
+		return load_observed_raw(
+			freq1=freq1,
+			freq2=freq2,
+			input_ctl_path=input_ctl_path,
+			data_dir=data_dir,
 		)
+	return load_observed_flat(
+		input_ctl_path=input_ctl_path,
+		data_dir=data_dir,
+	)
 
-	raw_dir = data_dir / "RAW"
 
-	if prefer_raw and raw_dir.exists():
-		return _load_from_raw(raw_dir, cfg, freq1_eff, freq2_eff)
-
-	# Try flat-file mode first (fast and deterministic).
-	try:
-		return _load_from_flat_files(data_dir, cfg)
-	except Exception as flat_exc:
-		if raw_dir.exists():
-			print(f"[signal_utils] INFO: flat DATA mode unavailable ({flat_exc}); trying RAW mode...")
-			return _load_from_raw(raw_dir, cfg, freq1_eff, freq2_eff)
-		raise
+def load_observed(
+	mode: str = "flat",
+	**kwargs,
+) -> Tuple[np.ndarray, np.ndarray]:
+	"""Dispatch to load_observed_flat or load_observed_raw based on mode."""
+	mode_norm = str(mode).strip().lower()
+	if mode_norm == "flat":
+		return load_observed_flat(**kwargs)
+	if mode_norm == "raw":
+		return load_observed_raw(**kwargs)
+	raise ValueError("mode must be 'flat' or 'raw'")
 
 
 def bandpass_filter_waveforms(

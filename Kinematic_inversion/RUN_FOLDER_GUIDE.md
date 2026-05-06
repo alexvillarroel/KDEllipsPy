@@ -65,6 +65,7 @@ The `input.ctl` file contains all inversion parameters. Each run folder should h
 
 1. **Observed Data Parameters**: time window, sampling, units
 2. **Source Position & Focal Mechanism**: latitude, longitude, depth, strike, dip, rake
+    - Optional but recommended for `DATA/RAW/`: event origin UTC date/time
 3. **Fault Plane Parameters**: dimensions, hypocenter location, subfault grid
 4. **Ellipse Parameters**: number of ellipses, frequency band, time shift
 5. **Parameters to Invert**: which fault parameters to vary and their bounds
@@ -114,6 +115,7 @@ DATA/
 - Files are automatically bandpass-filtered to the frequency range in `input.ctl`
 - Station name is extracted from file metadata
 - If inventory files present, instrument response is removed
+- If `Event Origin Date/Time` is set in `input.ctl`, windowing uses event origin + `t1`
 - Requires: `obspy` for SAC/MiniSEED reading
 
 ## Example Workflow

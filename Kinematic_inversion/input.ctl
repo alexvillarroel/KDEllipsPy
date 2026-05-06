@@ -17,6 +17,8 @@
 # 2. Source Position & Focal Mechanism          :     Values                   |
 #===============================================:===============================
  Event Name                                     :     Event Copiapo 2025 INTRAPLATE
+ Event Origin Date (UTC, YYYY-MM-DD)           :     2025-06-06
+ Event Origin Time (UTC, HH:MM:SS[.sss])       :     17:14:33
  Latitude                                       :   -26.639
  Longitude                                      :   -70.404
  Depth                                     (km) :      75.0
