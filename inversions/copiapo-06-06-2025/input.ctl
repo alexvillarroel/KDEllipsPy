@@ -11,7 +11,7 @@
  Time window end (t2)                           :   128
  Number of points (Npts)                        :     512
  Delta / Time step                              :    0.25
- Units                        (1:disp, 2:vel)   :       1
+ Units                        (1:disp, 2:vel)   :       2
 
 #===============================================:===============================
 # 2. Source Position & Focal Mechanism          :     Values                   |
@@ -31,8 +31,8 @@
  Length along dip (Ly)                     (m)  : 30000.0
  Hypocenter position strike (Hx)           (m)  : 15000.0
  Hypocenter position dip (Hy)              (m)  : 15000.0
- Number of subfaults along strike (Nx)          :       10
- Number of subfaults along dip (Ny)             :       10
+ Number of subfaults along strike (Nx)          :       30
+ Number of subfaults along dip (Ny)             :       30
 
 #===============================================:===============================
 # 4. Ellipse Parameters & Frequency Band        :     Values                   |
@@ -68,7 +68,7 @@
 #===============================================:===============================
 # 7. Optional: Moment Tensor (Full MT)          :     Values                   |
 #===============================================:===============================
- Moment Tensor Flag           (0:no, 1:yes)     :       1
+ Moment Tensor Flag           (0:no, 1:yes)     :       0
  MT Scaling Mode (mt_strict/mt_factored)      : mt_factored
  Mrr                                            :  -2.486
  Mtt                                            :   7.932

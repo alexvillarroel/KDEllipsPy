@@ -298,6 +298,69 @@ class GraphicsSuite:
     def load_na_results(self, source: Any) -> tuple[list[dict[str, float]], list[str]]:
         return self._normalize_na_rows(source)
 
+    def plot_waveform_fit(
+        self,
+        observed: np.ndarray,
+        synthetic: np.ndarray,
+        time_array: np.ndarray,
+        station_names: list[str],
+        misfit: float | None = None,
+    ) -> None:
+        """
+        Grafica las formas de onda observadas vs sintéticas.
+        
+        Parameters
+        ----------
+        observed : np.ndarray, shape (nsta, 3, npts)
+        synthetic : np.ndarray, shape (nsta, 3, npts)
+        time_array : np.ndarray, shape (npts,)
+        station_names : list[str], length nsta
+        misfit : float, opcional
+        """
+        nsta = observed.shape[0]
+        fig, axs = plt.subplots(nsta, 3, figsize=(10, 1.5 * nsta), squeeze=False, sharex=True)
+        
+        comps = ['North', 'East', 'Z']
+        colors_obs = ['black', 'black', 'black']
+        colors_syn = ['red', 'red', 'red']
+
+        title = "Mejor ajuste de formas de onda"
+        if misfit is not None:
+            title += f" (Misfit: {misfit:.4f})"
+        fig.suptitle(title, fontsize=14, y=1.02)
+
+        for i in range(nsta):
+            for j in range(3):
+                ax = axs[i, j]
+                
+                # Observado
+                ax.plot(time_array, observed[i, j, :], color=colors_obs[j], label='Observed' if i==0 else None, linewidth=1.5)
+                # Sintético
+                ax.plot(time_array, synthetic[i, j, :], color=colors_syn[j], label='Synthetic' if i==0 else None, linewidth=1.2, linestyle='--')
+                
+                if i == 0:
+                    ax.set_title(comps[j])
+                
+                if j == 0:
+                    ax.set_ylabel(station_names[i], fontweight='bold')
+                
+                if i == nsta - 1:
+                    ax.set_xlabel("Time (s)")
+                
+                ax.grid(True, alpha=0.3)
+                ax.tick_params(axis='both', which='both', bottom=False, top=False, left=False, right=False, labelleft=False)
+
+        fig.legend(loc='upper right', bbox_to_anchor=(1.1, 1.0))
+        plt.tight_layout()
+        
+        out_path = self.fig_dir / "Best_Waveform_Fit.png"
+        fig.savefig(out_path, dpi=self.cfg.dpi, bbox_inches="tight")
+        print(f"✓ Gráfico guardado: {out_path}", flush=True)
+        if self.cfg.show:
+            plt.show()
+        else:
+            plt.close(fig)
+
     def plot_seismograms_all(self) -> None:
         dt, npts = self._read_dt_npts()
         stations = self._read_station_names()

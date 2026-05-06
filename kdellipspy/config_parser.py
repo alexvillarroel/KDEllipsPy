@@ -142,6 +142,7 @@ class InversionProcessParams:
     ss1: int             # Sample size for first iteration (NA) / unused default for MCMC
     ss_other: int        # Sample size for other iterations (NA)
     cells_resample: int
+    misfit_time_window: float = 0.0 # 0=full signal, >0=window in seconds
     # MCMC (only used when algorithm_type == 1); optional lines in input.ctl
     mcmc_total_steps: int = 500
     mcmc_burn_in: int = 0
@@ -157,6 +158,7 @@ class InversionProcessParams:
         ss1 = int(get('Sample size for first iteration (SS1)', 30))
         ss_other = int(get('Sample size for other iterations', 30))
         cells_resample = int(get('Cells to resample', 7))
+        misfit_time_window = float(get('Misfit time window', 0.0)) # 0 means full signal
         mcmc_total_steps = int(get('MCMC total steps', 500))
         if mcmc_total_steps < 1:
             mcmc_total_steps = max(100, ss1 * max(1, num_iterations))
@@ -178,6 +180,7 @@ class InversionProcessParams:
             ss1=ss1,
             ss_other=ss_other,
             cells_resample=cells_resample,
+            misfit_time_window=misfit_time_window,
             mcmc_total_steps=mcmc_total_steps,
             mcmc_burn_in=mcmc_burn_in,
             mcmc_proposal_scale=mcmc_proposal_scale,
@@ -225,7 +228,9 @@ class Station:
     longitude: float
     height: float
     name: str
-
+    use_n: bool
+    use_e: bool # Default to using east component
+    use_z: bool # Default to using vertical component
 
 @dataclass
 class StationParams:
@@ -238,11 +243,19 @@ class StationParams:
         for line in station_lines:
             parts = line.split()
             if len(parts) >= 4:
+                use_n = use_e = use_z = True
+                if len(parts) >= 7:
+                    use_n = int(parts[4]) == 1
+                    use_e = int(parts[5]) == 1
+                    use_z = int(parts[6]) == 1
                 stations.append(Station(
                     latitude=float(parts[0]),
                     longitude=float(parts[1]),
                     height=float(parts[2]),
-                    name=parts[3]
+                    name=parts[3],
+                    use_n=use_n,
+                    use_e=use_e,
+                    use_z=use_z
                 ))
         return cls(stations=stations)
 

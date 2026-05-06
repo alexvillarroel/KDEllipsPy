@@ -85,10 +85,17 @@ class MisfitCalculator:
         azi_times_path: Optional[Path] = None,
         azi_times_array: Optional[np.ndarray] = None,
         time_window_s: float = 20.0,
+        station_flags: Optional[np.ndarray] = None,
     ):
         self.observed = observed_waveforms
         self.time = time_array
         self.time_window_s = float(time_window_s)
+        
+        nsta = self.observed.shape[0]
+        if station_flags is not None:
+            self.station_flags = np.asarray(station_flags, dtype=bool)
+        else:
+            self.station_flags = np.ones((nsta, 3), dtype=bool)
 
         if azi_times_array is not None:
             arr = np.asarray(azi_times_array, dtype=float)
@@ -143,6 +150,7 @@ class MisfitCalculator:
 
         nshow = min(max_stations, nsta)
         for j in range(nsta):
+            use_n, use_e, use_z = self.station_flags[j]
             az = float(self.azi[j])
             start_p = int(np.rint(float(self.tp[j]))) * sampling
             start_s = int(np.rint(float(self.ts[j]))) * sampling
@@ -159,14 +167,20 @@ class MisfitCalculator:
                 x_syn = synthetic[j, 0, kp0:kp1 + 1]
                 y_syn = synthetic[j, 1, kp0:kp1 + 1]
                 z_syn = synthetic[j, 2, kp0:kp1 + 1]
-                r_obs = x_obs * np.cos(az) + y_obs * np.sin(az)
-                r_syn = x_syn * np.cos(az) + y_syn * np.sin(az)
-                r_obs_rms = float(np.sqrt(np.mean(r_obs ** 2)))
-                r_syn_rms = float(np.sqrt(np.mean(r_syn ** 2)))
-                z_obs_rms = float(np.sqrt(np.mean(z_obs ** 2)))
-                z_syn_rms = float(np.sqrt(np.mean(z_syn ** 2)))
-                obs_energy += float(np.sum(r_obs ** 2) + np.sum(z_obs ** 2))
-                syn_energy += float(np.sum(r_syn ** 2) + np.sum(z_syn ** 2))
+                
+                # Apply N/Z flags to Radial/Vertical
+                if use_n:
+                    r_obs = x_obs * np.cos(az) + y_obs * np.sin(az)
+                    r_syn = x_syn * np.cos(az) + y_syn * np.sin(az)
+                    r_obs_rms = float(np.sqrt(np.mean(r_obs ** 2)))
+                    r_syn_rms = float(np.sqrt(np.mean(r_syn ** 2)))
+                    obs_energy += float(np.sum(r_obs ** 2))
+                    syn_energy += float(np.sum(r_syn ** 2))
+                if use_z:
+                    z_obs_rms = float(np.sqrt(np.mean(z_obs ** 2)))
+                    z_syn_rms = float(np.sqrt(np.mean(z_syn ** 2)))
+                    obs_energy += float(np.sum(z_obs ** 2))
+                    syn_energy += float(np.sum(z_syn ** 2))
 
             t_obs_rms = t_syn_rms = 0.0
             if ks1 >= ks0:
@@ -174,12 +188,15 @@ class MisfitCalculator:
                 y_obs = self.observed[j, 1, ks0:ks1 + 1]
                 x_syn = synthetic[j, 0, ks0:ks1 + 1]
                 y_syn = synthetic[j, 1, ks0:ks1 + 1]
-                t_obs = y_obs * np.cos(az) - x_obs * np.sin(az)
-                t_syn = y_syn * np.cos(az) - x_syn * np.sin(az)
-                t_obs_rms = float(np.sqrt(np.mean(t_obs ** 2)))
-                t_syn_rms = float(np.sqrt(np.mean(t_syn ** 2)))
-                obs_energy += float(np.sum(t_obs ** 2))
-                syn_energy += float(np.sum(t_syn ** 2))
+                
+                # Apply E flag to Transverse
+                if use_e:
+                    t_obs = y_obs * np.cos(az) - x_obs * np.sin(az)
+                    t_syn = y_syn * np.cos(az) - x_syn * np.sin(az)
+                    t_obs_rms = float(np.sqrt(np.mean(t_obs ** 2)))
+                    t_syn_rms = float(np.sqrt(np.mean(t_syn ** 2)))
+                    obs_energy += float(np.sum(t_obs ** 2))
+                    syn_energy += float(np.sum(t_syn ** 2))
 
             if j < nshow:
                 lines.append(
@@ -203,7 +220,7 @@ class MisfitCalculator:
         return "\n".join(lines)
 
     # ------------------------------------------------------------------
-    def l2_misfit(self, synthetic: np.ndarray) -> float:
+    def l2_misfit(self, synthetic: np.ndarray, use_full_signal: bool = False) -> float:
         """Compute normalised L2 misfit in P (radial+vertical) and S (transverse) windows.
         (Calcula el desajuste L2 normalizado en ventanas P (radial+vertical) y S (transversal).)
         """
@@ -226,41 +243,73 @@ class MisfitCalculator:
 
         num = 0.0
         den = 0.0
+        if use_full_signal == False:
+            for j in range(nsta):
+                use_n, use_e, use_z = self.station_flags[j]
+                az = float(self.azi[j])
+                start_p = int(np.rint(float(self.tp[j]))) * sampling
+                start_s = int(np.rint(float(self.ts[j]))) * sampling
+                kp0 = max(0, start_p - 1)
+                kp1 = min(npts - 1, start_p + win - 1)
+                ks0 = max(0, start_s - 1)
+                ks1 = min(npts - 1, start_s + win - 1)
 
-        for j in range(nsta):
-            az = float(self.azi[j])
-            start_p = int(np.rint(float(self.tp[j]))) * sampling
-            start_s = int(np.rint(float(self.ts[j]))) * sampling
-            kp0 = max(0, start_p - 1)
-            kp1 = min(npts - 1, start_p + win - 1)
-            ks0 = max(0, start_s - 1)
-            ks1 = min(npts - 1, start_s + win - 1)
+                # P window: radial + vertical
+                if kp1 >= kp0:
+                    x_obs = self.observed[j, 0, kp0:kp1 + 1]
+                    y_obs = self.observed[j, 1, kp0:kp1 + 1]
+                    z_obs = self.observed[j, 2, kp0:kp1 + 1]
+                    x_syn = synthetic[j, 0, kp0:kp1 + 1]
+                    y_syn = synthetic[j, 1, kp0:kp1 + 1]
+                    z_syn = synthetic[j, 2, kp0:kp1 + 1]
+                    
+                    if use_n:  # Map N flag to Radial
+                        r_obs = x_obs * np.cos(az) + y_obs * np.sin(az)
+                        r_syn = x_syn * np.cos(az) + y_syn * np.sin(az)
+                        num += float(np.sum((r_obs - r_syn) ** 2))
+                        den += float(np.sum(r_obs ** 2))
+                    if use_z:
+                        num += float(np.sum((z_obs - z_syn) ** 2))
+                        den += float(np.sum(z_obs ** 2))
 
-            # P window: radial + vertical
-            if kp1 >= kp0:
-                x_obs = self.observed[j, 0, kp0:kp1 + 1]
-                y_obs = self.observed[j, 1, kp0:kp1 + 1]
-                z_obs = self.observed[j, 2, kp0:kp1 + 1]
-                x_syn = synthetic[j, 0, kp0:kp1 + 1]
-                y_syn = synthetic[j, 1, kp0:kp1 + 1]
-                z_syn = synthetic[j, 2, kp0:kp1 + 1]
+                # S window: transverse
+                if ks1 >= ks0:
+                    x_obs = self.observed[j, 0, ks0:ks1 + 1]
+                    y_obs = self.observed[j, 1, ks0:ks1 + 1]
+                    x_syn = synthetic[j, 0, ks0:ks1 + 1]
+                    y_syn = synthetic[j, 1, ks0:ks1 + 1]
+                    
+                    if use_e:  # Map E flag to Transverse
+                        t_obs = y_obs * np.cos(az) - x_obs * np.sin(az)
+                        t_syn = y_syn * np.cos(az) - x_syn * np.sin(az)
+                        num += float(np.sum((t_obs - t_syn) ** 2))
+                        den += float(np.sum(t_obs ** 2))
+        else:
+            for j in range(nsta):
+                use_n, use_e, use_z = self.station_flags[j]
+                az = float(self.azi[j])
+                x_obs = self.observed[j, 0, :]
+                y_obs = self.observed[j, 1, :]
+                z_obs = self.observed[j, 2, :]
+                x_syn = synthetic[j, 0, :]
+                y_syn = synthetic[j, 1, :]
+                z_syn = synthetic[j, 2, :]
+                
+                # Rotate the full signal
                 r_obs = x_obs * np.cos(az) + y_obs * np.sin(az)
                 r_syn = x_syn * np.cos(az) + y_syn * np.sin(az)
-                num += float(np.sum((r_obs - r_syn) ** 2))
-                den += float(np.sum(r_obs ** 2))
-                num += float(np.sum((z_obs - z_syn) ** 2))
-                den += float(np.sum(z_obs ** 2))
-
-            # S window: transverse
-            if ks1 >= ks0:
-                x_obs = self.observed[j, 0, ks0:ks1 + 1]
-                y_obs = self.observed[j, 1, ks0:ks1 + 1]
-                x_syn = synthetic[j, 0, ks0:ks1 + 1]
-                y_syn = synthetic[j, 1, ks0:ks1 + 1]
                 t_obs = y_obs * np.cos(az) - x_obs * np.sin(az)
                 t_syn = y_syn * np.cos(az) - x_syn * np.sin(az)
-                num += float(np.sum((t_obs - t_syn) ** 2))
-                den += float(np.sum(t_obs ** 2))
+                
+                if use_n:  # Map N flag to Radial
+                    num += float(np.sum((r_obs - r_syn)**2))
+                    den += float(np.sum(r_obs**2))
+                if use_e:  # Map E flag to Transverse
+                    num += float(np.sum((t_obs - t_syn)**2))
+                    den += float(np.sum(t_obs**2))
+                if use_z:
+                    num += float(np.sum((z_obs - z_syn)**2))
+                    den += float(np.sum(z_obs**2))
 
         return num / den if den > 0.0 else num
 
@@ -382,14 +431,31 @@ class BaseInversionModel:
         self.observed_waveforms = observed_waveforms
         self.time_array = time_array
         self.misfit_calc: Optional[MisfitCalculator] = None
+        self.use_full_signal: bool = False
 
         if observed_waveforms is not None and time_array is not None:
+            # Prepare station flags from ConfigParser
+            station_flags = None
+            if hasattr(self.cfg, 'stations') and self.cfg.stations is not None:
+                station_flags = np.array([
+                    [s.use_n, s.use_e, s.use_z] for s in self.cfg.stations.stations
+                ], dtype=bool)
+                
+            time_window_s = 20.0
+            if hasattr(self.cfg, 'inversion_process') and self.cfg.inversion_process is not None:
+                tw = self.cfg.inversion_process.misfit_time_window
+                if tw > 0.0:
+                    time_window_s = tw
+                elif tw == 0.0:
+                    self.use_full_signal = True
+
             if azi_times_array is not None:
                 self.misfit_calc = MisfitCalculator(
                     observed_waveforms,
                     time_array,
                     azi_times_array=azi_times_array,
-                    time_window_s=20.0,
+                    time_window_s=time_window_s,
+                    station_flags=station_flags
                 )
             else:
                 azi_times_path = self.input_ctl_path.parent / "Event" / "azi_times.txt"
@@ -397,7 +463,8 @@ class BaseInversionModel:
                     observed_waveforms,
                     time_array,
                     azi_times_path=azi_times_path,
-                    time_window_s=20.0,
+                    time_window_s=time_window_s,
+                    station_flags=station_flags
                 )
 
         self.param_names: List[str] = [
@@ -489,7 +556,7 @@ class BaseInversionModel:
             ap = self.fm.build_axitra(geom, latlon=False, freesurface=True)
             ap = self.fm.green(ap, quiet=True)
             _, sx, sy, sz = self.fm.conv(
-                ap, geom, source_type=1, t0=float(self.cfg.ellipse.t0), quiet=True
+                ap, geom, source_type=5, t0=float(self.cfg.ellipse.t0), quiet=True
             )
 
             synthetics = np.array([sx, sy, sz])
@@ -509,7 +576,7 @@ class BaseInversionModel:
                 freq2=float(self.cfg.ellipse.freq2),
             )
 
-            misfit = float(self.misfit_calc.l2_misfit(synthetics))
+            misfit = float(self.misfit_calc.l2_misfit(synthetics, use_full_signal=self.use_full_signal))
             if misfit < self._best_misfit_seen:
                 self._best_misfit_seen = misfit
                 self.best_synthetics = synthetics.copy()

@@ -1,7 +1,7 @@
 ################## PARAMETERS TO MODIFY *********************************
 
 CC=gcc		#	C Compiler
-CFLAGS=-O3 	# 	and its options
+CFLAGS=-O3 -std=c99# 	and its options
 #
 # GFORTRAN compiler
 #
