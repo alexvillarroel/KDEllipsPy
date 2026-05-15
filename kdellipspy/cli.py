@@ -126,7 +126,7 @@ def main() -> None:
 
     if algo == 0:
         inversion = NAInversionModel(
-            str(input_ctl),
+            config=cfg,
             axitra_dir=str(axitra_dir),
             observed_waveforms=observed_waveforms,
             time_array=time_array,
@@ -134,7 +134,7 @@ def main() -> None:
         )
     else:
         inversion = MCMCInversionModel(
-            str(input_ctl),
+            config=cfg,
             axitra_dir=str(axitra_dir),
             observed_waveforms=observed_waveforms,
             time_array=time_array,

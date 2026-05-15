@@ -8,7 +8,7 @@
 # 1. Observed Data Parameters                   :     Values                   |
 #===============================================:===============================
  Time window start (t1)                         :     0.0
- Time window end (t2)                           :   128
+ Time window end (t2)                           :   128.0
  Number of points (Npts)                        :     512
  Delta / Time step                              :    0.25
  Units                        (1:disp, 2:vel)   :       2
@@ -17,6 +17,7 @@
 # 2. Source Position & Focal Mechanism          :     Values                   |
 #===============================================:===============================
  Event Name                                     :     Event Copiapo 2025 INTRAPLATE
+ Origin Time (UTC)                              :     2025-06-06T17:15:06.000Z
  Latitude                                       :   -26.639
  Longitude                                      :   -70.404
  Depth                                     (km) :      75.0
@@ -27,10 +28,10 @@
 #===============================================:===============================
 # 3. Fault Plane Parameters                     :     Values                   |
 #===============================================:===============================
- Length along strike (Lx)                  (m)  : 30000.0
- Length along dip (Ly)                     (m)  : 30000.0
- Hypocenter position strike (Hx)           (m)  : 15000.0
- Hypocenter position dip (Hy)              (m)  : 15000.0
+ Length along strike (Lx)                  (m)  :  30000.0
+ Length along dip (Ly)                     (m)  :  30000.0
+ Hypocenter position strike (Hx)           (m)  :  15000.0
+ Hypocenter position dip (Hy)              (m)  :  15000.0
  Number of subfaults along strike (Nx)          :       30
  Number of subfaults along dip (Ny)             :       30
 
@@ -60,16 +61,22 @@
 # 6. Inversion Process Parameters               :     Values                   |
 #===============================================:===============================
  Algorithm type                 (0:NA, 1:MC)    :      0
- Number of iterations                           :      40
- Sample size for first iteration (SS1)          :      200
- Sample size for other iterations               :      50
- Cells to resample                              :      3
+ NA: Number of iterations                       :      40
+ NA: Sample size for first iteration (SS1)      :      200
+ NA: Sample size for other iterations           :      50
+ NA: Cells to resample                          :      3
+ Misfit time window     (s, 0.0=Full signal)    :      20.0
+ MCMC: total steps                              :      1000
+ MCMC: burn-in                                  :      200
+ MCMC: proposal scale                           :      0.05
+ MCMC: thinning                                 :      1
+ MCMC: chains                                   :      1
 
 #===============================================:===============================
 # 7. Optional: Moment Tensor (Full MT)          :     Values                   |
 #===============================================:===============================
  Moment Tensor Flag           (0:no, 1:yes)     :       0
- MT Scaling Mode (mt_strict/mt_factored)      : mt_factored
+ MT Scaling Mode (mt_strict/mt_factored)        : mt_factored
  Mrr                                            :  -2.486
  Mtt                                            :   7.932
  Mpp                                            :   0.083
@@ -79,15 +86,16 @@
  Exponent (iexp)                                :    18.0
 
 #===============================================:===============================
-# 8. Station Parameters (Lat, Lon, Height, Name):     Values                   |
+# 8. Station Parameters (Lat, Lon, Elev, Name, N, E, Z) (0:no, 1:yes)           |
 #===============================================:===============================
  Number of stations                             :       6
--23.61000 -70.26200 0.0 A24F
--23.90500 -69.29100 0.0 PB19
--26.14800 -70.59900 0.0 AC01
--27.50300 -70.88700 0.0 A18C
--28.83600 -70.27400 0.0 AC05
--29.10200 -71.41000 0.0 A32C
+-23.61000 -70.26200 0.0 A24F 1 1 1
+-23.90500 -69.29100 0.0 PB19 1 1 1
+-26.14800 -70.59900 0.0 AC01 1 1 1
+-27.50300 -70.88700 0.0 A18C 1 1 1
+-28.83600 -70.27400 0.0 AC05 1 1 1
+-29.10200 -71.41000 0.0 A32C 1 1 1
+
 #===============================================:===============================
 # 9. Velocity Model 1D                              : Thickness Vp Vs Rho Qp Qs |
 #===============================================:===============================

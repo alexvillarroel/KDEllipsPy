@@ -1,36 +1,36 @@
 # kdellipspy/__init__.py
 
 # --- Configuración y Parámetros ---
-from .config_parser import (
+from .core.config_parser import (
     ConfigParser, ObservedDataParams, SourcePosition, FaultPlaneParams,
     EllipseParams, InversionParam, InversionParams, InversionProcessParams,
     MomentTensor, StationParams, VelocityLayer, VelocityModel,
     read_input_ctl, parse_velocity_model, validate_input_ctl
 )
 # Renombramos Station para evitar colisión con geometry.py
-from .config_parser import Station as ConfigStation 
+from .core.config_parser import Station as ConfigStation
 
 # --- Modelado Foward ---
-from .forward_model import (
+from .core.forward_model import (
     AxitraForwardModel, precompute_greens_functions
 )
 
 # --- Geometría y Cinemática ---
-from .geometry import (
+from .core.geometry import (
     UTMProjection, StationGeometry, Subfault, SourcePoint, FaultGeometry,
     GeometryBuilder, EllipticalSlipMapper, build_geometry_from_input_ctl,
     build_station_geometry, EllipseDiagnosticsResult, EllipseDiagnostics
 )
 # Renombramos Station de geometry
-from .geometry import Station as GeometryStation 
+from .core.geometry import Station as GeometryStation
 
 # --- Gráficos ---
-from .graphics_suite import (
+from .core.graphics_suite import (
     GraphicsConfig, GraphicsSuite
 )
 
 # --- Inversión: módulo base (compartido) ---
-from .inversion_base import (
+from .inversion.base import (
     NAModel,
     MisfitCalculator,
     NAResult,
@@ -38,22 +38,30 @@ from .inversion_base import (
 )
 
 # --- Inversión: Neighbourhood Algorithm ---
-from .inversion_na import (
+from .inversion.kinematic.model_na import (
     NAConfig,
     NAInversionModel,
 )
 
 # --- Inversión: MCMC (PyMC + ArviZ) ---
-from .inversion_mcmc import (
+from .inversion.kinematic.model_mcmc import (
     MCMCConfig,
     MCMCInversionModel,
 )
 
-# --- Procesamiento de Señales ---
-from .signal_utils import (
-    build_azi_times_array, write_azi_times_file,
-    load_and_filter_observed_data, bandpass_filter_waveforms
+# --- Inversión: Dinámica (legacy bridge) ---
+from .inversion.dynamic.model_dynamic import (
+    DynamicInversionConfig,
+    DynamicInversionModel,
 )
+
+# --- Procesamiento de Señales ---
+from .core.signal_utils import (
+    build_azi_times_array, write_azi_times_file,
+    load_and_filter_observed_data, bandpass_filter_waveforms,
+    integrate_waveforms
+)
+from .core.data_preprocessor import DataPreprocessor
 
 # Definimos exactamente qué se expone al exterior
 __all__ = [
@@ -85,8 +93,12 @@ __all__ = [
     # MCMC
     "MCMCConfig",
     "MCMCInversionModel",
+    # Dynamic
+    "DynamicInversionConfig",
+    "DynamicInversionModel",
     
     # Procesamiento de Señales
     "build_azi_times_array", "write_azi_times_file",
-    "load_and_filter_observed_data", "bandpass_filter_waveforms"
+    "load_and_filter_observed_data", "bandpass_filter_waveforms", "integrate_waveforms",
+    "DataPreprocessor"
 ]

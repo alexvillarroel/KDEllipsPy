@@ -8,7 +8,7 @@
 # 1. Observed Data Parameters                   :     Values                   |
 #===============================================:===============================
  Time window start (t1)                         :     0.0
- Time window end (t2)                           :   128
+ Time window end (t2)                           :   128.0
  Number of points (Npts)                        :     512
  Delta / Time step                              :    0.25
  Units                        (1:disp, 2:vel)   :       2
@@ -17,6 +17,7 @@
 # 2. Source Position & Focal Mechanism          :     Values                   |
 #===============================================:===============================
  Event Name                                     :     Calama 2020 Intraplate
+ Origin Time (UTC)                              :     2020-06-03T07:35:28.000Z
  Latitude                                       :   -23.2470
  Longitude                                      :   -68.530
  Depth                                     (km) :      123.400

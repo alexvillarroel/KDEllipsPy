@@ -1,0 +1,99 @@
+################################################################################
+#                                                                              #
+#             Control file for KINEMATIC INVERSION (Ellipse Patch)             #
+#                                  v2025                                       #
+#                                                                              #
+################################################################################
+#===============================================:===============================
+# 1. Observed Data Parameters                   :     Values                   |
+#===============================================:===============================
+ Time window start (t1)                         :     0.0
+ Time window end (t2)                           :   128.0
+ Number of points (Npts)                        :     512
+ Delta / Time step                              :    0.25
+ Units                        (1:disp, 2:vel)   :       2
+
+#===============================================:===============================
+# 2. Source Position & Focal Mechanism          :     Values                   |
+#===============================================:===============================
+ Event Name                                     :     Base_Event_Name
+ Origin Time (UTC)                              :     2025-01-01T00:00:00.000Z
+ Latitude                                       :     0.0000
+ Longitude                                      :     0.0000
+ Depth                                     (km) :     10.000
+ Strike                                  (deg.) :      0.0
+ Dip                                     (deg.) :      0.0
+ Rake                                    (deg.) :      0.0
+
+#===============================================:===============================
+# 3. Fault Plane Parameters                     :     Values                   |
+#===============================================:===============================
+ Length along strike (Lx)                  (m)  :  20000.0
+ Length along dip (Ly)                     (m)  :  20000.0
+ Hypocenter position strike (Hx)           (m)  :  10000.0
+ Hypocenter position dip (Hy)              (m)  :  10000.0
+ Number of subfaults along strike (Nx)          :       20
+ Number of subfaults along dip (Ny)             :       20
+
+#===============================================:===============================
+# 4. Ellipse Parameters & Frequency Band        :     Values                   |
+#===============================================:===============================
+ Number of ellipses                             :       1
+ Initial slip                 (0:no, 1:yes)     :       0
+ Slip shape            (0:cst, 1:gauss, 2:ell)  :       1
+ Frequency 1 (Freq1)                      (Hz)  :    0.02
+ Frequency 2 (Freq2)                      (Hz)  :    0.10
+ Time shift (T0)                           (s)  :     2.0
+
+#===============================================:===============================
+# 5. Parameters to Invert (Min, Max, Flag)      :   Min      Max     Flag      |
+#===============================================:===============================
+ Number of parameters                           :       7
+ Param 1: Length of axis 1                 (km) :     2.0    10.0      1
+ Param 2: Length of axis 2                 (km) :     2.0    10.0      1
+ Param 3: Rotation angle                 (x pi) :     0.0    1.0       1
+ Param 4: Position of the center np             :     0.2    1.0       1
+ Param 5: Position of the center tp     (x 2pi) :     0.0    1.0       1
+ Param 6: Maximum slip (Dmax)               (m) :     0.5    5.0       1
+ Param 7: Rupture velocity (Vr)          (km/s) :     1.5    3.5       1
+
+#===============================================:===============================
+# 6. Inversion Process Parameters               :     Values                   |
+#===============================================:===============================
+ Algorithm type                 (0:NA, 1:MC)    :      0
+ NA: Number of iterations                       :      30
+ NA: Sample size for first iteration (SS1)      :      100
+ NA: Sample size for other iterations           :      50
+ NA: Cells to resample                          :      5
+ Misfit time window     (s, 0.0=Full signal)    :      20.0
+ MCMC: total steps                              :      500
+ MCMC: burn-in                                  :      100
+ MCMC: proposal scale                           :      0.05
+ MCMC: thinning                                 :      1
+ MCMC: chains                                   :      1
+
+#===============================================:===============================
+# 7. Optional: Moment Tensor (Full MT)          :     Values                   |
+#===============================================:===============================
+ Moment Tensor Flag           (0:no, 1:yes)     :       0
+ MT Scaling Mode (mt_strict/mt_factored)        : mt_factored
+ Mrr                                            :     1.0
+ Mtt                                            :     1.0
+ Mpp                                            :     1.0
+ Mrt                                            :     0.0
+ Mrp                                            :     0.0
+ Mtp                                            :     0.0
+ Exponent (iexp)                                :    18.0
+
+#===============================================:===============================
+# 8. Station Parameters (Lat, Lon, Elev, Name, N, E, Z) (0:no, 1:yes)           |
+#===============================================:===============================
+ Number of stations                             :       1
+ 0.0000  0.0000  0.0  STA1 1 1 1
+
+#===============================================:===============================
+# 9. Velocity Model 1D                          : Thickness Vp Vs Rho Qp Qs |
+#===============================================:===============================
+ Number of layers                               :       2
+ 10000.0  6000.0  3500.0  2700.0  600.0  300.0
+ 0.0      8000.0  4500.0  3300.0  1000.0  500.0

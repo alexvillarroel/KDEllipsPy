@@ -1,0 +1,31 @@
+\documentclass[11pt,a4paper]{report}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+
+\geometry{margin=1in}
+\onehalfspacing
+
+\title{KDEllipspy's Documentation}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\clearpage
+\section*{Introduction}
+\textit{\textbf{KDEllipspy}} is a Python-based software developed for the kinematic and dynamic inversion of earthquakes. By implementing a physical model that assumes an elliptical slip distribution for the seismic source, the package facilitates the inversion of seismic data to robustly estimate key source parameters.\par
+To achieve computational efficiency and physical accuracy, the software leverages two established numerical engines: it utilizes \textbf{AXITRA} to compute Green's functions and convolve the sources for the kinematic modeling, and \textbf{FD3D\_TSN} to handle the rupture and dynamic wave propagation.\par
+This documentation provides a comprehensive guide to the software, structured as follows: the theoretical background underlying the models, a detailed user manual, practical usage examples, and technical notes for developers.
+\input{chapters/01_theoretical_background}
+\input{chapters/02_user_manual}
+\input{chapters/03_usage_examples}
+\input{chapters/04_developer_notes}
+
+\end{document}

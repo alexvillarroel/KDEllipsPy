@@ -363,7 +363,7 @@ class moment:
 
         # axi.data input file
         with open(ap.sid+'.data','w') as f:
-            f.writelines(['&input','\n','nfreq='+str(ap.nfreq),',aw=2.'])
+            f.writelines(['&input','\n','nfreq='+str(ap.nfreq),',aw='+str(ap.aw)])
             f.writelines([',tl='+str(ap.duration), ',xl='+str(ap.xl),',ikmax='+str(ap.ikmax),',latlon='+l2f(ap.latlon)])
             f.writelines([',freesurface='+l2f(ap.freesurface),',sourcefile="'+ap.sid+'.source"'])
             f.writelines([',statfile="'+ap.sid+'.stat"','\n','//','\n'])
@@ -546,7 +546,7 @@ class force:
 
         # axi.data input file
         with open(ap.sid+'.data','w') as f:
-            f.writelines(['&input','\n','nfreq='+str(ap.nfreq),',aw=2.'])
+            f.writelines(['&input','\n','nfreq='+str(ap.nfreq),',aw='+str(ap.aw)])
             f.writelines([',tl='+str(ap.duration), ',xl='+str(ap.xl),',ikmax='+str(ap.ikmax),',latlon='+l2f(ap.latlon)])
             f.writelines([',freesurface='+l2f(ap.freesurface),',sourcefile="'+ap.sid+'.source"'])
             f.writelines([',statfile="'+ap.sid+'.stat"','\n','//','\n'])

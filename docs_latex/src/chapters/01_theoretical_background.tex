@@ -1,0 +1,57 @@
+\chapter{Theoretical Background}
+
+\section{Problem Definition}
+KDEllipspy addresses earthquake source inversion by combining physical modeling and waveform fitting.
+The goal is to estimate source parameters that explain observed seismic records.
+
+\section{Forward Modeling Concepts}
+The forward problem maps source parameters to synthetic seismograms.
+In this framework, source geometry, rupture timing, and source amplitudes are translated into predicted waveforms at receiver stations.
+
+\section{Inversion Perspective}
+The inverse problem searches for parameter sets that minimize a misfit between observed and synthetic waveforms.
+Depending on the workflow, this can be done with stochastic optimization (e.g., Neighbourhood Algorithm) or Bayesian sampling (e.g., MCMC).
+
+\section{Assumptions and Limitations}
+This section should document key assumptions, such as fixed mesh geometry, velocity model choices, and data-window selection for misfit computation.
+
+\section{Kinematic Source Framework}
+The kinematic module follows the finite-fault paradigm: the fault plane is discretized into subfaults, and each subfault contributes to the final seismogram through a delayed source history and a propagation operator.
+This formulation is rooted in classical source theory and rupture kinematics (Kostrov, 1964; Haskell, 1964; Aki and Richards, 2002).
+
+\subsection{Subfault Parameterization}
+Let the fault be discretized into $N_s$ subfaults.
+In KDEllipspy, the slip field is controlled by an elliptical parameterization with semi-axes $(a_1,a_2)$, orientation $\theta$, position parameters, maximum slip $d_{\max}$, and rupture velocity $v_r$.
+For a subfault center $(x,y)$ in local fault coordinates,
+\begin{equation}
+d = \left(\frac{x'}{a_1}\right)^2 + \left(\frac{y'}{a_2}\right)^2,
+\end{equation}
+where $(x',y')$ are coordinates in the rotated ellipse frame.
+The local slip factor $f(d)$ is imposed by the chosen shape law (constant, Gaussian-like, or elliptical taper), and the effective slip is
+\begin{equation}
+D_i = d_{\max} \, f(d_i).
+\end{equation}
+
+\subsection{Rupture Timing}
+Rupture delay is modeled from hypocentral distance and rupture speed:
+\begin{equation}
+t_{r,i} = \frac{\|\mathbf{x}_i - \mathbf{x}_h\|}{v_r},
+\end{equation}
+with $\mathbf{x}_h$ the hypocenter and $\mathbf{x}_i$ the subfault location.
+This defines the source activation chronology over the mesh.
+
+\subsection{Moment and Waveform Synthesis}
+For each subfault, scalar moment is proportional to rigidity, area, and slip:
+\begin{equation}
+M_{0,i} = \mu_i A_i D_i.
+\end{equation}
+Observed components are synthesized through linear superposition of Green's functions and source histories:
+\begin{equation}
+u_r(t) = \sum_{i=1}^{N_s}\sum_{k=1}^{N_b}\left(G_{r,i,k} * q_{i,k}\right)(t),
+\end{equation}
+where $r$ is receiver/component, $k$ denotes source basis terms, and $*$ is temporal convolution.
+This representation matches the standard linear elastodynamic framework used in reflectivity/discrete-wavenumber approaches (e.g., Bouchon, 1981; Cotton and Coutant, 1997).
+
+\subsection{Misfit in Inversion}
+Model ranking is based on normalized waveform misfit between observed and synthetic data, using P/S windows and rotated components.
+This follows the classical finite-fault inversion logic in which source parameters are constrained by waveform similarity in selected time windows (e.g., Hartzell and Heaton, 1983; Kikuchi and Kanamori, 1991).

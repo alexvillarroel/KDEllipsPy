@@ -86,7 +86,7 @@ class KDEllipsPyGUI(QMainWindow):
         self.console.append("Iniciando búsqueda NA...")
         
         # Configuración de inversión desde tu backend
-        inversion_model = NAInversionModel(self.cfg.filepath) 
+        inversion_model = NAInversionModel(config=self.cfg) 
         na_cfg = NAConfig(n_iterations=self.cfg.inversion_process.num_iterations)
         
         self.worker = InversionWorker(inversion_model, na_cfg)
