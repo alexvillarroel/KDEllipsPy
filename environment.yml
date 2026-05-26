@@ -13,6 +13,8 @@ dependencies:
   - make
   - gfortran
   - gcc
+  - meson
+  - ninja
   - pymc>=5.10.0,<5.20.0
   - arviz>=0.18.0,<0.20.0
   - pip
