@@ -42,14 +42,14 @@ setup(
     version="0.1.0",
     packages=find_packages(),
     install_requires=[
-        "numpy>=1.26,<2.0.0",
-        "scipy",
+        "numpy>=1.26.4,<2.0.0",
+        "scipy<1.14.0",
         "matplotlib",
         "pyproj",
         "obspy",
         "neighpy",
-        "pymc>=5.9.0",
-        "arviz",
+        "pymc>=5.10.0,<5.20.0",
+        "arviz>=0.18.0,<0.20.0",
     ],
     entry_points={
         "console_scripts": [
