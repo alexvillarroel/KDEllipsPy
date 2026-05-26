@@ -1,7 +1,10 @@
-*.res
-docs/_build/
+# Python
 __pycache__/
 *.pyc
+
+# Docs
+docs/_build/
+
 # --- Axitra & Fortran Temporary Files ---
 *.data
 *.head
@@ -15,6 +18,7 @@ __pycache__/
 *.output
 axi.datapy
 fort.*
+
 # --- Compiled Binaries & Objects ---
 *.o
 *.mod

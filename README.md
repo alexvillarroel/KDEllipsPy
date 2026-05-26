@@ -34,7 +34,7 @@ pip install -e .
 
 ### Google Colab (Quick Start)
 You can run a synthetic simulation directly in your browser without any local installation:
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](Colab_Example_Synthetic.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/alexvillarroel/KDEllipsPy/blob/main/Colab_Example_Synthetic.ipynb)
 
 ---
 
