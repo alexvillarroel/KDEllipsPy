@@ -19,11 +19,11 @@ def build_axitra():
             subprocess.check_call(['make', 'all'], cwd=axitra_src)
             # Build python wrappers and utilities (convmPy, axitra2py)
             print("Building Python wrappers (f2py) and utilities...")
-            subprocess.check_call(['make', 'python'], cwd=axitra_src)
+            subprocess.check_call(['make', 'python', f'PYTHON={sys.executable}'], cwd=axitra_src)
             print("Axitra build process completed successfully.")
         except Exception as e:
             print(f"Error during Axitra build: {e}")
-            print("Requirements: gfortran, make, and numpy<2.0.0 must be available in the environment.")
+            print("Requirements: gfortran, make, and numpy>=2.0.0 must be available in the environment.")
     else:
         print(f"Axitra source directory not found at: {axitra_src}")
 
@@ -43,9 +43,10 @@ setup(
     python_requires=">=3.10, <3.13",
     packages=find_packages(),
     install_requires=[
-        "numpy>=1.26.4,<2.0.0",
-        "scipy<1.14.0",
+        "numpy>=1.26.4",
+        "scipy>=1.12.0",
         "matplotlib",
+        "cartopy",
         "pyproj",
         "obspy",
         "neighpy",

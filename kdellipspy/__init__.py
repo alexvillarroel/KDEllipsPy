@@ -33,15 +33,13 @@ from .core.forward_model import (
 from .core.geometry import (
     UTMProjection, StationGeometry, Subfault, SourcePoint, FaultGeometry,
     GeometryBuilder, EllipticalSlipMapper, build_geometry_from_input_ctl,
-    build_station_geometry, EllipseDiagnosticsResult, EllipseDiagnostics
+    build_station_geometry
 )
 # Renombramos Station de geometry
 from .core.geometry import Station as GeometryStation
 
 # --- Gráficos ---
-from .core.graphics_suite import (
-    GraphicsConfig, GraphicsSuite
-)
+from .core import plotting
 
 # --- Inversión: módulo base (compartido) ---
 from .inversion.base import (
@@ -91,10 +89,10 @@ __all__ = [
     # Geometría
     "UTMProjection", "GeometryStation", "StationGeometry", "Subfault", "SourcePoint", 
     "FaultGeometry", "GeometryBuilder", "EllipticalSlipMapper", "build_geometry_from_input_ctl",
-    "build_station_geometry", "EllipseDiagnosticsResult", "EllipseDiagnostics",
+    "build_station_geometry",
     
     # Gráficos
-    "GraphicsConfig", "GraphicsSuite",
+    "plotting",
     
     # Inversión base
     "NAModel",

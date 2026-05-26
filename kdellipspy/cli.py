@@ -15,8 +15,7 @@ from kdellipspy import (
     NAInversionModel,
     NAConfig,
     MCMCInversionModel,
-    MCMCConfig,
-    GraphicsSuite
+    MCMCConfig
 )
 
 def step(number: int, total: int, title: str) -> None:
@@ -226,19 +225,12 @@ def main() -> None:
         is_interactive = hasattr(sys, 'ps1') or 'ipython' in sys.modules or 'pytest' in sys.modules
         show_plots = is_interactive and not args.no_plot
         
-        graphics = GraphicsSuite(base_dir=input_dir, show=show_plots)
-        graphics.plot_na_results(result)
+        # 1. Plot inversion convergence
+        result.plot(show=show_plots)
 
-        # --- Gráfico de sismogramas observados vs sintéticos del mejor modelo ---
+        # 2. Plot waveform fit
         if inversion.best_synthetics is not None:
-            station_names = [st.name for st in cfg.stations.stations]
-            graphics.plot_waveform_fit(
-                observed=inversion.observed_waveforms,
-                synthetic=inversion.best_synthetics,
-                time_array=inversion.time_array,
-                station_names=station_names,
-                misfit=result.best_model.misfit if result.best_model else None,
-            )
+            inversion.plot_fit(show=show_plots)
         else:
             print("⚠ No se generaron sintéticos del mejor modelo (best_synthetics es None).", flush=True)
         

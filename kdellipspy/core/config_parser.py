@@ -309,6 +309,13 @@ class ConfigParser:
         if filepath not in ("<manual>", "<from_dict>"):
             self.parse()
 
+    def plot_stations(self, show: bool = True, save_path: Optional[str] = None, use_cartopy: bool = True) -> Tuple[Any, Any]:
+        """
+        Grafica la ubicación de las estaciones e hipocentro.
+        """
+        from .plotting import plot_stations_map
+        return plot_stations_map(self, show=show, save_path=save_path, use_cartopy=use_cartopy)
+
     @classmethod
     def from_dict(cls, params: Dict[str, Any]) -> 'ConfigParser':
         """Create a ConfigParser instance from a dictionary of parameters."""

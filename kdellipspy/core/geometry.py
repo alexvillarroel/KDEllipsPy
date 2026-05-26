@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from math import cos, log10, pi as math_pi, radians, sin, sqrt
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import numpy as np
 from pyproj import CRS, Transformer
@@ -239,6 +239,13 @@ class FaultGeometry:
         if m0 <= 0.0:
             return float("-inf")
         return float((2.0 / 3.0) * (log10(m0) - 9.1))
+
+    def plot(self, title: str = "2D Slip Distribution", show: bool = True, save_path: Optional[str] = None) -> Tuple[Any, Any]:
+        """
+        Visualización 2D de la distribución de slip interpolada.
+        """
+        from .plotting import plot_slip_distribution
+        return plot_slip_distribution(self, title=title, show=show, save_path=save_path)
 
 
 class GeometryBuilder:
@@ -773,174 +780,3 @@ def build_station_geometry(
 
     return StationGeometry(ref_lat=ref_lat, ref_lon=ref_lon, stations=stations)
 
-
-@dataclass
-class EllipseDiagnosticsResult:
-    x_m: np.ndarray
-    y_m: np.ndarray
-    d: np.ndarray
-    slip_factor: np.ndarray
-    inside_mask: np.ndarray
-    xe_m: float
-    ye_m: float
-    a1_m: float
-    a2_m: float
-    alpha_rad: float
-    active_subfault_ratio: float
-
-
-class EllipseDiagnostics:
-    """Evaluate and plot the ellipse/slip mapping that feeds the forward model."""
-
-    def __init__(self, config: ConfigParser):
-        self.config = config
-        self.builder = GeometryBuilder(config)
-
-    @classmethod
-    def from_input_ctl(cls, input_ctl_path: str) -> "EllipseDiagnostics":
-        return cls(ConfigParser(input_ctl_path))
-
-    @classmethod
-    def from_config(cls, config: ConfigParser) -> "EllipseDiagnostics":
-        return cls(config)
-
-    @classmethod
-    def from_params(cls, params: dict) -> "EllipseDiagnostics":
-        return cls(ConfigParser.from_dict(params))
-
-    def evaluate(self, model: np.ndarray) -> EllipseDiagnosticsResult:
-        if len(model) < 7:
-            raise ValueError("Model must include 7 parameters: a1,a2,theta,np,tp,dmax,vr")
-
-        geom = self.builder.build()
-
-        a1_m = float(model[0]) * 1000.0
-        a2_m = float(model[1]) * 1000.0
-        alpha = float(model[2]) * math_pi
-        np_frac = float(model[3])
-        tp_angle = float(model[4]) * 2.0 * math_pi
-
-        estk = float(self.config.fault_plane.hx)
-        edip = float(self.config.fault_plane.hy)
-        slip_shape = int(self.config.ellipse.slip_shape)
-
-        x01 = a1_m * np_frac * cos(tp_angle)
-        y01 = a2_m * np_frac * sin(tp_angle)
-        xe = x01 * cos(alpha) + y01 * sin(alpha) + estk
-        ye = -x01 * sin(alpha) + y01 * cos(alpha) + edip
-
-        x_vals = []
-        y_vals = []
-        d_vals = []
-        s_vals = []
-        inside_vals = []
-
-        nx = int(self.config.fault_plane.nx)
-        dstk = float(self.config.fault_plane.lx) / float(nx)
-        ddip = float(self.config.fault_plane.ly) / float(self.config.fault_plane.ny)
-
-        for sf in geom.subfaults:
-            sf_idx = int(sf.index)
-            istk = ((sf_idx - 1) % nx) + 1
-            idip = ((sf_idx - 1) // nx) + 1
-            xpos = (float(istk) - 0.5) * dstk
-            ypos = (float(idip) - 0.5) * ddip
-            xx = (xpos - xe) * cos(alpha) - (ypos - ye) * sin(alpha)
-            yy = (xpos - xe) * sin(alpha) + (ypos - ye) * cos(alpha)
-
-            if a1_m > 0 and a2_m > 0:
-                d = (xx / a1_m) ** 2 + (yy / a2_m) ** 2
-            else:
-                d = np.inf
-
-            if d <= 1.0:
-                if slip_shape == 0:
-                    slip_factor = 1.0
-                elif slip_shape == 1:
-                    slip_factor = float(np.exp(-d))
-                else:
-                    slip_factor = float(np.sqrt(max(0.0, 1.0 - d)))
-                inside = True
-            else:
-                slip_factor = 0.0
-                inside = False
-
-            x_vals.append(xpos)
-            y_vals.append(ypos)
-            d_vals.append(float(d))
-            s_vals.append(float(slip_factor))
-            inside_vals.append(bool(inside))
-
-        x_arr = np.asarray(x_vals, dtype=float)
-        y_arr = np.asarray(y_vals, dtype=float)
-        d_arr = np.asarray(d_vals, dtype=float)
-        s_arr = np.asarray(s_vals, dtype=float)
-        in_arr = np.asarray(inside_vals, dtype=bool)
-
-        active_ratio = float(np.count_nonzero(s_arr > 1e-14)) / float(len(s_arr)) if len(s_arr) else 0.0
-
-        return EllipseDiagnosticsResult(
-            x_m=x_arr,
-            y_m=y_arr,
-            d=d_arr,
-            slip_factor=s_arr,
-            inside_mask=in_arr,
-            xe_m=float(xe),
-            ye_m=float(ye),
-            a1_m=float(a1_m),
-            a2_m=float(a2_m),
-            alpha_rad=float(alpha),
-            active_subfault_ratio=active_ratio,
-        )
-
-    def plot(
-        self,
-        result: EllipseDiagnosticsResult,
-        title: str = "Ellipse diagnostics (fault plane)",
-        save_path: Optional[str] = None,
-        show: bool = True,
-    ):
-        try:
-            import matplotlib.pyplot as plt
-        except Exception as exc:
-            raise ImportError("matplotlib is required for EllipseDiagnostics.plot") from exc
-
-        fig, ax = plt.subplots(figsize=(8, 7))
-
-        sc = ax.scatter(
-            result.x_m / 1000.0,
-            result.y_m / 1000.0,
-            c=result.slip_factor,
-            s=70,
-            cmap="inferno_r",
-            edgecolors="k",
-            linewidths=0.25,
-        )
-
-        t = np.linspace(0.0, 2.0 * math_pi, 361)
-        ex = result.a1_m * np.cos(t)
-        ey = result.a2_m * np.sin(t)
-        bx = ex * np.cos(result.alpha_rad) + ey * np.sin(result.alpha_rad) + result.xe_m
-        by = -ex * np.sin(result.alpha_rad) + ey * np.cos(result.alpha_rad) + result.ye_m
-        ax.plot(bx / 1000.0, by / 1000.0, "c-", lw=2.0, label="Ellipse boundary")
-
-        ax.plot(result.xe_m / 1000.0, result.ye_m / 1000.0, "c*", ms=12, label="Ellipse center")
-        hx = float(self.config.fault_plane.hx) / 1000.0
-        hy = float(self.config.fault_plane.hy) / 1000.0
-        ax.plot(hx, hy, marker="D", color="royalblue", ms=10, label="Hypocenter")
-
-        cbar = plt.colorbar(sc, ax=ax)
-        cbar.set_label("Slip factor")
-        ax.set_xlabel("Along strike (km)")
-        ax.set_ylabel("Along dip (km)")
-        ax.set_title(f"{title}\nactive_subfault_ratio={result.active_subfault_ratio:.3f}")
-        ax.grid(True, alpha=0.3)
-        ax.legend(loc="best")
-        fig.tight_layout()
-
-        if save_path:
-            fig.savefig(save_path, dpi=180)
-
-        if show:
-            plt.show()
-        return fig, ax

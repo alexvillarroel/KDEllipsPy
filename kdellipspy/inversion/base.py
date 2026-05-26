@@ -394,6 +394,44 @@ class NAResult:
                     row[name] = float(value)
                 writer.writerow(row)
 
+    def plot(self, show: bool = True, save_path: Optional[str] = None) -> Tuple[Any, Any]:
+        """
+        Grafica el resumen de resultados de la búsqueda NA.
+        """
+        from ..core.plotting import plot_na_results
+        
+        # Convert all_models to list of dicts for the plotting function
+        rows = []
+        for model in self.all_models:
+            row = {"iteration": float(model.iteration), "misfit": float(model.misfit)}
+            for name, value in zip(self.param_names, model.model):
+                row[name] = float(value)
+            rows.append(row)
+            
+        return plot_na_results(rows, self.param_names, show=show, save_path=save_path)
+
+    def plot_convergence(self, show: bool = True, save_path: Optional[str] = None) -> Tuple[Any, Any]:
+        """
+        Grafica la convergencia detallada por cada parámetro.
+        """
+        from ..core.plotting import plot_parameter_convergence
+        
+        rows = []
+        misfits = []
+        iterations = []
+        for model in self.all_models:
+            row = {"iteration": float(model.iteration), "misfit": float(model.misfit)}
+            for name, value in zip(self.param_names, model.model):
+                row[name] = float(value)
+            rows.append(row)
+            misfits.append(model.misfit)
+            iterations.append(model.iteration)
+            
+        return plot_parameter_convergence(
+            rows, self.param_names, np.array(misfits), np.array(iterations),
+            show=show, save_path=save_path
+        )
+
 
 # ---------------------------------------------------------------------------
 # BaseInversionModel
@@ -725,6 +763,27 @@ class BaseInversionModel:
                     ap.clean()
                 except Exception:
                     pass
+
+    def plot_fit(self, show: bool = True, save_path: Optional[str] = None) -> Tuple[Any, Any]:
+        """
+        Grafica el mejor ajuste de formas de onda encontrado hasta ahora.
+        """
+        if self.best_synthetics is None:
+            print("No se han generado sintéticos aún. Corre la inversión primero.")
+            return None, None
+            
+        from ..core.plotting import plot_waveform_fit
+        
+        station_names = [s.name for s in self.cfg.stations.stations]
+        return plot_waveform_fit(
+            observed=self.observed_waveforms,
+            synthetic=self.best_synthetics,
+            time=self.time_array,
+            station_names=station_names,
+            misfit=self._best_misfit_seen,
+            show=show,
+            save_path=save_path
+        )
 
 
 __all__ = [
