@@ -11,7 +11,7 @@ from .core.config_parser import (
 from .core.config_parser import Station as ConfigStation
 
 # --- Procesamiento de señales sísmicas (SAC/MiniSEED) ---
-from .sac_processor import (
+from .core.sac_processor import (
     ProcessingConfig,
     WaveformExtractor,
     process_trace,
@@ -20,7 +20,7 @@ from .sac_processor import (
 )
 
 # --- Carga de datos RAW para inversion ---
-from .raw_loader import (
+from .core.raw_loader import (
     load_observed_from_raw,
 )
 

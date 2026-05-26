@@ -9,8 +9,6 @@ dependencies:
   - matplotlib
   - pyproj
   - obspy
-  - pyside6
-  - pyqt
   - make
   - gfortran
   - gcc
