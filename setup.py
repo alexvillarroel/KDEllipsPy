@@ -47,11 +47,13 @@ setup(
         "matplotlib",
         "pyproj",
         "obspy",
-        "PySide6",
         "neighpy",
         "pymc>=5.9.0",
         "arviz",
     ],
+    extras_require={
+        "gui": ["PySide6"],
+    },
     entry_points={
         "console_scripts": [
             "kdellipspy=kdellipspy.cli:main",
