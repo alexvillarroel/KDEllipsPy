@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 
 class DataPreprocessor:
     """
-    Utility to prepare raw seismic data for AXITRA inversion.
-    (Utilidad para preparar datos sísmicos crudos para la inversión con AXITRA.)
+    Utility to prepare raw seismic data for axitra inversion.
+    (Utilidad para preparar datos sísmicos crudos para la inversión con axitra.)
     """
 
     def __init__(self, cfg: ConfigParser):

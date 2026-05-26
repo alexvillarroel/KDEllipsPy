@@ -13,7 +13,7 @@
 # %% [markdown]
 # # Inversión Cinemática: Terremoto de Copiapó (06-06-2025)
 #
-# Este notebook realiza la inversión utilizando los parámetros optimizados de AXITRA y el pre-procesador de datos con control de tiempo y padding.
+# Este notebook realiza la inversión utilizando los parámetros optimizados de axitra y el pre-procesador de datos con control de tiempo y padding.
 
 # %%
 import os
@@ -125,7 +125,7 @@ result = inversion.run_na_search()
 # PLOT RESULTS
 
 # %%
-graphics = kde.core.GraphicsSuite(
-    base_dir="/home/alex/KDEllipsPy/inversions/calama2020/Figures", show=True
+graphics = kde.GraphicsSuite(
+    base_dir=root / "inversions" / "calama2020" / "Figures", show=True
 )
 graphics.plot_na_results(result)

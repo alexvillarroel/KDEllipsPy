@@ -76,7 +76,7 @@
 # 7. Optional: Moment Tensor (Full MT)          :     Values                   |
 #===============================================:===============================
  Moment Tensor Flag           (0:no, 1:yes)     :                        1
- MT Scaling Mode (mt_strict/mt_factored)        :                    mt_factored
+ MT Scaling Mode (mt_strict/mt_factored)        :              mt_factored
  Mrr                                            :            -2.486000e+00
  Mtt                                            :             7.932000e+00
  Mpp                                            :             8.300000e-02

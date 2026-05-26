@@ -20,7 +20,7 @@ except ImportError:
 
 class AxitraForwardModel:
 	"""
-	Forward model using AXITRA2024 python wrapper.
+	Forward model using axitra python wrapper.
 
 	Main workflow:
 	1) Build invariant geometry from input.ctl
@@ -49,7 +49,7 @@ class AxitraForwardModel:
 		self.axitra_dir = (
 			Path(axitra_dir).resolve()
 			if axitra_dir
-			else (self.base_dir / "AXITRA2024").resolve()
+			else (Path(__file__).resolve().parent.parent / "axitra" / "src").resolve()
 		)
 
 	@classmethod
@@ -78,7 +78,7 @@ class AxitraForwardModel:
 		instance.axitra_dir = (
 			Path(axitra_dir).resolve()
 			if axitra_dir
-			else (instance.base_dir / "AXITRA2024").resolve()
+			else (instance.base_dir / "axitra").resolve()
 		)
 		return instance
 
@@ -104,7 +104,7 @@ class AxitraForwardModel:
 			- 'velocity_model': List of velocity layer dictionaries
 		
 		axitra_dir : str, optional
-			Path to AXITRA2024 directory. If not provided, assumes it's a sibling folder.
+			Path to axitra directory. If not provided, assumes it's a sibling folder.
 		
 		Returns:
 		--------
@@ -130,7 +130,7 @@ class AxitraForwardModel:
 		...     'inversion_process': {...},
 		...     'moment_tensor': {...},
 		... }
-		>>> fm = AxitraForwardModel.from_params(params, axitra_dir='/path/to/AXITRA2024')
+		>>> fm = AxitraForwardModel.from_params(params, axitra_dir='/path/to/axitra')
 		"""
 		# Create ConfigParser from dict
 		cfg = ConfigParser.from_dict(params)
@@ -144,7 +144,7 @@ class AxitraForwardModel:
 		return mod.Axitra, mod.moment
 
 	def _call_with_optional_silence(self, fn, *args, quiet: bool = True, **kwargs):
-		"""Call AXITRA wrapper function suppressing noisy stdout/stderr if requested."""
+		"""Call axitra wrapper function suppressing noisy stdout/stderr if requested."""
 		if not quiet:
 			return fn(*args, **kwargs)
 
@@ -302,7 +302,7 @@ class AxitraForwardModel:
 	):
 		_, moment = self._import_axitra()
 		t0_val = float(self.cfg.ellipse.t0) if t0 is None else float(t0)
-		# Many AXITRA sources (e.g. 1=Ricker, 5=Ramp) become degenerate or return NaN for t0<=0.
+		# Many axitra sources (e.g. 1=Ricker, 5=Ramp) become degenerate or return NaN for t0<=0.
 		# Keep a small positive fallback to avoid null synthetics.
 		if t0_val <= 0.0:
 			t0_val = max(float(self.cfg.observed_data.delta), 0.1)
@@ -336,7 +336,7 @@ class AxitraForwardModel:
 	def select_source_function(self) -> dict:
 		"""
 		Interactive prompt to select source time function, rise time and output type,
-		mirroring the AXITRA Fortran convms behavior.
+		mirroring the axitra Fortran convms behavior.
 
 		Source types (passed directly to moment.conv as source_type):
 		  0  : Dirac

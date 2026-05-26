@@ -5,7 +5,7 @@ from PyQt6.QtGui import QIcon
 
 # Rutas
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ICONO = "/home/alex/KDEllipsPy/kdellipspy/training/kdellipspy.ico"
+ICONO = os.path.join(BASE_DIR, "kdellipspy.ico")
 SCRIPT = os.path.abspath(__file__)
 DESKTOP_DIR = os.path.expanduser("~/.local/share/applications")
 DESKTOP_FILE = os.path.join(DESKTOP_DIR, "kdellipspy.desktop")

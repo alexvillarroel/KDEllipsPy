@@ -32,11 +32,18 @@ try:
         NAResult,
     )
 except ImportError:
-    from inversion_base import (
-        BaseInversionModel,
-        NAModel,
-        NAResult,
-    )
+    try:
+        from kdellipspy.inversion.base import (
+            BaseInversionModel,
+            NAModel,
+            NAResult,
+        )
+    except ImportError:
+        from base import (
+            BaseInversionModel,
+            NAModel,
+            NAResult,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -55,7 +62,7 @@ class NAConfig:
     n_iterations         : Number of NA iterations after the initial random stage (n)
     n_cells_resample     : Number of best Voronoi cells to resample from (nr)
     random_seed          : Optional seed for reproducibility
-    keep_axitra_files    : Keep temporary AXITRA files (useful for debugging)
+    keep_axitra_files    : Keep temporary axitra files (useful for debugging)
     """
 
     n_samples_initial: int = 30
@@ -76,16 +83,16 @@ class NAInversionModel(BaseInversionModel):
     (Modelo de Inversión Cinemática utilizando el Algoritmo Neighbourhood — NA.)
 
     Integrates observed data, arrival times, and event configuration to evaluate
-    kinematic rupture models. Communicates with AXITRA to simulate synthetic
+    kinematic rupture models. Communicates with axitra to simulate synthetic
     seismograms and compute misfit against real data.
     (Integra los datos observados, tiempos de llegada y configuración del evento
-    para evaluar distintos modelos de ruptura cinemática. Se comunica con AXITRA
+    para evaluar distintos modelos de ruptura cinemática. Se comunica con axitra
     para simular sismogramas sintéticos y calcular el desajuste con los datos reales.)
 
     Parameters
     ----------
     input_ctl_path     : Path to input.ctl configuration file (optional if config is provided)
-    axitra_dir         : Path to AXITRA2024 binary directory (optional)
+    axitra_dir         : Path to axitra binary directory (optional)
     observed_waveforms : 3-component seismograms, shape (nsta, 3, npts)
     time_array         : Time vector, shape (npts,)
     azi_times_array    : P/S arrival time table, shape (nsta, 3)
@@ -104,7 +111,7 @@ class NAInversionModel(BaseInversionModel):
     >>> # Using a config file path:
     >>> model = NAInversionModel(
     ...     "path/to/run/input.ctl",
-    ...     axitra_dir="path/to/AXITRA2024",
+    ...     axitra_dir="path/to/axitra",
     ...     observed_waveforms=obs,
     ...     time_array=t,
     ...     azi_times_array=azi,

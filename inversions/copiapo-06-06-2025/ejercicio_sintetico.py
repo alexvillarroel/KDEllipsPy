@@ -3,12 +3,18 @@ import os
 import sys
 from pathlib import Path
 
-# Asegurar que podemos importar kdellipspy core
-sys.path.append('/home/alex/KDEllipsPy/kdellipspy/core')
+# --- Bloque de resolución de rutas ---
+def find_project_root(start: Path) -> Path:
+    for p in [start, *start.parents]:
+        if (p / 'kdellipspy').exists():
+            return p
+    raise FileNotFoundError('No se encontro PROJECT_ROOT con carpeta kdellipspy.')
 
-from forward_model import AxitraForwardModel
-from config_parser import ConfigParser
-from graphics_suite import GraphicsSuite
+root = find_project_root(Path.cwd().resolve())
+if str(root) not in sys.path:
+    sys.path.insert(0, str(root))
+
+from kdellipspy import ConfigParser, AxitraForwardModel, GraphicsSuite
 
 # 1. Inicializamos la configuración usando el nuevo método .build()
 # Este método ya trae valores por defecto razonables
@@ -47,9 +53,9 @@ cfg.stations.add(name='STA3', latitude=-33.5, longitude=-70.5, use_n=False, use_
 cfg.velocity_model.add(thickness=0.0, vp=6000.0, vs=3500.0, rho=2700.0, qp=200.0, qs=400.0)
 
 # 5. Inicializamos el modelo forward
-# Usamos la ruta absoluta de AXITRA
-axitra_path = '/home/alex/KDEllipsPy/kdellipspy/AXITRA2024'
-fm = AxitraForwardModel.from_config(cfg, axitra_dir=axitra_path)
+# Usamos la ruta relativa de axitra
+axitra_path = root / 'kdellipspy' / 'axitra'
+fm = AxitraForwardModel.from_config(cfg, axitra_dir=str(axitra_path))
 
 # 6. Definimos los 7 parámetros de nuestra elipse sintética
 # [a1, a2, theta, np, tp, dmax, vr]

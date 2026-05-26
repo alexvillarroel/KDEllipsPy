@@ -157,7 +157,7 @@ class InversionProcessParams:
     mcmc_burn_in: int = 0
     mcmc_proposal_scale: float = 0.08  # Gaussian RW std as fraction of (max-min) per parameter
     mcmc_thin: int = 1
-    mcmc_chains: int = 1  # PyMC only; use 1 if AXITRA is not fork-safe
+    mcmc_chains: int = 1  # PyMC only; use 1 if axitra is not fork-safe
 
     @classmethod
     def from_dict(cls, params: Dict) -> 'InversionProcessParams':

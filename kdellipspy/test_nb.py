@@ -11,7 +11,7 @@ import kdellipspy as kde
 input_ctl = root / 'inversions' / 'copiapo-06-06-2025' / 'input.ctl'
 cfg = kde.ConfigParser(filepath=str(input_ctl))
 
-axitra_dir = root / 'kdellipspy' / 'AXITRA2024'
+axitra_dir = root / 'kdellipspy' / 'axitra'
 output_dir = root / 'inversions' / 'copiapo-06-06-2025' / 'DATA_PROCESSED'
 
 observed_waveforms, time_array = kde.load_and_filter_observed_data(

@@ -34,8 +34,12 @@ try:
     from ..core.config_parser import ConfigParser
     from ..core.forward_model import AxitraForwardModel
 except ImportError:
-    from config_parser import ConfigParser
-    from forward_model import AxitraForwardModel
+    try:
+        from kdellipspy.core.config_parser import ConfigParser
+        from kdellipspy.core.forward_model import AxitraForwardModel
+    except ImportError:
+        from config_parser import ConfigParser
+        from forward_model import AxitraForwardModel
 
 logger = logging.getLogger(__name__)
 
@@ -405,7 +409,7 @@ class BaseInversionModel:
     Parameters
     ----------
     input_ctl_path     : Path to input.ctl configuration file
-    axitra_dir         : Path to AXITRA2024 binary directory (optional)
+    axitra_dir         : Path to axitra binary directory (optional)
     observed_waveforms : Observed 3-component seismograms, shape (nsta, 3, npts)
     time_array         : Time vector, shape (npts,)
     azi_times_array    : Pre-computed P/S arrival time table, shape (nsta, 3)
@@ -568,8 +572,8 @@ class BaseInversionModel:
 
     # ------------------------------------------------------------------
     def _next_axitra_id(self) -> int:
-        """Generate a unique-enough AXITRA ID to avoid temporary file collisions.
-        (Genera un ID único para AXITRA para evitar colisiones de archivos temporales.)
+        """Generate a unique-enough axitra ID to avoid temporary file collisions.
+        (Genera un ID único para axitra para evitar colisiones de archivos temporales.)
         """
         self._axitra_id_counter += 1
         ns_stamp = int(time.time_ns() % 1_000_000_000)
@@ -596,7 +600,7 @@ class BaseInversionModel:
         Side-effects
         ------------
         - Updates ``self._best_misfit_seen`` and ``self.best_synthetics`` when improved.
-        - Cleans AXITRA temporary files unless the active config sets ``keep_axitra_files=True``.
+        - Cleans axitra temporary files unless the active config sets ``keep_axitra_files=True``.
         """
         self._eval_count += 1
 
@@ -697,6 +701,17 @@ class BaseInversionModel:
             if ap is not None and not keep:
                 try:
                     ap.clean()
+                except Exception:
+                    pass
+
+
+__all__ = [
+    "NAModel",
+    "MisfitCalculator",
+    "NAResult",
+    "BaseInversionModel",
+]
+          ap.clean()
                 except Exception:
                     pass
 

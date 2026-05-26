@@ -196,7 +196,7 @@ class FaultGeometry:
     def to_axitra_hist(self) -> np.ndarray:
         rows = []
         for sp in self.source_points:
-            # AXITRA's moment.conv wrapper expects absolute Moment (Nm) in the second column.
+            # axitra's moment.conv wrapper expects absolute Moment (Nm) in the second column.
             # If we pass Slip (meters) and Width/Length, the wrapper often fails to scale it correctly.
             # We calculate the absolute moment here: M0 = mu * area * slip
             
@@ -212,7 +212,7 @@ class FaultGeometry:
                     sp.strike_deg,
                     sp.dip_deg,
                     sp.rake_deg,
-                    0.0, # Width set to 0 to avoid double scaling in some AXITRA versions
+                    0.0, # Width set to 0 to avoid double scaling in some axitra versions
                     0.0, # Length set to 0
                     sp.rupture_time_s,
                 ]
@@ -329,7 +329,7 @@ class GeometryBuilder:
 
         layers = self.config.velocity_model.layers
 
-        # Support both conventions documented by AXITRA:
+        # Support both conventions documented by axitra:
         # - layer thickness per row
         # - upper-interface depth per row (first row must be 0)
         is_interface_depth = False
@@ -708,7 +708,7 @@ class EllipticalSlipMapper:
             threshold_disp = 1e-14
             geom.source_points = [sp for sp in geom.source_points if abs(sp.displacement) > threshold_disp]
 
-        # AXITRA expects sequential source indices 1..N.
+        # axitra expects sequential source indices 1..N.
         for i, sp in enumerate(geom.source_points, start=1):
             sp.index = i
 

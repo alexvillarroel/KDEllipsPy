@@ -1,0 +1,21 @@
+name: kdellipspy
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - numpy>=1.26,<2.0.0
+  - scipy
+  - matplotlib
+  - pyproj
+  - obspy
+  - pyside6
+  - pyqt
+  - make
+  - gfortran
+  - gcc
+  - pymc>=5.9.0
+  - arviz
+  - pip
+  - pip:
+    - neighpy

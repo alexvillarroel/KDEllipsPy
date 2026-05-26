@@ -60,9 +60,9 @@ class MCMCConfig:
                       each parameter's range, e.g. 0.08 → 8 % of width per param
     thin            : Thinning factor applied to the posterior draws
     random_seed     : Optional seed for reproducibility
-    keep_axitra_files : Keep temporary AXITRA files (useful for debugging)
+    keep_axitra_files : Keep temporary axitra files (useful for debugging)
     chains          : Number of parallel MCMC chains.
-                      Warning: chains > 1 may fail when AXITRA uses shared temp files.
+                      Warning: chains > 1 may fail when axitra uses shared temp files.
     """
 
     total_steps: int = 500
@@ -91,7 +91,7 @@ class MCMCInversionModel(BaseInversionModel):
     Parameters
     ----------
     input_ctl_path     : Path to input.ctl configuration file (optional if config is provided)
-    axitra_dir         : Path to AXITRA2024 binary directory (optional)
+    axitra_dir         : Path to axitra binary directory (optional)
     observed_waveforms : 3-component seismograms, shape (nsta, 3, npts)
     time_array         : Time vector, shape (npts,)
     azi_times_array    : P/S arrival time table, shape (nsta, 3)
@@ -107,7 +107,7 @@ class MCMCInversionModel(BaseInversionModel):
     >>> # Using a config file path:
     >>> model = MCMCInversionModel(
     ...     "path/to/run/input.ctl",
-    ...     axitra_dir="path/to/AXITRA2024",
+    ...     axitra_dir="path/to/axitra",
     ...     observed_waveforms=obs,
     ...     time_array=t,
     ...     azi_times_array=azi,
@@ -196,7 +196,7 @@ class MCMCInversionModel(BaseInversionModel):
             raise ValueError("MCMCConfig.burn_in must be < total_steps")
         if chains > 1:
             print(
-                "[MCMC/PyMC] Warning: chains > 1 may fail with AXITRA (shared temp files). "
+                "[MCMC/PyMC] Warning: chains > 1 may fail with axitra (shared temp files). "
                 "If errors occur, set 'MCMC chains : 1' in input.ctl.",
                 flush=True,
             )

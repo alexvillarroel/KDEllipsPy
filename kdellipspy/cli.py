@@ -53,12 +53,14 @@ def validate_paths(input_dir: Path, data_dir: Path) -> Path:
 
 def get_axitra_dir(input_dir: Path, src_root: Path) -> Path:
     """
-    Resolve AXITRA directory: try input_dir first, then kdellipspy/, then parent directory.
+    Resolve axitra directory: try input_dir first, then kdellipspy/, then parent directory.
     """
     search_paths = [
-        input_dir / "AXITRA2024",           # Check in input directory first
-        src_root / "AXITRA2024",          # Check in kdellipspy/ (src_root)
-        src_root.parent / "AXITRA2024",   # Check in KDEllipsPy/ (parent)
+        input_dir / "axitra" / "src",           # Check in input directory first
+        src_root / "axitra" / "src",          # Check in kdellipspy/ (src_root)
+        src_root.parent / "axitra" / "src",   # Check in KDEllipsPy/ (parent)
+        input_dir / "axitra",
+        src_root / "axitra",
     ]
     
     for path in search_paths:
@@ -66,9 +68,9 @@ def get_axitra_dir(input_dir: Path, src_root: Path) -> Path:
             return path
     
     raise RuntimeError(
-        f"AXITRA2024 directory not found in:\n" +
+        f"axitra directory not found in:\n" +
         "\n".join(f"  - {p}" for p in search_paths) +
-        "\nPlease ensure AXITRA2024 is available in one of these locations."
+        "\nPlease ensure axitra is available in one of these locations."
     )
 
 def main() -> None:

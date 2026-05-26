@@ -53,7 +53,7 @@ print("Hypocenter on the fault plane (x, y, depth) in (km) =", xhypo, yhypo, zhy
 print("Sub-faults on the fault plane =", nx, "x", ny)
 
 # Read source.dat (source parameters):
-fault = np.loadtxt("../AXITRA_F90/source")
+fault = np.loadtxt("../axitra_F90/source")
 nx = int(nx)
 size_fault = int(nx)*int(ny)
 print("Number of sub-faults =", size_fault)
@@ -126,7 +126,7 @@ print("Maximum slip = %0.2f (m)" % (hist_max))
 shade = (slip[0:size_fault]-hist_min)/(hist_max-hist_min)
 
 # Open stationn and station (station names and positions):
-estaciones = np.loadtxt("../AXITRA_F90/station")
+estaciones = np.loadtxt("../axitra_F90/station")
 nombres = open("../Stations/stationn",'r')
 nstac = int(np.size(estaciones)/3)
 print("There are %i stations:" % (nstac))

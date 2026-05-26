@@ -63,8 +63,14 @@ def run_test():
     print("Iniciando prueba de Forward con unidades consistentes (KM y KG/KM3)...")
     cfg = create_mock_config()
     
-    # Ruta al binario de AXITRA2024
-    axitra_dir = Path("./AXITRA2024").resolve()
+    # Ruta al binario de axitra
+    # Intentamos encontrarlo relativo al paquete si no se especifica
+    src_root = Path(__file__).resolve().parent
+    axitra_dir = (src_root / "axitra").resolve()
+    
+    if not axitra_dir.exists():
+        # Fallback al directorio actual
+        axitra_dir = Path("./axitra").resolve()
     if not (axitra_dir / "axitra").exists():
         print(f"Error: No se encontró el binario en {axitra_dir}")
         return
@@ -83,8 +89,8 @@ def run_test():
     
     print(f"Número de fuentes generadas: {len(geom_with_slip.source_points)}")
 
-    # 4. Correr AXITRA
-    print("Ejecutando AXITRA...")
+    # 4. Correr axitra
+    print("Ejecutando axitra...")
     ap = fm.build_axitra(geom_with_slip, latlon=False) 
     ap = fm.green(ap, quiet=False)
     

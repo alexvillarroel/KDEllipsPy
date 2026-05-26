@@ -366,7 +366,7 @@ def _distance_azimuth_deg(
 		result = iris_client.distaz(stlat, stlon, evlat, evlon)
 		return float(result["distance"]), float(result["azimuth"])
 
-	# Try direct calculation using UTMProjection (preferred for consistency with AXITRA North/East)
+	# Try direct calculation using UTMProjection (preferred for consistency with axitra North/East)
 	try:
 		from .geometry import StationGeometry
 		# Dummy geometry to access UTM conversion
