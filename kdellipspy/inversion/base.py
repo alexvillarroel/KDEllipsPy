@@ -727,16 +727,6 @@ class BaseInversionModel:
                     pass
 
 
-__all__ = [
-    "NAModel",
-    "MisfitCalculator",
-    "NAResult",
-    "BaseInversionModel",
-]
-          ap.clean()
-                except Exception:
-                    pass
-
 
 __all__ = [
     "NAModel",
