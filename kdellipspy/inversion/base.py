@@ -455,6 +455,28 @@ class BaseInversionModel:
         self.axitra_ikmax = int(axitra_ikmax)
 
         if observed_waveforms is not None and time_array is not None:
+            # Validate observed waveform array consistency
+            if observed_waveforms.ndim != 3:
+                raise ValueError(
+                    f"observed_waveforms must be 3D (nsta, 3, npts), got shape {observed_waveforms.shape}"
+                )
+            nsta_obs, ncomp, npts = observed_waveforms.shape
+            if ncomp != 3:
+                raise ValueError(
+                    f"observed_waveforms must have 3 components (N,E,Z), got {ncomp}"
+                )
+            nsta_cfg = len(self.cfg.stations.stations) if self.cfg.stations is not None else 0
+            if nsta_obs != nsta_cfg:
+                raise ValueError(
+                    f"Mismatch: observed_waveforms has {nsta_obs} stations "
+                    f"but input.ctl defines {nsta_cfg} stations. "
+                    f"Ensure you load data for exactly the stations in Section 8."
+                )
+            if len(time_array) != npts:
+                raise ValueError(
+                    f"time_array length ({len(time_array)}) must match npts ({npts})"
+                )
+
             # Prepare station flags from ConfigParser
             station_flags = None
             if hasattr(self.cfg, "stations") and self.cfg.stations is not None:

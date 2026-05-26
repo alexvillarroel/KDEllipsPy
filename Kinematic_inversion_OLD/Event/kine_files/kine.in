@@ -1,0 +1,45 @@
+#
+# Input file for receiver function inversion specific information
+#
+kine_param                     		/* input model */
+kine_models                    		/* output models */
+576
+12000 12000 24 24
+1
+0
+1
+10
+real_disp_x                                /* input data */
+0.0 128 512
+real_disp_y                                /* input data */
+0.0 128 512
+real_disp_z                                /* input data */
+0.0 128 512
+1 1 1					/* weight IQUI*/
+1 1 1                                   /* weight PICA*/
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1
+1 1 1

@@ -125,8 +125,8 @@ class MainWindow(QMainWindow):
             chk_z.setFlags(Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled)
             chk_z.setCheckState(Qt.CheckState.Checked if st.use_z else Qt.CheckState.Unchecked)
             self.table_stations.setItem(i, 6, chk_z)
-
-def main():
+            
+def main(): 
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()

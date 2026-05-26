@@ -1,0 +1,9 @@
+
+date
+#./axitra >invert.out
+#echo "fin axitra"
+../bin/kine_na > invert.out
+echo "fin kine_na"
+./plot_sismog_kine.py
+date
+

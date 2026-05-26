@@ -1,0 +1,16 @@
+ifx -xhost -ipo -O4   -c NA_src/na.F
+mv na.o lib
+cd kine_subs; make -f Makefile
+make[1]: Entering directory `/home/carlos/Documents/Magister_Geofisica/Ramos_3_Semestre/Trabajo_de_Tesis_1/Inversion/Kinematic/elipse/src-covm_inkm/kine_subs'
+ifx                    -fast           -c forward_modelling_ell.f 
+ifx                    -fast           -c calcmisfit.f 
+ifx                    -fast           -c convm_new_src.f 
+ifx                    -fast           -c display_model.f 
+ifx                    -fast           -c display_final.f 
+ifx                    -fast           -c lofw.f 
+ifx                    -fast           -c four1.f 
+ifx                    -fast           -c output_summary.f 
+ifx                    -fast           -c read_vmodelNA.f 
+make[1]: Leaving directory `/home/carlos/Documents/Magister_Geofisica/Ramos_3_Semestre/Trabajo_de_Tesis_1/Inversion/Kinematic/elipse/src-covm_inkm/kine_subs'
+ifx -xhost -ipo -O4  -o ../bin/kine_na kine_na_new.f \
+	lib/na.o  kine_subs/forward_modelling_ell.o kine_subs/convm_new_src.o kine_subs/calcmisfit.o kine_subs/cross_correlation.o kine_subs/display_model.o kine_subs/display_final.o kine_subs/lofw.o kine_subs/output_summary.o kine_subs/read_vmodelNA.o

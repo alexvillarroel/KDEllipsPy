@@ -23,7 +23,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QListWidget, QListWidgetItem, QStackedWidget, QLabel, QPushButton,
     QLineEdit, QFormLayout, QSpinBox, QDoubleSpinBox, QCheckBox,
-    QTableWidget, QTableWidgetItem, QHeaderView, QScrollArea,
+    QTableWidget, QTableWidgetItem, QHeaderView, QScrollArea, QGridLayout,
     QFileDialog, QMessageBox, QGroupBox, QComboBox, QFrame,
     QSizePolicy, QSplitter, QTextEdit
 )
@@ -1143,8 +1143,8 @@ class StationsView(QWidget):
 
 class DataVisualizationView(QWidget):
     """
-    Lee sismogramas desde la carpeta DATA y los muestra como una matriz de subplots
-    (N estaciones × 3 componentes) incrustada en un QScrollArea.
+    Lee sismogramas desde la carpeta DATA y los muestra como una grilla scrollable
+    con 3 columnas fijas por componente (N, E, Z) y una fila por estación.
 
     Formato esperado: archivos .sac, .mseed, o binarios numpy (.npy)
     en subcarpetas o directamente en DATA/.
@@ -1153,6 +1153,13 @@ class DataVisualizationView(QWidget):
     def __init__(self):
         super().__init__()
         self._work_dir: Optional[Path] = None
+        self._base_waveforms: Optional[np.ndarray] = None
+        self._view_waveforms: Optional[np.ndarray] = None
+        self._station_names: List[str] = []
+        self._station_dist_km: Dict[str, float] = {}
+        self._event_lat: Optional[float] = None
+        self._event_lon: Optional[float] = None
+        self._dt: float = 0.25
 
         layout = QVBoxLayout(self)
         layout.addWidget(_section_title("📊  Visualización de Sismogramas"))
@@ -1167,19 +1174,52 @@ class DataVisualizationView(QWidget):
         ctrl.addStretch()
         layout.addLayout(ctrl)
 
-        # ── ScrollArea que contiene el canvas de Matplotlib ─────────────────
+        proc = QHBoxLayout()
+        proc.addWidget(QLabel("fmin [Hz]:"))
+        self.freq_min = _make_dbl(0.04, 0.001, 50.0, 4, 0.01)
+        self.freq_min.setFixedWidth(100)
+        proc.addWidget(self.freq_min)
+
+        proc.addWidget(QLabel("fmax [Hz]:"))
+        self.freq_max = _make_dbl(0.15, 0.001, 50.0, 4, 0.01)
+        self.freq_max.setFixedWidth(100)
+        proc.addWidget(self.freq_max)
+
+        self.btn_bandpass = QPushButton("Aplicar Pasabanda")
+        self.btn_bandpass.clicked.connect(self.apply_bandpass)
+        proc.addWidget(self.btn_bandpass)
+
+        self.btn_integrate = QPushButton("Integrar Señal")
+        self.btn_integrate.clicked.connect(self.integrate_signal)
+        proc.addWidget(self.btn_integrate)
+
+        self.btn_reset = QPushButton("Reiniciar")
+        self.btn_reset.clicked.connect(self.reset_processing)
+        proc.addWidget(self.btn_reset)
+
+        proc.addStretch()
+        layout.addLayout(proc)
+
+        # ── ScrollArea que contiene una grilla por estación ────────────────
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
+        self.scroll.setFrameShape(QFrame.Shape.NoFrame)
         self.canvas_container = QWidget()
         self.canvas_layout = QVBoxLayout(self.canvas_container)
         self.canvas_layout.setContentsMargins(0, 0, 0, 0)
+        self.canvas_layout.setSpacing(12)
         self.scroll.setWidget(self.canvas_container)
         layout.addWidget(self.scroll)
 
-        self._canvas = None  # FigureCanvas, se crea al cargar datos
+        self._station_cards: List[QWidget] = []
 
     def set_work_dir(self, work_dir: Path):
         self._work_dir = work_dir
+
+    def set_event_location(self, evlat: Optional[float], evlon: Optional[float]):
+        """Define coordenadas del evento desde input.ctl para ordenar por distancia."""
+        self._event_lat = float(evlat) if evlat is not None else None
+        self._event_lon = float(evlon) if evlon is not None else None
 
     def load_data(self):
         """
@@ -1192,7 +1232,10 @@ class DataVisualizationView(QWidget):
             return
 
         data_dir = self._work_dir / "DATA"
-        if not data_dir.exists():
+        raw_dir = data_dir / "RAW"
+        if raw_dir.exists():
+            data_dir = raw_dir
+        elif not data_dir.exists():
             QMessageBox.warning(self, "Sin DATA/", "La carpeta DATA/ no existe en el directorio de trabajo.")
             return
 
@@ -1204,7 +1247,147 @@ class DataVisualizationView(QWidget):
                 "Formatos soportados: .npy (shape: [nsta, 3, npts]), .sac, .mseed")
             return
 
-        self._plot_waveforms(waveforms, station_names, dt)
+        self._base_waveforms = np.asarray(waveforms, dtype=float).copy()
+        self._view_waveforms = self._base_waveforms.copy()
+        self._station_names = list(station_names)
+        self._station_dist_km = dict(getattr(self, "_last_station_dist_km", {}))
+        self._dt = float(dt)
+        self._plot_waveforms(self._view_waveforms, self._station_names, self._dt)
+
+    def _has_loaded_waveforms(self) -> bool:
+        return self._view_waveforms is not None and len(self._station_names) > 0
+
+    def integrate_signal(self):
+        """Integra una vez en el tiempo las señales actuales (por estación/componente)."""
+        if not self._has_loaded_waveforms():
+            QMessageBox.information(self, "Sin datos", "Carga datos antes de integrar.")
+            return
+
+        self._view_waveforms = np.cumsum(self._view_waveforms, axis=2) * self._dt
+        self._plot_waveforms(self._view_waveforms, self._station_names, self._dt)
+        self.info_lbl.setText(self.info_lbl.text() + " · integración aplicada")
+
+    def apply_bandpass(self):
+        """Aplica filtro pasabanda con fmin/fmax seleccionadas en la UI."""
+        if not self._has_loaded_waveforms():
+            QMessageBox.information(self, "Sin datos", "Carga datos antes de filtrar.")
+            return
+
+        fmin = float(self.freq_min.value())
+        fmax = float(self.freq_max.value())
+        if fmin <= 0 or fmax <= 0 or fmin >= fmax:
+            QMessageBox.warning(self, "Frecuencias inválidas", "Debe cumplirse: 0 < fmin < fmax")
+            return
+
+        nyquist = 0.5 / max(self._dt, 1e-12)
+        if fmax >= nyquist:
+            QMessageBox.warning(
+                self,
+                "Frecuencia inválida",
+                f"fmax ({fmax:.3f} Hz) debe ser menor que Nyquist ({nyquist:.3f} Hz).",
+            )
+            return
+
+        try:
+            from obspy.signal.filter import bandpass
+        except Exception:
+            QMessageBox.warning(
+                self,
+                "Dependencia faltante",
+                "No se pudo importar obspy.signal.filter.bandpass.",
+            )
+            return
+
+        filtered = self._view_waveforms.copy()
+        n_sta, n_comp, _ = filtered.shape
+        df = 1.0 / self._dt
+        for i in range(n_sta):
+            for j in range(n_comp):
+                tr = filtered[i, j]
+                tr = tr - np.mean(tr)
+                filtered[i, j] = bandpass(tr, fmin, fmax, df=df, corners=4, zerophase=True)
+
+        self._view_waveforms = filtered
+        self._plot_waveforms(self._view_waveforms, self._station_names, self._dt)
+        self.info_lbl.setText(
+            self.info_lbl.text() + f" · pasabanda {fmin:.3f}-{fmax:.3f} Hz"
+        )
+
+    def reset_processing(self):
+        """Restaura las trazas originales cargadas desde disco."""
+        if self._base_waveforms is None:
+            QMessageBox.information(self, "Sin datos", "No hay datos para reiniciar.")
+            return
+        self._view_waveforms = self._base_waveforms.copy()
+        self._plot_waveforms(self._view_waveforms, self._station_names, self._dt)
+        self.info_lbl.setText("Procesamiento reiniciado")
+
+    def _clear_station_cards(self):
+        while self.canvas_layout.count():
+            item = self.canvas_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+        self._station_cards.clear()
+
+    def _component_figure(self, t: np.ndarray, signal: np.ndarray, title: str, color: str):
+        fig = Figure(figsize=(4.2, 1.7), tight_layout=True)
+        ax = fig.add_subplot(1, 1, 1)
+        ax.plot(t, signal, color=color, linewidth=0.8)
+        ax.set_title(title, fontsize=9, fontweight="bold")
+        ax.set_xlabel("Tiempo [s]", fontsize=8)
+        ax.tick_params(labelsize=7)
+        ax.grid(True, alpha=0.25)
+        return fig
+
+    def _station_card(self, station_name: str, row_data: np.ndarray, t: np.ndarray):
+        card = QGroupBox(station_name)
+        card.setObjectName("stationCard")
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(10, 12, 10, 10)
+        card_layout.setSpacing(8)
+
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(10)
+        grid.setVerticalSpacing(6)
+
+        headers = [("N", 0, "#2c7be5"), ("E", 1, "#e8623a"), ("Z", 2, "#3cb179")]
+        for label, col, color in headers:
+            title = QLabel(label)
+            title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            title.setStyleSheet("font-weight: bold; color: #8eb4e3;")
+            grid.addWidget(title, 0, col)
+
+            fig = self._component_figure(t, row_data[col], f"{station_name} - {label}", color)
+            canvas = FigureCanvas(fig)
+            canvas.setMinimumHeight(170)
+            canvas.setMaximumHeight(200)
+            grid.addWidget(canvas, 1, col)
+
+        card_layout.addLayout(grid)
+        return card
+
+    def _inject_overview(self, waveforms: np.ndarray, station_names: List[str], dt: float):
+        summary = QGroupBox("Resumen de Datos")
+        layout = QVBoxLayout(summary)
+        n_sta, _, npts = waveforms.shape
+        layout.addWidget(QLabel(f"Estaciones cargadas: {n_sta}"))
+        layout.addWidget(QLabel(f"Componentes: N / E / Z"))
+        layout.addWidget(QLabel(f"Puntos por traza: {npts}"))
+        layout.addWidget(QLabel(f"Delta: {dt:.3f} s"))
+        if self._station_dist_km:
+            ordered = []
+            for s in station_names:
+                dkm = self._station_dist_km.get(s, np.nan)
+                if np.isfinite(dkm):
+                    ordered.append(f"{s} ({dkm:.1f} km)")
+                else:
+                    ordered.append(s)
+            layout.addWidget(QLabel("Orden por distancia al evento:"))
+            layout.addWidget(QLabel(", ".join(ordered)))
+        else:
+            layout.addWidget(QLabel(f"Orden: {', '.join(station_names)}"))
+        self.canvas_layout.addWidget(summary)
 
     def _try_load(self, data_dir: Path):
         """
@@ -1225,6 +1408,7 @@ class DataVisualizationView(QWidget):
         # ── Opción 2: obspy ─────────────────────────────────────────────────
         try:
             import obspy
+            from obspy.geodetics import gps2dist_azimuth
             stream = obspy.Stream()
             for ext in ("*.sac", "*.SAC", "*.mseed", "*.MiniSEED"):
                 for fpath in data_dir.glob(ext):
@@ -1235,21 +1419,65 @@ class DataVisualizationView(QWidget):
             if len(stream) > 0:
                 stations_dict: Dict[str, list] = {}
                 for tr in stream:
-                    sta = tr.stats.station
+                    sta = str(tr.stats.station).strip().upper()
                     if sta not in stations_dict:
                         stations_dict[sta] = []
                     stations_dict[sta].append(tr)
                 
-                station_names = sorted(stations_dict.keys())
+                # Compute station distances (km), prioritizing event coordinates from input.ctl.
+                dist_km: Dict[str, float] = {}
+                for sname, traces in stations_dict.items():
+                    dvals = []
+                    for tr in traces:
+                        d_m = getattr(tr.stats, "distance", None)
+                        if d_m is not None:
+                            try:
+                                dvals.append(float(d_m) / 1000.0)
+                                continue
+                            except Exception:
+                                pass
+                        sac = getattr(tr.stats, "sac", None)
+                        if sac is None:
+                            continue
+                        stla = getattr(sac, "stla", None)
+                        stlo = getattr(sac, "stlo", None)
+
+                        # Prefer event coordinates provided by input.ctl.
+                        evla = self._event_lat
+                        evlo = self._event_lon
+
+                        # Fallback to SAC event coordinates if input.ctl values are unavailable.
+                        if evla is None or evlo is None:
+                            evla = getattr(sac, "evla", None)
+                            evlo = getattr(sac, "evlo", None)
+
+                        if None in (stla, stlo, evla, evlo):
+                            continue
+                        try:
+                            d_m_calc = gps2dist_azimuth(float(evla), float(evlo), float(stla), float(stlo))[0]
+                            dvals.append(float(d_m_calc) / 1000.0)
+                        except Exception:
+                            pass
+                    if dvals:
+                        dist_km[sname] = float(np.min(dvals))
+
+                station_names = sorted(
+                    stations_dict.keys(),
+                    key=lambda s: (dist_km.get(s, float("inf")), s),
+                )
                 npts_max = max(tr.stats.npts for sta in stations_dict for tr in stations_dict[sta])
                 waveforms = np.zeros((len(station_names), 3, npts_max))
                 dt = stream[0].stats.delta
                 for i, sname in enumerate(station_names):
                     for tr in stations_dict[sname]:
-                        comp = tr.stats.component.upper()
+                        comp = str(getattr(tr.stats, "component", "")).upper().strip()
+                        if not comp:
+                            channel = str(getattr(tr.stats, "channel", "")).upper().strip()
+                            comp = channel[-1:] if channel else "Z"
                         ch = {"N": 0, "E": 1, "Z": 2}.get(comp, 2)
                         n = min(tr.stats.npts, npts_max)
                         waveforms[i, ch, :n] = tr.data[:n]
+                self._last_station_dist_km = dist_km
                 return waveforms, station_names, dt
         except ImportError:
             pass
@@ -1268,58 +1496,28 @@ class DataVisualizationView(QWidget):
 
     def _plot_waveforms(self, waveforms: np.ndarray, station_names: List[str], dt: float):
         """
-        Genera la matriz de subplots (N_estaciones × 3 componentes) embebida en la GUI.
-        Cada fila es una estación; las columnas son N, E, Z.
+        Genera una grilla scrollable con una fila por estación y tres columnas por componente.
         """
-        if self._canvas:
-            self.canvas_layout.removeWidget(self._canvas)
-            self._canvas.deleteLater()
-            self._canvas = None
+        self._clear_station_cards()
 
         n_sta = waveforms.shape[0]
         npts  = waveforms.shape[2]
         t     = np.arange(npts) * dt
-
-        # Altura dinámica: 1.8 pulgadas por estación, mínimo 4
-        fig_height = max(4.0, n_sta * 1.8)
-        comp_labels = ["N", "E", "Z"]
-        colors      = ["#2c7be5", "#e8623a", "#3cb179"]
-
-        # ── Creación de la figura Matplotlib ────────────────────────────────
-        fig = Figure(figsize=(10, fig_height), tight_layout=True)
-        axes = []
-        for row in range(n_sta):
-            row_axes = []
-            for col in range(3):
-                ax = fig.add_subplot(n_sta, 3, row * 3 + col + 1)
-                row_axes.append(ax)
-            axes.append(row_axes)
+        self._inject_overview(waveforms, station_names, dt)
 
         for row, sname in enumerate(station_names):
-            for col in range(3):
-                ax = axes[row][col]
-                ax.plot(t, waveforms[row, col], color=colors[col],
-                        linewidth=0.7, alpha=0.9)
-                ax.set_xlim(t[0], t[-1])
-                ax.tick_params(labelsize=6)
-                ax.grid(True, alpha=0.2)
-                # Etiquetas sólo en bordes para limpieza visual
-                if row == 0:
-                    ax.set_title(f"Comp. {comp_labels[col]}", fontsize=8, fontweight="bold")
-                if col == 0:
-                    ax.set_ylabel(sname, fontsize=7, rotation=0, labelpad=36, va="center")
-                if row < n_sta - 1:
-                    ax.set_xticklabels([])
-                else:
-                    ax.set_xlabel("Tiempo [s]", fontsize=7)
+            station_card = self._station_card(sname, waveforms[row], t)
+            self.canvas_layout.addWidget(station_card)
+            self._station_cards.append(station_card)
 
-        # ── Integra el FigureCanvas de Matplotlib en el QScrollArea ─────────
-        self._canvas = FigureCanvas(fig)
-        # Ajusta el tamaño del canvas para permitir scroll
-        self._canvas.setMinimumHeight(int(fig_height * 96))
-        self.canvas_layout.addWidget(self._canvas)
-        self._canvas.draw()
-        self.info_lbl.setText(f"{n_sta} estaciones cargadas · {npts} puntos · Δt={dt:.3f}s")
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.canvas_layout.addWidget(spacer)
+
+        visible_rows = min(5, n_sta)
+        self.info_lbl.setText(
+            f"{n_sta} estaciones cargadas · mostrando {visible_rows} visibles antes del scroll · Δt={dt:.3f}s"
+        )
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -1473,6 +1671,7 @@ class MainWindow(QMainWindow):
         self._data = self._io.parse(str(self._ctl_path))
         self._populate_all_views()
         self.view_data.set_work_dir(self._work_dir)
+        self.view_data.set_event_location(self._data.get("latitude"), self._data.get("longitude"))
 
         short = str(self._work_dir)
         if len(short) > 28:
@@ -1492,6 +1691,7 @@ class MainWindow(QMainWindow):
             self._data = self._io.parse(path)
             self._populate_all_views()
             self.view_data.set_work_dir(self._work_dir)
+            self.view_data.set_event_location(self._data.get("latitude"), self._data.get("longitude"))
             self.statusBar().showMessage(f"Cargado: {path}")
 
     def save_ctl(self):
@@ -1520,6 +1720,7 @@ class MainWindow(QMainWindow):
         self.view_source.load(self._data)
         self.view_velmodel.load(self._data)
         self.view_stations.load(self._data)
+        self.view_data.set_event_location(self._data.get("latitude"), self._data.get("longitude"))
 
     def _collect_all_views(self):
         """Recoge los valores de todas las vistas hacia `self._data`."""

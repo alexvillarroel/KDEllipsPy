@@ -1,0 +1,9 @@
+
+date
+./axitra >direct.out
+echo "fin axitra"
+../bin/kine_direct >> direct.out
+echo "fin kine_direct"
+./plot_sismog_kine.py
+date
+

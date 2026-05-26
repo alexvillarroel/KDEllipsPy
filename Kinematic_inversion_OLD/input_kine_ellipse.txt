@@ -1,0 +1,65 @@
+INPUT PARAMETERS FOR KINEMATIC INVERSION:
+=========================================
+
+
+-------------------------------------------------------------------------------------------------
+ OBSERVED DATA PARAMETERS: (Time window (t1-t2); Npts; Delta; Units (displacement=1, velocity=2))
+0.0 128 512 0.25 1
+
+
+-----------------------------------------
+ SOURCE POSITION: (Lat; Lon; Depth; Name)
+-26.5534  -71.167   74.8  Event Copiapo 2025 INTRAPLATE
+
+
+---------------------------------------------------------
+ SELECTED PLANE FROM FOCAL MECHANISM: (Strike; Dip; Rake)
+91 38	-111
+
+
+--------------------------------------------------------------------------------
+ FAULT PLANE PARAMETERS: (Length along dip and strike [km]; Hipocenter position; 
+ Number of subfaults along dip and strike)
+24000 24000
+12000 12000
+24 24
+
+
+----------------------------------------------------------------------------------------
+ ELLIPSE PARAMETERS AND FREQUENCY BAND: (Number of ellipses; Initial slip (yes=1, no=0); 
+ Slip shape (cst=0, gauss=1, ell=2); Freq1; Freq2; T0)
+1 0 1 0.07 0.13 3
+
+
+-------------------------------------------------------------------------------------------------
+ PARAMETERS TO INVERT: (Number of parameters; Length of axis 1 and 2 [km]; Rotation angle [x pi]; 
+ Position of the center (np); Position of the center (tp) [x 2pi]; Dmax [m]; Vr [km/s])
+7 1
+2.0 13.0 1
+2.0 13.0 1
+0.0 2.0 1
+0.0 1.0 1
+0.0 1.0 1
+0.4 3.0 1
+0.5 3.5 1
+
+
+-------------------------------------------------------------------------------------
+ INVERSION PROCESS PARAMETERS: (Algorithm type (NA=0 or MC=1); Number of iterations; 
+Sample size for first iteration; Sample size for other iterations; cells to resample)
+0 70 30 30 7
+
+
+---------------------------------------------------------------------------------------
+ STATION PARAMETERS: (Number of stations; Positions and names (Lat, Lon, Height, Name))
+10
+kst -26.148 -70.599 0.0 AC01
+kst -27.070 -70.820 0.0 A30C
+kst -27.503 -70.887 0.0 A18C
+kst -25.162 -69.590 0.0 GO02
+kst -28.205 -71.074 0.0 AC04
+kst -28.580 -70.758 0.0 A10C
+kst -28.836 -70.274 0.0 AC05
+kst -29.102 -71.410 0.0 A32C
+kst -23.905 -69.291 0.0 PB19
+kst -23.610 -70.262 0.0 A24F 
