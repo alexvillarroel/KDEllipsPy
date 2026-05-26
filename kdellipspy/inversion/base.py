@@ -727,7 +727,6 @@ class BaseInversionModel:
                     pass
 
 
-
 __all__ = [
     "NAModel",
     "MisfitCalculator",
