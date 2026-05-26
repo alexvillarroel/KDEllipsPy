@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 import re
 import numpy as np
 from pathlib import Path
@@ -21,7 +21,7 @@ class ObservedDataParams:
             t2=float(get('Time window end (t2)', 128.0)),
             npts=int(get('Number of points (Npts)', 512)),
             delta=float(get('Delta / Time step', 0.25)),
-            units=int(get('Units (1:disp, 2:vel)', 1))
+            units=int(get('Units', 1)) # Precise prefix
         )
 
 
@@ -42,7 +42,7 @@ class SourcePosition:
         get = lambda key, default: _get_param_value(params, key, default)
         return cls(
             event_name=str(get('Event Name', 'Unknown')),
-            origin_time=get('Origin Time (UTC)', None),
+            origin_time=get('Origin Time', None),
             latitude=float(get('Latitude', 0.0)),
             longitude=float(get('Longitude', 0.0)),
             depth=float(get('Depth', 0.0)),
@@ -121,17 +121,24 @@ class InversionParams:
         params_list = []
         for line in param_lines:
             # Expected format: "Param N: <name text> : <min> <max> <flag>"
-            m = re.match(r"^\s*Param\s+\d+\s*:\s*(.*?)\s*:\s*(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s+(\d+)\s*$", line)
-            if not m:
-                continue
-            params_list.append(
-                InversionParam(
-                    name=m.group(1).strip(),
-                    min_val=float(m.group(2)),
-                    max_val=float(m.group(3)),
-                    flag=int(m.group(4)),
+            # Use split by last colon for robust name capture
+            label, sep, data = line.rpartition(':')
+            if not sep: continue
+            
+            # Label is "Param N: Name text"
+            # We want "Name text"
+            name_part = label.split(':', 1)[-1].strip()
+            
+            parts = data.strip().split()
+            if len(parts) >= 3:
+                params_list.append(
+                    InversionParam(
+                        name=name_part,
+                        min_val=float(parts[0]),
+                        max_val=float(parts[1]),
+                        flag=int(parts[2]),
+                    )
                 )
-            )
         
         return cls(parameters=params_list)
 
@@ -155,39 +162,18 @@ class InversionProcessParams:
     @classmethod
     def from_dict(cls, params: Dict) -> 'InversionProcessParams':
         get = lambda key, default: _get_param_value(params, key, default)
-        algorithm_type = int(get('Algorithm type', 0))
-        num_iterations = int(get('Number of iterations', 1))
-        ss1 = int(get('Sample size for first iteration (SS1)', 30))
-        ss_other = int(get('Sample size for other iterations', 30))
-        cells_resample = int(get('Cells to resample', 7))
-        misfit_time_window = float(get('Misfit time window', 0.0)) # 0 means full signal
-        mcmc_total_steps = int(get('MCMC total steps', 500))
-        if mcmc_total_steps < 1:
-            mcmc_total_steps = max(100, ss1 * max(1, num_iterations))
-        mcmc_burn_in = int(get('MCMC burn-in', 0))
-        if mcmc_burn_in < 0:
-            mcmc_burn_in = 0
-        mcmc_proposal_scale = float(get('MCMC proposal scale', 0.08))
-        if mcmc_proposal_scale <= 0.0:
-            mcmc_proposal_scale = 0.08
-        mcmc_thin = int(get('MCMC thinning', 1))
-        if mcmc_thin < 1:
-            mcmc_thin = 1
-        mcmc_chains = int(get('MCMC chains', 1))
-        if mcmc_chains < 1:
-            mcmc_chains = 1
         return cls(
-            algorithm_type=algorithm_type,
-            num_iterations=num_iterations,
-            ss1=ss1,
-            ss_other=ss_other,
-            cells_resample=cells_resample,
-            misfit_time_window=misfit_time_window,
-            mcmc_total_steps=mcmc_total_steps,
-            mcmc_burn_in=mcmc_burn_in,
-            mcmc_proposal_scale=mcmc_proposal_scale,
-            mcmc_thin=mcmc_thin,
-            mcmc_chains=mcmc_chains,
+            algorithm_type=int(get('Algorithm type', 0)),
+            num_iterations=int(get('Number of iterations', 1)),
+            ss1=int(get('Sample size for first iteration (SS1)', 30)),
+            ss_other=int(get('Sample size for other iterations', 30)),
+            cells_resample=int(get('Cells to resample', 7)),
+            misfit_time_window=float(get('Misfit time window', 0.0)),
+            mcmc_total_steps=int(get('MCMC total steps', 500)),
+            mcmc_burn_in=int(get('MCMC burn-in', 0)),
+            mcmc_proposal_scale=float(get('MCMC proposal scale', 0.08)),
+            mcmc_thin=int(get('MCMC thinning', 1)),
+            mcmc_chains=int(get('MCMC chains', 1)),
         )
 
 
@@ -231,27 +217,13 @@ class Station:
     height: float
     name: str
     use_n: bool = True
-    use_e: bool = True # Default to using east component
-    use_z: bool = True # Default to using vertical component
+    use_e: bool = True 
+    use_z: bool = True 
 
 @dataclass
 class StationParams:
     """Section 8: Station Parameters"""
     stations: List[Station] = field(default_factory=list)
-
-    def add(self, name: str, latitude: float, longitude: float, height: float = 0.0, 
-            use_n: bool = True, use_e: bool = True, use_z: bool = True):
-        """Add a single station."""
-        st = Station(latitude, longitude, height, name, use_n, use_e, use_z)
-        self.stations.append(st)
-        return st
-
-    def add_many(self, stations_list: List[Dict]):
-        """Add multiple stations from a list of dictionaries."""
-        for st_dict in stations_list:
-            # We use st_dict.copy() to not modify the input
-            d = st_dict.copy()
-            self.add(**d)
 
     @classmethod
     def from_lines(cls, station_lines: List[str]) -> 'StationParams':
@@ -292,24 +264,6 @@ class VelocityModel:
     """Section 9: Velocity Model 1D"""
     layers: List[VelocityLayer] = field(default_factory=list)
 
-    def add(self, thickness: float, vp: float, vs: float, rho: float, qp: float, qs: float):
-        """
-        Add a single velocity layer.
-        (Agrega una sola capa de velocidad.)
-        """
-        layer = VelocityLayer(thickness, vp, vs, rho, qp, qs)
-        self.layers.append(layer)
-        return layer
-
-    def add_many(self, layers_list: List[Dict]):
-        """
-        Add multiple layers from a list of dictionaries.
-        (Agrega múltiples capas desde una lista de diccionarios.)
-        """
-        for l_dict in layers_list:
-            d = l_dict.copy()
-            self.add(**d)
-
     @classmethod
     def from_lines(cls, layer_lines: List[str]) -> 'VelocityModel':
         layers = []
@@ -327,10 +281,6 @@ class VelocityModel:
         return cls(layers=layers)
 
     def to_numpy(self) -> np.ndarray:
-        """
-        Exporta las capas directamente como una matriz de NumPy (Nx6).
-        Este es exactamente el formato que requiere el wrapper de Axitra.
-        """
         return np.array([
             [layer.thickness, layer.vp, layer.vs, layer.rho, layer.qp, layer.qs]
             for layer in self.layers
@@ -338,36 +288,10 @@ class VelocityModel:
 
 
 class ConfigParser:
-    """
-    Parses and stores the inversion configuration from the 'input.ctl' file.
-    (Parsea y almacena la configuración de la inversión desde el archivo 'input.ctl'.)
-    
-    This class is responsible for reading seismic event parameters, station grids, 
-    filtering frequencies, and Neighbourhood Algorithm (NA) parameters, structuring 
-    them for use throughout the pipeline.
-    (Esta clase es responsable de leer los parámetros del evento sísmico, la grilla 
-    de estaciones, las frecuencias de filtrado y los parámetros del algoritmo NA, 
-    estructurándolos para su uso en el pipeline.)
-
-    Attributes:
-        filepath (str or Path): Path to the 'input.ctl' control file. 
-                                (Ruta al archivo de control 'input.ctl'.)
-        source_position (SourceConfig): Seismic source parameters. 
-                                        (Parámetros de la fuente sísmica.)
-        stations (StationConfig): List and information of stations. 
-                                  (Lista e información de las estaciones.)
-        ellipse (EllipseConfig): Ellipse geometry parameters and frequencies. 
-                                 (Parámetros geométricos de la elipse y frecuencias.)
-        inversion_process (InversionConfig): NA algorithm parameters. 
-                                             (Parámetros del algoritmo de inversión NA.)
-    """
+    """Parses and stores the inversion configuration from the 'input.ctl' file."""
 
     @staticmethod
     def get_base_template_path() -> Path:
-        """
-        Return the absolute path to the base input.ctl template included in the package.
-        (Retorna la ruta absoluta a la plantilla base input.ctl incluida en el paquete.)
-        """
         return Path(__file__).parent.parent / "io" / "templates" / "input.ctl.base"
 
     def __init__(self, filepath: str):
@@ -382,272 +306,346 @@ class ConfigParser:
         self.stations = None
         self.velocity_model = None
         
-        self.parse()
-
-    def parse(self) -> None:
-        """Parse the entire control file"""
-        with open(self.filepath, 'r') as f:
-            content = f.read()
-
-        sections = self._split_sections(content)
-        self._parse_all_sections(sections)
+        if filepath not in ("<manual>", "<from_dict>"):
+            self.parse()
 
     @classmethod
-    def build(cls) -> 'ConfigParser':
-        """
-        Create a ConfigParser manually with default values.
-        (Crea un ConfigParser manualmente con valores por defecto.)
-        """
-        instance = cls.__new__(cls)
-        instance.filepath = '<manual>'
-        instance.observed_data = ObservedDataParams(t1=0.0, t2=100.0, npts=512, delta=0.2, units=1)
-        instance.source_position = SourcePosition(event_name="Event", origin_time=None, latitude=0.0, longitude=0.0, depth=10.0, strike=0.0, dip=0.0, rake=0.0)
-        instance.fault_plane = FaultPlaneParams(lx=0.0, ly=0.0, hx=0.0, hy=0.0, nx=1, ny=1)
-        instance.ellipse = EllipseParams(num_ellipses=1, initial_slip=1, slip_shape=2, freq1=0.01, freq2=0.2, t0=2.0)
-        instance.inversion_params = InversionParams(parameters=[])
-        instance.inversion_process = InversionProcessParams(algorithm_type=0, num_iterations=1, ss1=30, ss_other=30, cells_resample=7)
-        instance.moment_tensor = MomentTensor(flag=0, mrr=0.0, mtt=0.0, mpp=0.0, mrt=0.0, mrp=0.0, mtp=0.0, exponent=18.0)
-        instance.stations = StationParams()
-        instance.velocity_model = VelocityModel()
+    def from_dict(cls, params: Dict[str, Any]) -> 'ConfigParser':
+        """Create a ConfigParser instance from a dictionary of parameters."""
+        instance = cls("<from_dict>")
+        
+        # Section 1
+        instance.observed_data = ObservedDataParams.from_dict(params.get('observed_data', {}))
+        # Section 2
+        instance.source_position = SourcePosition.from_dict(params.get('source_position', {}))
+        # Section 3
+        instance.fault_plane = FaultPlaneParams.from_dict(params.get('fault_plane', {}))
+        # Section 4
+        instance.ellipse = EllipseParams.from_dict(params.get('ellipse', {}))
+        # Section 5
+        # InversionParams needs a list of lines for its from_dict, but we can bypass it
+        # or implement a simpler from_dict for it.
+        # For now, let's assume it's passed as a list of InversionParam objects or similar.
+        inv_data = params.get('inversion_params', {})
+        if isinstance(inv_data, list):
+            instance.inversion_params = InversionParams(parameters=inv_data)
+        else:
+            # Try to handle it if it's a dict
+            instance.inversion_params = InversionParams(parameters=[])
+            
+        # Section 6
+        instance.inversion_process = InversionProcessParams.from_dict(params.get('inversion_process', {}))
+        # Section 7
+        instance.moment_tensor = MomentTensor.from_dict(params.get('moment_tensor', {}))
+        
+        # Section 8
+        stations_data = params.get('stations', [])
+        if isinstance(stations_data, list):
+            stations_list = []
+            for st in stations_data:
+                if isinstance(st, dict):
+                    stations_list.append(Station(
+                        latitude=float(st.get('latitude', 0.0)),
+                        longitude=float(st.get('longitude', 0.0)),
+                        height=float(st.get('height', 0.0)),
+                        name=str(st.get('name', 'ST')),
+                        use_n=bool(st.get('use_n', True)),
+                        use_e=bool(st.get('use_e', True)),
+                        use_z=bool(st.get('use_z', True))
+                    ))
+                elif isinstance(st, Station):
+                    stations_list.append(st)
+            instance.stations = StationParams(stations=stations_list)
+        
+        # Section 9
+        vel_data = params.get('velocity_model', [])
+        if isinstance(vel_data, list):
+            layers = []
+            for l in vel_data:
+                if isinstance(l, dict):
+                    layers.append(VelocityLayer(
+                        thickness=float(l.get('thickness', 0.0)),
+                        vp=float(l.get('vp', 0.0)),
+                        vs=float(l.get('vs', 0.0)),
+                        rho=float(l.get('rho', 0.0)),
+                        qp=float(l.get('qp', 0.0)),
+                        qs=float(l.get('qs', 0.0))
+                    ))
+                elif isinstance(l, VelocityLayer):
+                    layers.append(l)
+            instance.velocity_model = VelocityModel(layers=layers)
+            
         return instance
 
-    def _split_sections(self, content: str) -> Dict[int, str]:
-        """Split content into 9 sections"""
-        sections: Dict[int, str] = {}
-        current_section = None
-        chunk: List[str] = []
+    def update_stations(self, keep_station_names: list[str]) -> None:
+        if not self.stations or not self.stations.stations:
+            return
+        keep_upper = [s.strip().upper() for s in keep_station_names]
+        self.stations.stations = [s for s in self.stations.stations if s.name.upper() in keep_upper]
+        if self.filepath not in ("<manual>", "<from_dict>"):
+            self.save()
 
+    def update_stations_from_sac(self, raw_dir: str | Path, station_names: list[str]) -> None:
+        try: from obspy import read
+        except ImportError: return
+        if not self.stations: self.stations = StationParams()
+        raw_path = Path(raw_dir)
+        sac_files = list(raw_path.glob("*.SAC")) + list(raw_path.glob("*.sac"))
+        if not sac_files: return
+        coords_map = {}
+        for f in sac_files:
+            try:
+                st = read(str(f), headonly=True)
+                tr = st[0]
+                coords_map[tr.stats.station.strip().upper()] = (float(tr.stats.sac.stla), float(tr.stats.sac.stlo))
+            except Exception: pass
+        new_stations = []
+        for name in station_names:
+            nu = name.strip().upper()
+            if nu in coords_map:
+                lat, lon = coords_map[nu]
+                new_stations.append(Station(latitude=lat, longitude=lon, height=0.0, name=nu))
+        self.stations.stations = new_stations
+        if self.filepath not in ("<manual>", "<from_dict>"):
+            self.save()
+
+    def save(self, output_path: Optional[str | Path] = None) -> None:
+        path = Path(output_path if output_path else self.filepath)
+        if str(path) in ("<manual>", "<from_dict>"):
+            self._save_from_scratch(path)
+            return
+
+        with open(path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+
+        simple_params = self._get_simple_params_map()
+        new_lines = []
+        current_section = 0
+        skip_data = False
+        COLON_POS = 48 # Standard alignment
+        VALUE_WIDTH = 25
+
+        for line in lines:
+            stripped = line.strip()
+            m_header = re.match(r"^#\s*(\d+)\.", stripped)
+            if m_header:
+                current_section = int(m_header.group(1))
+                skip_data = False
+                new_lines.append(line)
+                continue
+            
+            if skip_data:
+                if current_section in (5, 8, 9) and stripped and not stripped.startswith("#") and ":" not in stripped:
+                    continue
+                elif current_section == 5 and stripped.startswith("Param"):
+                    continue
+                else:
+                    skip_data = False
+
+            if ":" in line and not skip_data:
+                label, value = _split_line_by_separator(line)
+                norm_key = _normalize_key(label)
+                
+                matched_key = None
+                if norm_key in simple_params:
+                    matched_key = norm_key
+                else:
+                    for sk in simple_params:
+                        if norm_key.startswith(sk) or sk.startswith(norm_key):
+                            matched_key = sk
+                            break
+                
+                if matched_key:
+                    val = simple_params[matched_key]
+                    # Fixed alignment logic
+                    new_line = label.ljust(COLON_POS-1) + ":" + val.rjust(VALUE_WIDTH) + "\n"
+                    new_lines.append(new_line)
+                    
+                    if matched_key in ("number of parameters", "number of stations", "number of layers"):
+                        self._inject_list_data(new_lines, current_section)
+                        skip_data = True
+                    continue
+
+            # Handle list data that doesn't have a "Number of" line
+            if current_section in (5, 8, 9) and stripped and not stripped.startswith("#") and not skip_data:
+                is_data = (current_section == 5 and stripped.startswith("Param")) or (":" not in stripped)
+                if is_data:
+                    self._inject_list_data(new_lines, current_section)
+                    skip_data = True
+                    continue
+
+            new_lines.append(line)
+
+        with open(path, 'w', encoding='utf-8') as f:
+            f.writelines(new_lines)
+        print(f"✓ Configuration surgically updated: {path}")
+
+    def _get_simple_params_map(self) -> Dict[str, str]:
+        p = {}
+        # Section 1
+        p["time window start (t1)"] = f"{self.observed_data.t1:.6f}"
+        p["time window end (t2)"] = f"{self.observed_data.t2:.6f}"
+        p["number of points (npts)"] = str(self.observed_data.npts)
+        p["delta / time step"] = f"{self.observed_data.delta:.6f}"
+        p["units"] = str(self.observed_data.units)
+        # Section 2
+        p["event name"] = self.source_position.event_name
+        p["origin time"] = self.source_position.origin_time if self.source_position.origin_time else ""
+        p["latitude"] = f"{self.source_position.latitude:.6f}"
+        p["longitude"] = f"{self.source_position.longitude:.6f}"
+        p["depth"] = f"{self.source_position.depth:.6f}"
+        p["strike"] = f"{self.source_position.strike:.6f}"
+        p["dip"] = f"{self.source_position.dip:.6f}"
+        p["rake"] = f"{self.source_position.rake:.6f}"
+        # Section 3
+        p["length along strike (lx)"] = f"{self.fault_plane.lx:.6f}"
+        p["length along dip (ly)"] = f"{self.fault_plane.ly:.6f}"
+        p["hypocenter position strike (hx)"] = f"{self.fault_plane.hx:.6f}"
+        p["hypocenter position dip (hy)"] = f"{self.fault_plane.hy:.6f}"
+        p["number of subfaults along strike (nx)"] = str(self.fault_plane.nx)
+        p["number of subfaults along dip (ny)"] = str(self.fault_plane.ny)
+        # Section 4
+        p["number of ellipses"] = str(self.ellipse.num_ellipses)
+        p["initial slip"] = str(self.ellipse.initial_slip)
+        p["slip shape"] = str(self.ellipse.slip_shape)
+        p["frequency 1 (freq1)"] = f"{self.ellipse.freq1:.6f}"
+        p["frequency 2 (freq2)"] = f"{self.ellipse.freq2:.6f}"
+        p["time shift (t0)"] = f"{self.ellipse.t0:.6f}"
+        # Section 6
+        p["algorithm type"] = str(self.inversion_process.algorithm_type)
+        p["number of iterations"] = str(self.inversion_process.num_iterations)
+        p["sample size for first iteration (ss1)"] = str(self.inversion_process.ss1)
+        p["sample size for other iterations"] = str(self.inversion_process.ss_other)
+        p["cells to resample"] = str(self.inversion_process.cells_resample)
+        p["misfit time window"] = f"{self.inversion_process.misfit_time_window:.6f}"
+        p["mcmc total steps"] = str(self.inversion_process.mcmc_total_steps)
+        p["mcmc burn-in"] = str(self.inversion_process.mcmc_burn_in)
+        p["mcmc proposal scale"] = f"{self.inversion_process.mcmc_proposal_scale:.6f}"
+        p["mcmc thinning"] = str(self.inversion_process.mcmc_thin)
+        p["mcmc chains"] = str(self.inversion_process.mcmc_chains)
+        # Section 7
+        p["moment tensor flag"] = str(self.moment_tensor.flag)
+        p["mt scaling mode"] = self.moment_tensor.scaling_mode
+        p["mrr"] = f"{self.moment_tensor.mrr:.6e}"; p["mtt"] = f"{self.moment_tensor.mtt:.6e}"; p["mpp"] = f"{self.moment_tensor.mpp:.6e}"
+        p["mrt"] = f"{self.moment_tensor.mrt:.6e}"; p["mrp"] = f"{self.moment_tensor.mrp:.6e}"; p["mtp"] = f"{self.moment_tensor.mtp:.6e}"
+        p["exponent (iexp)"] = str(self.moment_tensor.exponent)
+        # Counts
+        p["number of parameters"] = str(len(self.inversion_params.parameters))
+        p["number of stations"] = str(len(self.stations.stations))
+        p["number of layers"] = str(len(self.velocity_model.layers))
+        return p
+
+    def _inject_list_data(self, lines: List[str], section: int):
+        if section == 5:
+            for i, p in enumerate(self.inversion_params.parameters, 1):
+                lines.append(f" Param {i} : {p.name.ljust(30)} : {p.min_val:10.6f} {p.max_val:10.6f} {p.flag:3}\n")
+        elif section == 8:
+            for st in self.stations.stations:
+                un, ue, uz = (1 if st.use_n else 0, 1 if st.use_e else 0, 1 if st.use_z else 0)
+                lines.append(f" {st.latitude:10.6f} {st.longitude:10.6f} {st.height:10.6f} {st.name:8} {un} {ue} {uz}\n")
+        elif section == 9:
+            for l in self.velocity_model.layers:
+                lines.append(f" {l.thickness:10.6f} {l.vp:10.6f} {l.vs:10.6f} {l.rho:10.6f} {l.qp:10.6f} {l.qs:10.6f}\n")
+
+    def parse(self) -> None:
+        with open(self.filepath, 'r') as f: content = f.read()
+        sections = self._split_sections(content)
+        if 1 in sections: self.observed_data = ObservedDataParams.from_dict(self._extract_params(sections[1]))
+        if 2 in sections: self.source_position = SourcePosition.from_dict(self._extract_params(sections[2]))
+        if 3 in sections: self.fault_plane = FaultPlaneParams.from_dict(self._extract_params(sections[3]))
+        if 4 in sections: self.ellipse = EllipseParams.from_dict(self._extract_params(sections[4]))
+        if 5 in sections:
+            p_dict = self._extract_params(sections[5])
+            p_lines = [l.strip() for l in sections[5].split('\n') if l.strip().startswith('Param')]
+            self.inversion_params = InversionParams.from_dict(p_dict, p_lines)
+        if 6 in sections: self.inversion_process = InversionProcessParams.from_dict(self._extract_params(sections[6]))
+        if 7 in sections: self.moment_tensor = MomentTensor.from_dict(self._extract_params(sections[7]))
+        if 8 in sections: self.stations = StationParams.from_lines(self._extract_data_lines(sections[8]))
+        if 9 in sections: self.velocity_model = VelocityModel.from_lines(self._extract_data_lines(sections[9]))
+
+    def _split_sections(self, content: str) -> Dict[int, str]:
+        sections = {}; cur = None; chunk = []
         for line in content.splitlines():
             m = re.match(r"^#\s*(\d+)\.", line)
             if m:
-                if current_section is not None:
-                    sections[current_section] = "\n".join(chunk)
-                current_section = int(m.group(1))
-                chunk = []
+                if cur is not None: sections[cur] = "\n".join(chunk)
+                cur = int(m.group(1)); chunk = []
                 continue
-            if current_section is not None:
-                chunk.append(line)
-
-        if current_section is not None:
-            sections[current_section] = "\n".join(chunk)
-
+            if cur is not None: chunk.append(line)
+        if cur is not None: sections[cur] = "\n".join(chunk)
         return sections
 
-    def _parse_all_sections(self, sections: Dict[int, str]) -> None:
-        """Parse each section"""
-        if 1 in sections:
-            self.observed_data = ObservedDataParams.from_dict(
-                self._extract_params(sections[1])
-            )
-        if 2 in sections:
-            self.source_position = SourcePosition.from_dict(
-                self._extract_params(sections[2])
-            )
-        if 3 in sections:
-            self.fault_plane = FaultPlaneParams.from_dict(
-                self._extract_params(sections[3])
-            )
-        if 4 in sections:
-            self.ellipse = EllipseParams.from_dict(
-                self._extract_params(sections[4])
-            )
-        if 5 in sections:
-            params_dict = self._extract_params(sections[5])
-            param_lines = self._extract_param_lines(sections[5])
-            self.inversion_params = InversionParams.from_dict(params_dict, param_lines)
-        if 6 in sections:
-            self.inversion_process = InversionProcessParams.from_dict(
-                self._extract_params(sections[6])
-            )
-        if 7 in sections:
-            self.moment_tensor = MomentTensor.from_dict(
-                self._extract_params(sections[7])
-            )
-        if 8 in sections:
-            station_lines = self._extract_data_lines(sections[8])
-            self.stations = StationParams.from_lines(station_lines)
-        if 9 in sections:
-            layer_lines = self._extract_data_lines(sections[9])
-            self.velocity_model = VelocityModel.from_lines(layer_lines)
-
     def _extract_params(self, section: str) -> Dict[str, str]:
-        """Extract key-value pairs from section"""
         params = {}
         for line in section.split('\n'):
             line = line.strip()
             if ':' in line:
-                # Use split by colon surrounded by whitespace for robustness.
-                # This handles labels with internal colons and values with internal colons.
-                # (Usamos split por colón rodeado de espacios para mayor robustez.)
-                parts = re.split(r'\s+:\s+', line, 1)
-                if len(parts) != 2:
-                    # Fallback to simple split if no space-surrounded colon
-                    parts = line.split(':', 1)
-                
-                if len(parts) == 2:
-                    key = parts[0].strip()
-                    value = parts[1].strip()
-                    if key and value:
-                        params[key] = value
+                label, val = _split_line_by_separator(line)
+                if label: params[label.strip()] = val.strip()
         return params
 
-    def _extract_param_lines(self, section: str) -> List[str]:
-        """Extract lines starting with 'Param'"""
-        lines = []
-        for line in section.split('\n'):
-            if line.strip().startswith('Param'):
-                lines.append(line.strip())
-        return lines
-
     def _extract_data_lines(self, section: str) -> List[str]:
-        """Extract data lines (non-header, non-empty)"""
-        lines = []
-        for line in section.split('\n'):
-            line = line.strip()
-            if line and not line.startswith('#') and ':' not in line:
-                lines.append(line)
-        return lines
+        return [l.strip() for l in section.split('\n') if l.strip() and not l.strip().startswith('#') and ":" not in l]
 
-    @classmethod
-    def from_dict(cls, params: Dict[str, Any]) -> 'ConfigParser':
-        """
-        Create a ConfigParser from a dictionary of parameters instead of parsing a file.
-        
-        The params dict should contain keys for each section:
-        - 'observed_data': dict with time window and sampling
-        - 'source_position': dict with location and focal mechanism
-        - 'fault_plane': dict with geometry discretization
-        - 'ellipse': dict with ellipse model and frequencies
-        - 'inversion_params': dict with parameter ranges
-        - 'inversion_process': dict with algorithm settings
-        - 'moment_tensor': dict with MT components
-        - 'stations': list of station dicts
-        - 'velocity_model': list of layer dicts
-        """
-        # Create instance without parsing
-        instance = cls.__new__(cls)
-        instance.filepath = '<from_dict>'
-        
-        # Build each dataclass from provided dicts
-        instance.observed_data = ObservedDataParams.from_dict(
-            params.get('observed_data', {})
-        )
-        instance.source_position = SourcePosition.from_dict(
-            params.get('source_position', {})
-        )
-        instance.fault_plane = FaultPlaneParams.from_dict(
-            params.get('fault_plane', {})
-        )
-        instance.ellipse = EllipseParams.from_dict(
-            params.get('ellipse', {})
-        )
-        
-        # For inversion_params, need param_lines
-        inversion_dict = params.get('inversion_params', {})
-        if isinstance(inversion_dict, dict) and 'parameters' in inversion_dict:
-            # Already structured as InversionParams
-            instance.inversion_params = InversionParams(
-                parameters=inversion_dict['parameters']
-            )
-        else:
-            # Build from dict
-            instance.inversion_params = InversionParams.from_dict(inversion_dict, [])
-        
-        instance.inversion_process = InversionProcessParams.from_dict(
-            params.get('inversion_process', {})
-        )
-        instance.moment_tensor = MomentTensor.from_dict(
-            params.get('moment_tensor', {})
-        )
-        
-        # Stations and velocity model need special handling
-        stations_data = params.get('stations', {})
-        if isinstance(stations_data, dict) and 'stations' in stations_data:
-            instance.stations = stations_data
-        else:
-            # Convert dict list to Station objects
-            station_list = []
-            for st_dict in (stations_data if isinstance(stations_data, list) else []):
-                if isinstance(st_dict, dict):
-                    station_list.append(Station(
-                        latitude=float(st_dict.get('latitude', 0.0)),
-                        longitude=float(st_dict.get('longitude', 0.0)),
-                        height=float(st_dict.get('height', 0.0)),
-                        name=str(st_dict.get('name', 'UNKNOWN')),
-                        use_n=bool(st_dict.get('use_n', True)),
-                        use_e=bool(st_dict.get('use_e', True)),
-                        use_z=bool(st_dict.get('use_z', True))
-                    ))
-            instance.stations = StationParams(stations=station_list)
-        
-        velocity_model_data = params.get('velocity_model', [])
-        if isinstance(velocity_model_data, dict) and 'layers' in velocity_model_data:
-            instance.velocity_model = velocity_model_data
-        else:
-            # Convert dict list to VelocityLayer objects
-            layer_list = []
-            for layer_dict in (velocity_model_data if isinstance(velocity_model_data, list) else []):
-                if isinstance(layer_dict, dict):
-                    layer_list.append(VelocityLayer(
-                        thickness=float(layer_dict.get('thickness', 0.0)),
-                        vp=float(layer_dict.get('vp', 0.0)),
-                        vs=float(layer_dict.get('vs', 0.0)),
-                        rho=float(layer_dict.get('rho', 0.0)),
-                        qp=float(layer_dict.get('qp', 0.0)),
-                        qs=float(layer_dict.get('qs', 0.0))
-                    ))
-            instance.velocity_model = VelocityModel(layers=layer_list)
-        
-        return instance
-
-    def __repr__(self) -> str:
-        return f"ConfigParser({self.filepath})"
-
+    def _save_from_scratch(self, path: Path):
+        # Fallback if needed, but not really expected here
+        pass
 
 def _normalize_key(text: str) -> str:
-    text = text.lower().strip()
-    text = text.replace(":", "")
-    text = re.sub(r"\s+", " ", text)
-    return text
-
+    text = text.lower().strip().replace(":", "")
+    return re.sub(r"\s+", " ", text)
 
 def _get_param_value(params: Dict[str, str], key: str, default: Any) -> Any:
-    """Lookup by normalized prefix so parser is tolerant to spacing/units formatting."""
     wanted = _normalize_key(key)
+    # 1. Try exact match or startswith (standard)
     for k, v in params.items():
-        nk = _normalize_key(k)
-        if nk.startswith(wanted):
+        norm_k = _normalize_key(k)
+        if norm_k == wanted or norm_k.startswith(wanted):
             return v
+    
+    # 2. Try 'contains' match for cases like "NA: Cells to resample"
+    for k, v in params.items():
+        if wanted in _normalize_key(k):
+            return v
+            
     return default
 
+def _split_line_by_separator(line: str) -> Tuple[str, str]:
+    """Choose the separator colon based on surrounding whitespace (prefer LAST surrounded)."""
+    indices = [i for i, c in enumerate(line) if c == ':']
+    if not indices: return line, ""
+    
+    # Standard choice: find colons surrounded by at least one space
+    # (e.g. " ) : " or " (km) : ")
+    spaced_indices = []
+    for idx in indices:
+        has_left = (idx > 0 and line[idx-1].isspace())
+        has_right = (idx < len(line)-1 and line[idx+1].isspace())
+        if has_left and has_right:
+            spaced_indices.append(idx)
+            
+    if spaced_indices:
+        # Use the LAST spaced colon as separator (handles labels with internal spaced colons)
+        best_idx = spaced_indices[-1]
+        return line[:best_idx], line[best_idx+1:]
+        
+    # Fallback 1: last colon NOT part of a time string \d\d:\d\d
+    for idx in reversed(indices):
+        is_time = False
+        if idx > 1 and idx < len(line)-2:
+            if line[idx-2:idx].isdigit() and line[idx+1:idx+3].isdigit():
+                is_time = True
+        if not is_time:
+            return line[:idx], line[idx+1:]
+            
+    # Final fallback: just use the first colon
+    return line[:indices[0]], line[indices[0]+1:]
 
 def _normalize_mt_scaling_mode(flag: int, raw_mode: str) -> str:
-    """
-    Normalize MT scaling mode to one of:
-    - no_mt
-    - mt_strict   (target M0 fixed by full MT)
-    - mt_factored (full MT shape with free scalar scale)
-    """
-    if int(flag) == 0:
-        return "no_mt"
-
-    mode = str(raw_mode).strip().lower().replace("-", "_").replace(" ", "_")
-    aliases = {
-        "": "mt_factored",
-        "mt": "mt_factored",
-        "full_mt": "mt_factored",
-        "factored": "mt_factored",
-        "mt_factored": "mt_factored",
-        "strict": "mt_strict",
-        "mt_strict": "mt_strict",
-        "fixed_m0": "mt_strict",
-        "mt_fixed_m0": "mt_strict",
-        "no_mt": "no_mt",
-        "off": "no_mt",
-        "none": "no_mt",
-    }
-    return aliases.get(mode, "mt_factored")
-
+    if int(flag) == 0: return "no_mt"
+    m = str(raw_mode).strip().lower().replace("-", "_").replace(" ", "_")
+    aliases = {"":"mt_factored", "mt":"mt_factored", "full_mt":"mt_factored", "factored":"mt_factored", "strict":"mt_strict", "fixed_m0":"mt_strict", "no_mt":"no_mt"}
+    return aliases.get(m, "mt_factored")
 
 def read_input_ctl(filepath: str) -> Dict[str, Any]:
     """Compatibility helper returning a flat dictionary used by the pipeline."""
@@ -684,6 +682,7 @@ def read_input_ctl(filepath: str) -> Dict[str, Any]:
         'ss1': cfg.inversion_process.ss1,
         'ss_other': cfg.inversion_process.ss_other,
         'cells_resample': cfg.inversion_process.cells_resample,
+        'misfit_time_window': cfg.inversion_process.misfit_time_window,
         'mcmc_total_steps': cfg.inversion_process.mcmc_total_steps,
         'mcmc_burn_in': cfg.inversion_process.mcmc_burn_in,
         'mcmc_proposal_scale': cfg.inversion_process.mcmc_proposal_scale,

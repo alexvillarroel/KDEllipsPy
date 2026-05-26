@@ -61,11 +61,11 @@
 # 6. Inversion Process Parameters               :     Values                   |
 #===============================================:===============================
  Algorithm type                 (0:NA, 1:MC)    :      0
- NA: Number of iterations                           :      30
+ NA: Number of iterations                           :      5
  NA: Sample size for first iteration (SS1)          :      200
- NA: Sample size for other iterations               :      100
+ NA: Sample size for other iterations               :      30
  NA: Cells to resample                              :      4
- Misfit time window     (s, 0.0=Full signal)    :      15.0
+ Misfit time window     (s, 0.0=Full signal)    :      0.0
  MCMC: total steps                               :      500
  MCMC: burn-in                                   :      100
  MCMC: proposal scale                            :      0.05

@@ -302,10 +302,10 @@ class AxitraForwardModel:
 	):
 		_, moment = self._import_axitra()
 		t0_val = float(self.cfg.ellipse.t0) if t0 is None else float(t0)
-		# AXITRA Ricker source (source_type=1) becomes degenerate for t0<=0.
+		# Many AXITRA sources (e.g. 1=Ricker, 5=Ramp) become degenerate or return NaN for t0<=0.
 		# Keep a small positive fallback to avoid null synthetics.
-		if int(source_type) == 1 and t0_val <= 0.0:
-			t0_val = max(float(self.cfg.observed_data.delta), 0.5)
+		if t0_val <= 0.0:
+			t0_val = max(float(self.cfg.observed_data.delta), 0.1)
 		unit_val = int(self.cfg.observed_data.units) if unit is None else int(unit)
 		hist = geometry.to_axitra_hist()
 		return self._call_with_optional_silence(

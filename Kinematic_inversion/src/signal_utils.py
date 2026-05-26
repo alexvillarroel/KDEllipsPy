@@ -302,7 +302,7 @@ def _load_from_raw(raw_dir: Path, cfg: ConfigParser, freq1: float, freq2: float)
 	delta = float(cfg.observed_data.delta)
 	time = float(cfg.observed_data.t1) + np.arange(npts, dtype=float) * delta
 
-	comp_idx = {"E": 0, "N": 1, "Z": 2}
+	comp_idx = {"N": 0, "E": 1, "Z": 2}
 	observed = np.zeros((len(station_names), 3, npts), dtype=float)
 
 	missing = []

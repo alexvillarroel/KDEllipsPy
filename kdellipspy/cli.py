@@ -1,47 +1,62 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 import argparse
 
-from config_parser import ConfigParser
-from signal_utils import load_and_filter_observed_data, build_azi_times_array
-from inversion_na import NAInversionModel, NAConfig
-from inversion_mcmc import MCMCInversionModel, MCMCConfig
-from graphics_suite import GraphicsSuite
+# --- Bloque de resolución de rutas para que los imports funcionen siempre ---
+# Agregamos la raíz del proyecto al path si no está presente
+src_root = Path(__file__).resolve().parent.parent
+if str(src_root) not in sys.path:
+    sys.path.insert(0, str(src_root))
+
+from kdellipspy import (
+    ConfigParser,
+    load_and_filter_observed_data,
+    build_azi_times_array,
+    NAInversionModel,
+    NAConfig,
+    MCMCInversionModel,
+    MCMCConfig,
+    GraphicsSuite
+)
 
 def step(number: int, total: int, title: str) -> None:
     print("\n" + "=" * 72, flush=True)
     print(f"[{number}/{total}] {title}", flush=True)
     print("=" * 72, flush=True)
 
-def validate_run_dir(run_dir: Path) -> None:
-    """Validate that run_dir contains required input.ctl and DATA directory."""
-    run_dir = run_dir.resolve()
+def validate_paths(input_dir: Path, data_dir: Path) -> Path:
+    """Validate that input_dir contains input.ctl and data_dir exists."""
+    input_dir = input_dir.resolve()
+    data_dir = data_dir.resolve()
     
-    input_ctl = run_dir / "input.ctl"
-    data_dir = run_dir / "DATA"
+    input_ctl = input_dir / "input.ctl"
     
     errors = []
     if not input_ctl.is_file():
-        errors.append(f"  ✗ {input_ctl} (not found or not a file)")
+        errors.append(f"  ✗ {input_ctl} (no se encontró o no es un archivo)")
     if not data_dir.is_dir():
-        errors.append(f"  ✗ {data_dir} (not found or not a directory)")
+        errors.append(f"  ✗ {data_dir} (no se encontró o no es un directorio)")
     
     if errors:
-        print("ERROR: Invalid run directory structure", flush=True)
-        print(f"Run directory: {run_dir}", flush=True)
-        print("Missing required files/directories:", flush=True)
+        print("ERROR: Estructura de directorios inválida", flush=True)
+        print(f"Directorio input: {input_dir}", flush=True)
+        print(f"Directorio datos: {data_dir}", flush=True)
+        print("Faltan archivos o directorios requeridos:", flush=True)
         for error in errors:
             print(error, flush=True)
-        print("\nUsage: python main.py --run <RUN_DIR>", flush=True)
-        print("       <RUN_DIR> must contain: input.ctl and DATA/", flush=True)
+        print("\nUso: python cli.py <INPUT_DIR> [DATA_DIR]", flush=True)
+        print("       <INPUT_DIR> debe contener: input.ctl", flush=True)
+        print("       [DATA_DIR] por defecto es <INPUT_DIR>/DATA", flush=True)
         sys.exit(1)
+    
+    return input_ctl
 
-def get_axitra_dir(run_dir: Path, src_root: Path) -> Path:
+def get_axitra_dir(input_dir: Path, src_root: Path) -> Path:
     """
-    Resolve AXITRA directory: try run_dir first, then kdellipspy/, then parent directory.
+    Resolve AXITRA directory: try input_dir first, then kdellipspy/, then parent directory.
     """
     search_paths = [
-        run_dir / "AXITRA2024",           # Check in run directory first
+        input_dir / "AXITRA2024",           # Check in input directory first
         src_root / "AXITRA2024",          # Check in kdellipspy/ (src_root)
         src_root.parent / "AXITRA2024",   # Check in KDEllipsPy/ (parent)
     ]
@@ -61,32 +76,53 @@ def main() -> None:
     
     # Parse arguments first
     parser = argparse.ArgumentParser(
-        description="Kinematic inversion pipeline with event-run folder support"
+        description="Pipeline de inversión cinemática con soporte para directorios de entrada y datos"
+    )
+    parser.add_argument(
+        "input_dir",
+        type=str,
+        nargs="?",
+        default=".",
+        help="Carpeta que contiene input.ctl (por defecto: .)"
+    )
+    parser.add_argument(
+        "data_dir",
+        type=str,
+        nargs="?",
+        help="Carpeta que contiene los datos observados (por defecto: <INPUT_DIR>/DATA)"
     )
     parser.add_argument(
         "--run",
         type=str,
-        default=".",
-        help="Event run folder (default: current directory). Must contain input.ctl and DATA/"
+        help="Legacy: Carpeta de ejecución (contiene input.ctl y DATA/)"
     )
     parser.add_argument(
         "--no-plot",
         action="store_true",
-        help="Skip plot generation"
+        help="Saltar la generación de gráficos"
     )
     
     args = parser.parse_args()
-    run_dir = Path(args.run).resolve()
     
+    # Resolvimiento de rutas basado en los nuevos parámetros
+    if args.run:
+        input_dir = Path(args.run).resolve()
+        data_dir = input_dir / "DATA"
+    else:
+        input_dir = Path(args.input_dir).resolve()
+        if args.data_dir:
+            data_dir = Path(args.data_dir).resolve()
+        else:
+            data_dir = input_dir / "DATA"
+
     print("=" * 72, flush=True)
     print("KINEMATIC INVERSION - PYTHON PIPELINE", flush=True)
     print("=" * 72, flush=True)
     
-    step(1, 6, "Validando estructura del directorio de ejecución")
-    validate_run_dir(run_dir)
-    print(f"✓ Directorio de ejecución: {run_dir}", flush=True)
-    
-    input_ctl = run_dir / "input.ctl"
+    step(1, 6, "Validando rutas de entrada y datos")
+    input_ctl = validate_paths(input_dir, data_dir)
+    print(f"✓ Directorio de configuración: {input_dir}", flush=True)
+    print(f"✓ Directorio de datos: {data_dir}", flush=True)
 
     step(2, 6, "Cargando configuración")
     cfg = ConfigParser(str(input_ctl))
@@ -99,19 +135,10 @@ def main() -> None:
         freq1=cfg.ellipse.freq1,
         freq2=cfg.ellipse.freq2,
         input_ctl_path=input_ctl,
-        data_dir=run_dir / "DATA",
+        data_dir=data_dir,
         prefer_raw=False,
     )
-
-    azi_times_array = None
-    try:
-        azi_times_array = build_azi_times_array(input_ctl_path=input_ctl)
-        print(f"azi_times generado en memoria: shape={azi_times_array.shape}", flush=True)
-    except Exception as e:
-        raise RuntimeError(
-            "No se pudo generar azi_times en memoria. Instala obspy para calcular tiempos P/S."
-        ) from e
-    print(f"Datos listos con forma: {observed_waveforms.shape}", flush=True)
+    print(f"Datos observados listos con forma: {observed_waveforms.shape}", flush=True)
 
     algo = int(cfg.inversion_process.algorithm_type)
     if algo == 0:
@@ -122,7 +149,7 @@ def main() -> None:
         print(f"ERROR: Algorithm type {algo} not supported (0=NA, 1=MCMC).", flush=True)
         sys.exit(1)
 
-    axitra_dir = get_axitra_dir(run_dir, src_root)
+    axitra_dir = get_axitra_dir(input_dir, src_root)
 
     if algo == 0:
         inversion = NAInversionModel(
@@ -130,7 +157,6 @@ def main() -> None:
             axitra_dir=str(axitra_dir),
             observed_waveforms=observed_waveforms,
             time_array=time_array,
-            azi_times_array=azi_times_array,
         )
     else:
         inversion = MCMCInversionModel(
@@ -138,7 +164,6 @@ def main() -> None:
             axitra_dir=str(axitra_dir),
             observed_waveforms=observed_waveforms,
             time_array=time_array,
-            azi_times_array=azi_times_array,
         )
 
     step(5, 6, "Ejecutando inversión")
@@ -181,7 +206,7 @@ def main() -> None:
             print(f"  {key}: {diag[key]}", flush=True)
 
     step(6, 6, "Exportando resultados y generando gráficos")
-    output_dir = run_dir / "output"
+    output_dir = input_dir / "output"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     json_path = output_dir / "na_results.json"
@@ -199,7 +224,7 @@ def main() -> None:
         is_interactive = hasattr(sys, 'ps1') or 'ipython' in sys.modules or 'pytest' in sys.modules
         show_plots = is_interactive and not args.no_plot
         
-        graphics = GraphicsSuite(base_dir=run_dir, show=show_plots)
+        graphics = GraphicsSuite(base_dir=input_dir, show=show_plots)
         graphics.plot_na_results(result)
 
         # --- Gráfico de sismogramas observados vs sintéticos del mejor modelo ---

@@ -44,8 +44,8 @@ class DataPreprocessor:
             return
 
         raw_dir = Path(raw_dir)
-        pattern = "*.SAC"
-        st = read(str(raw_dir / pattern))
+        pattern = "*.SAC" 
+        st = read(str(raw_dir / pattern)) if any(raw_dir.glob(pattern)) else read(str(raw_dir / pattern.lower()))
         
         if station_names:
             st = st.select(station=",".join(station_names))
@@ -86,7 +86,7 @@ class DataPreprocessor:
             
             for tr in st_comp:
                 ax.text(
-                    0, tr.stats.distance/1000.0, tr.stats.station,
+                    0, tr.stats.distance, tr.stats.station,
                     transform=ax.get_yaxis_transform(),
                     ha='right', va='center', fontsize=8
                 )
@@ -138,8 +138,8 @@ class DataPreprocessor:
             observed, time = _load_from_raw(selected_raw_dir, self.cfg, freq1, freq2)
 
             # Map components to axis 1: we follow the convention returned by _load_from_raw
-            # which uses component order [E, N, Z] by internal mapping. We'll export files
-            # as real_vel_x -> E, real_vel_y -> N, real_vel_z -> Z for compatibility.
+            # which uses component order [N, E, Z] by internal mapping. We'll export files
+            # as real_vel_x -> N, real_vel_y -> E, real_vel_z -> Z for compatibility.
             comp_map = { 'x': 0, 'y': 1, 'z': 2 }
             processed_data = {}
             for comp in ['x', 'y', 'z']:

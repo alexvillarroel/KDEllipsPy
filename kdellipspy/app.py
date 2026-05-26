@@ -1,12 +1,16 @@
 import sys
+from pathlib import Path
 from PySide6.QtWidgets import (QApplication, QMainWindow, QTabWidget, QWidget, 
                              QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, 
                              QFormLayout, QTextEdit, QFileDialog)
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Signal, QThread
 
-# Importamos tus clases existentes
-from config_parser import ConfigParser
-from inversion_na import NAInversionModel, NAConfig
+# --- Bloque de resolución de rutas para que los imports funcionen siempre ---
+src_root = Path(__file__).resolve().parent.parent
+if str(src_root) not in sys.path:
+    sys.path.insert(0, str(src_root))
+
+from kdellipspy import ConfigParser, NAInversionModel, NAConfig
 
 class InversionWorker(QThread):
     """Hilo para ejecutar la inversión sin bloquear la GUI."""

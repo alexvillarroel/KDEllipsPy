@@ -470,6 +470,21 @@ class BaseInversionModel:
                 elif tw == 0.0:
                     self.use_full_signal = True
 
+            # If no azi_times_array is provided, try to calculate it directly
+            if azi_times_array is None:
+                try:
+                    from kdellipspy.core.signal_utils import build_azi_times_array
+                    azi_times_array = build_azi_times_array(config=self.cfg)
+                    logger.info("Automatically calculated azimuth and travel times for misfit calculation.")
+                except Exception as e:
+                    logger.warning(f"Could not calculate azi_times_array automatically: {e}")
+                    # Fallback to file search if automatic calculation fails
+                    if input_ctl_path is not None or (hasattr(config, "filepath") and config.filepath not in ("<manual>", "<from_dict>")):
+                        azi_times_path = self.input_ctl_path.parent / "Event" / "azi_times.txt"
+                        if azi_times_path.exists():
+                            azi_times_array = np.loadtxt(str(azi_times_path), dtype=float)
+                            logger.info(f"Loaded azi_times from fallback file: {azi_times_path}")
+
             if azi_times_array is not None:
                 self.misfit_calc = MisfitCalculator(
                     observed_waveforms,
@@ -478,20 +493,8 @@ class BaseInversionModel:
                     time_window_s=time_window_s,
                     station_flags=station_flags,
                 )
-            elif input_ctl_path is not None or (hasattr(config, "filepath") and config.filepath not in ("<manual>", "<from_dict>")):
-                azi_times_path = self.input_ctl_path.parent / "Event" / "azi_times.txt"
-                if azi_times_path.exists():
-                    self.misfit_calc = MisfitCalculator(
-                        observed_waveforms,
-                        time_array,
-                        azi_times_path=azi_times_path,
-                        time_window_s=time_window_s,
-                        station_flags=station_flags,
-                    )
-                else:
-                    logger.warning(f"azi_times.txt not found at {azi_times_path}. Misfit calculation might fail if azi_times_array is not provided.")
             else:
-                 logger.warning("No azi_times_array provided and no input_ctl_path to search for azi_times.txt. Misfit calculation might fail.")
+                 logger.warning("No azimuth/travel time data available. Misfit calculation will likely fail.")
 
         self.param_names: List[str] = [
             "a1 (km)",

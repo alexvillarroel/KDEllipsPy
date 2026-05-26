@@ -49,16 +49,16 @@ class UTMProjection:
         return max(1, min(60, zone))
 
     def latlon_to_xy(self, lat_deg: float, lon_deg: float) -> Tuple[float, float]:
-        """Convert lat/lon (degrees) to UTM x/y (meters)."""
+        """Convert lat/lon (degrees) to UTM Easting/Northing (meters)."""
         if abs(lon_deg) > 180 or abs(lat_deg) > 90:
             raise ValueError(f"Coordinates out of range: lat={lat_deg}, lon={lon_deg}")
         
-        x_m, y_m = self.to_utm.transform(lon_deg, lat_deg)
-        return float(x_m), float(y_m)
+        easting_m, northing_m = self.to_utm.transform(lon_deg, lat_deg)
+        return float(easting_m), float(northing_m)
 
-    def xy_to_latlon(self, x_m: float, y_m: float) -> Tuple[float, float]:
-        """Convert UTM x/y (meters) to lat/lon (degrees)."""
-        lon_deg, lat_deg = self.to_wgs84.transform(x_m, y_m)
+    def xy_to_latlon(self, easting_m: float, northing_m: float) -> Tuple[float, float]:
+        """Convert UTM Easting/Northing (meters) to lat/lon (degrees)."""
+        lon_deg, lat_deg = self.to_wgs84.transform(easting_m, northing_m)
         return float(lat_deg), float(lon_deg)
 
 
@@ -66,8 +66,8 @@ class UTMProjection:
 class Station:
     index: int
     name: str
-    x_m: float
-    y_m: float
+    x_m: float  # North
+    y_m: float  # East
     z_m: float
     lat: float
     lon: float
@@ -88,11 +88,15 @@ class StationGeometry:
         return len(self.stations)
 
     def _latlon_to_local(self, lat: float, lon: float) -> Tuple[float, float]:
-        x_m, y_m = self._projection.latlon_to_xy(lat, lon)
-        return x_m, y_m
+        """Convert lat/lon to local (North, East) in meters."""
+        e_abs, n_abs = self._projection.latlon_to_xy(lat, lon)
+        e0, n0 = self._projection.latlon_to_xy(self.ref_lat, self.ref_lon)
+        return float(n_abs - n0), float(e_abs - e0)
 
     def _local_to_latlon(self, x_m: float, y_m: float) -> Tuple[float, float]:
-        return self._projection.xy_to_latlon(x_m, y_m)
+        """Convert local (North, East) to absolute lat/lon."""
+        e0, n0 = self._projection.latlon_to_xy(self.ref_lat, self.ref_lon)
+        return self._projection.xy_to_latlon(e0 + y_m, n0 + x_m)
 
     def to_axitra_stations(self, latlon: bool = False) -> np.ndarray:
         rows = []
@@ -169,10 +173,15 @@ class FaultGeometry:
         return len(self.source_points)
 
     def _local_to_latlon(self, x_m: float, y_m: float) -> Tuple[float, float]:
-        return self._projection.xy_to_latlon(x_m, y_m)
+        """Convert local (North, East) to absolute lat/lon."""
+        e0, n0 = self._projection.latlon_to_xy(self.source_lat, self.source_lon)
+        return self._projection.xy_to_latlon(e0 + y_m, n0 + x_m)
 
     def _latlon_to_local(self, lat: float, lon: float) -> Tuple[float, float]:
-        return self._projection.latlon_to_xy(lat, lon)
+        """Convert lat/lon to local (North, East) in meters."""
+        e_abs, n_abs = self._projection.latlon_to_xy(lat, lon)
+        e0, n0 = self._projection.latlon_to_xy(self.source_lat, self.source_lon)
+        return float(n_abs - n0), float(e_abs - e0)
 
     def to_axitra_sources(self, latlon: bool = True) -> np.ndarray:
         rows = []
@@ -187,32 +196,27 @@ class FaultGeometry:
     def to_axitra_hist(self) -> np.ndarray:
         rows = []
         for sp in self.source_points:
-            if self.mt_enabled:
-                rows.append(
-                    [
-                        sp.index,
-                        sp.moment,
-                        sp.strike_deg,
-                        sp.dip_deg,
-                        sp.rake_deg,
-                        sp.width,
-                        sp.length,
-                        sp.rupture_time_s,
-                    ]
-                )
-            else:
-                rows.append(
-                    [
-                        sp.index,
-                        sp.displacement,
-                        sp.strike_deg,
-                        sp.dip_deg,
-                        sp.rake_deg,
-                        sp.width,
-                        sp.length,
-                        sp.rupture_time_s,
-                    ]
-                )
+            # AXITRA's moment.conv wrapper expects absolute Moment (Nm) in the second column.
+            # If we pass Slip (meters) and Width/Length, the wrapper often fails to scale it correctly.
+            # We calculate the absolute moment here: M0 = mu * area * slip
+            
+            # If displacement is stored but moment is 0 (non-MT mode), calculate it.
+            m0_val = float(sp.moment)
+            if not self.mt_enabled or m0_val == 0.0:
+                m0_val = float(sp.mu_pa * sp.width * sp.length * sp.displacement)
+
+            rows.append(
+                [
+                    sp.index,
+                    m0_val,
+                    sp.strike_deg,
+                    sp.dip_deg,
+                    sp.rake_deg,
+                    0.0, # Width set to 0 to avoid double scaling in some AXITRA versions
+                    0.0, # Length set to 0
+                    sp.rupture_time_s,
+                ]
+            )
         return np.array(rows, dtype="float64")
 
     def total_moment_nm(self) -> float:
@@ -370,22 +374,23 @@ class GeometryBuilder:
 
         # Create projection to compute lat/lon for each subfault
         projection = UTMProjection(float(src.latitude), float(src.longitude))
-        # Get event UTM coordinates (absolute)
-        event_utm_x, event_utm_y = projection.latlon_to_xy(float(src.latitude), float(src.longitude))
+        # Get event UTM coordinates (absolute): Easting, Northing
+        event_easting, event_northing = projection.latlon_to_xy(float(src.latitude), float(src.longitude))
 
         subfaults: List[Subfault] = []
         for idip in range(1, fp.ny + 1):
             for istk in range(1, fp.nx + 1):
                 idx = (idip - 1) * fp.nx + istk
+                # Local coords (relative to hypocenter): x=North, y=East
                 x = x0 + (istk - 1) * dxs + (idip - 1) * dxd
                 y = y0 + (istk - 1) * dys + (idip - 1) * dyd
                 z = z0 + (idip - 1) * dzd
                 mu_pa = get_rigidity_at_depth(z)
                 # Convert local cartesian (x, y) to UTM absolute, then to lat/lon
-                # Note: x=north, y=east (local convention)
-                subfault_utm_x = event_utm_x + x
-                subfault_utm_y = event_utm_y + y
-                lat_deg, lon_deg = projection.xy_to_latlon(subfault_utm_x, subfault_utm_y)
+                # x=north, y=east (local convention)
+                subfault_easting = event_easting + y
+                subfault_northing = event_northing + x
+                lat_deg, lon_deg = projection.xy_to_latlon(subfault_easting, subfault_northing)
                 subfaults.append(
                     Subfault(
                         index=idx,
@@ -750,24 +755,16 @@ def build_station_geometry(
     stations: List[Station] = []
     ref_geometry = StationGeometry(ref_lat=ref_lat, ref_lon=ref_lon, stations=[])
 
-    # UTM absolute coordinates: x=east, y=north
-    epi_east_utm, epi_north_utm = ref_geometry._latlon_to_local(ref_lat, ref_lon)
-
     for idx, (name, lat, lon, elev_m) in enumerate(station_data, start=1):
-        # Get station in UTM coordinates (absolute)
-        sta_east_utm, sta_north_utm = ref_geometry._latlon_to_local(lat, lon)
-
-        # Convert to local convention used by forward/geometry:
-        # x -> north, y -> east (relative to event location).
-        x_local = sta_north_utm - epi_north_utm
-        y_local = sta_east_utm - epi_east_utm
+        # x_local -> North, y_local -> East (relative to event location).
+        x_local, y_local = ref_geometry._latlon_to_local(lat, lon)
 
         stations.append(
             Station(
                 index=idx,
                 name=name,
-                x_m=x_local,
-                y_m=y_local,
+                x_m=float(x_local),
+                y_m=float(y_local),
                 z_m=elev_m,
                 lat=lat,
                 lon=lon,

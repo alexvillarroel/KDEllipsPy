@@ -307,7 +307,7 @@ def _load_from_raw(raw_dir: Path, cfg: ConfigParser, freq1: float, freq2: float)
 	delta = float(cfg.observed_data.delta)
 	time = float(cfg.observed_data.t1) + np.arange(npts, dtype=float) * delta
 
-	comp_idx = {"E": 0, "N": 1, "Z": 2}
+	comp_idx = {"N": 0, "E": 1, "Z": 2}
 	observed = np.zeros((len(station_names), 3, npts), dtype=float)
 
 	missing = []
@@ -366,8 +366,29 @@ def _distance_azimuth_deg(
 		result = iris_client.distaz(stlat, stlon, evlat, evlon)
 		return float(result["distance"]), float(result["azimuth"])
 
+	# Try direct calculation using UTMProjection (preferred for consistency with AXITRA North/East)
+	try:
+		from .geometry import StationGeometry
+		# Dummy geometry to access UTM conversion
+		ref_geom = StationGeometry(ref_lat=evlat, ref_lon=evlon, stations=[])
+		x_north, y_east = ref_geom._latlon_to_local(stlat, stlon)
+		
+		# Azimuth clockwise from North: atan2(East, North)
+		azi_rad = math.atan2(y_east, x_north)
+		azi_deg = math.degrees(azi_rad)
+		if azi_deg < 0:
+			azi_deg += 360.0
+			
+		dist_km = math.sqrt(x_north**2 + y_east**2) / 1000.0
+		# Convert km to degrees approximately for TauPy
+		dist_deg = float(dist_km / 111.19) 
+		return dist_deg, azi_deg
+	except ImportError:
+		pass
+
+	# Fallback to ObsPy geodetics
 	if gps2dist_azimuth is None or kilometers2degrees is None:
-		raise RuntimeError("ObsPy geodetics is unavailable. Install obspy to compute azimuth and distance.")
+		raise RuntimeError("ObsPy geodetics and UTM fallback are unavailable. Install obspy or ensure geometry.py is accessible.")
 
 	dist_m, azimuth_deg, _ = gps2dist_azimuth(stlat, stlon, evlat, evlon)
 	distdeg = float(kilometers2degrees(float(dist_m) / 1000.0))
@@ -623,33 +644,41 @@ def bandpass_filter_waveforms(
 	return filtered
 
 
-def integrate_waveforms(waveforms: np.ndarray, delta: float) -> np.ndarray:
+def integrate_waveforms(
+	waveforms: np.ndarray, 
+	delta: float, 
+	baseline_samples: Optional[int] = None,
+	steps: int = 1
+) -> np.ndarray:
 	"""
-	Integrate waveforms along the last axis using a cumulative trapezoidal rule.
+	Integrate waveforms along the last axis using a digital filter (Matlab integraf.m logic).
+	Cleanest results for seismic signals.
 
 	Args:
 		waveforms: array with shape (..., npts)
 		delta: sampling interval in seconds
+		baseline_samples: Number of samples at the start for pre-event baseline correction.
+		steps: Number of integration steps (1 for velocity, 2 for displacement).
 
 	Returns:
 		Integrated waveforms with the same shape as the input.
 	"""
-	data = np.asarray(waveforms, dtype=float)
-	if data.shape[-1] == 0:
-		return np.zeros_like(data)
+	from scipy.signal import lfilter
+	
+	data = np.asarray(waveforms, dtype=float).copy()
+	dt = float(delta)
+	
+	for _ in range(steps):
+		# 1. Baseline Correction (pre-event window along the last axis)
+		if baseline_samples and baseline_samples > 0:
+			mean = np.mean(data[..., :baseline_samples], axis=-1, keepdims=True)
+		else:
+			mean = np.mean(data, axis=-1, keepdims=True)
+		data -= mean
 
-	delta = float(delta)
-	if delta <= 0:
-		raise ValueError(f"delta must be positive, got {delta}")
-
-	try:
-		from scipy.integrate import cumulative_trapezoid
-
-		return cumulative_trapezoid(data, dx=delta, axis=-1, initial=0.0)
-	except ImportError:
-		if data.shape[-1] == 1:
-			return np.zeros_like(data)
-
-		increments = 0.5 * (data[..., 1:] + data[..., :-1]) * delta
-		leading_zero = np.zeros_like(data[..., :1])
-		return np.concatenate([leading_zero, np.cumsum(increments, axis=-1)], axis=-1)
+		# 2. Matlab Integration Motor (Digital Filter)
+		b, a = [0.5, 0.5], [1.0, -1.0]
+		data = lfilter(b, a, data, axis=-1) * dt
+		data -= data[..., 0:1] # Force start at zero
+			
+	return data
