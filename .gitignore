@@ -26,3 +26,7 @@ fort.*
 kdellipspy/axitra/src/axitra
 kdellipspy/axitra/src/convms
 kdellipspy/axitra/src/axitra2py
+# Ignored Directories
+Dynamic_inversion/
+Kinematic_inversion/
+Kinematic_inversion_OLD/
