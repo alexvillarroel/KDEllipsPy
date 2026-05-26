@@ -2,3 +2,23 @@
 docs/_build/
 __pycache__/
 *.pyc
+# --- Axitra & Fortran Temporary Files ---
+*.data
+*.head
+*.source
+*.stat
+*.hist
+*.res
+*.sou
+*.xyz
+*.input
+*.output
+axi.datapy
+fort.*
+# --- Compiled Binaries & Objects ---
+*.o
+*.mod
+*.so
+kdellipspy/axitra/src/axitra
+kdellipspy/axitra/src/convms
+kdellipspy/axitra/src/axitra2py
