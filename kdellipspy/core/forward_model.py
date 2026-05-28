@@ -78,7 +78,7 @@ class AxitraForwardModel:
 		instance.axitra_dir = (
 			Path(axitra_dir).resolve()
 			if axitra_dir
-			else (instance.base_dir / "axitra").resolve()
+			else (Path(__file__).resolve().parent.parent / "axitra" / "src").resolve()
 		)
 		return instance
 
