@@ -12,6 +12,66 @@ except ImportError:
     from config_parser import ConfigParser
 
 
+# ----------------------------------------------------------------------------
+# Moment-tensor decomposition into the 6 elementary mechanisms whose Green's
+# functions axitra computes (5 deviatoric double couples + 1 isotropic source,
+# flagged by width = -1).
+#
+# Convention bug this replaces: the previous implementation hard-coded the 6
+# basis tensors in a frame that did NOT match the GCMT/USE (RTP) convention of
+# the input moment tensor, so each MT component was routed to the wrong
+# mechanism (rt/rp/tp slots cyclically permuted and the dip-slip diagonal terms
+# with wrong signs), giving a scrambled, polarity-inverted radiation pattern.
+# We now build the basis from the *actual* moment tensor of each mechanism
+# (Aki & Richards -> RTP) and solve for the weights.
+_MT_BASIS_STR = [0.0, 270.0, 0.0, 90.0, 0.0, 0.0]
+_MT_BASIS_DIP = [90.0, 90.0, 90.0, 45.0, 45.0, 0.0]
+_MT_BASIS_RAK = [0.0, -90.0, 90.0, 90.0, 90.0, 0.0]
+_MT_BASIS_WD = [0.0, 0.0, 0.0, 0.0, 0.0, -1.0]
+_MT_BASIS_LEN = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+
+def _sdr_to_mt_rtp(strike: float, dip: float, rake: float) -> np.ndarray:
+    """Unit-M0 moment tensor of a (strike, dip, rake) double couple in the
+    GCMT/USE (RTP) layout vector ``[Mrr, Mtt, Mpp, Mrt, Mrp, Mtp]``.
+
+    Uses the Aki & Richards convention (x=N, y=E, z=Down) and the standard
+    NED->RTP transform: Mrr=Mzz, Mtt=Mxx, Mpp=Myy, Mrt=Mxz, Mrp=-Myz, Mtp=-Mxy.
+    """
+    f, d, l = radians(strike), radians(dip), radians(rake)
+    Mxx = -(sin(d) * cos(l) * sin(2 * f) + sin(2 * d) * sin(l) * sin(f) ** 2)
+    Myy = (sin(d) * cos(l) * sin(2 * f) - sin(2 * d) * sin(l) * cos(f) ** 2)
+    Mzz = sin(2 * d) * sin(l)
+    Mxy = (sin(d) * cos(l) * cos(2 * f) + 0.5 * sin(2 * d) * sin(l) * sin(2 * f))
+    Mxz = -(cos(d) * cos(l) * cos(f) + cos(2 * d) * sin(l) * sin(f))
+    Myz = -(cos(d) * cos(l) * sin(f) - cos(2 * d) * sin(l) * cos(f))
+    return np.array([Mzz, Mxx, Myy, Mxz, -Myz, -Mxy], dtype=float)
+
+
+def _elementary_mt_matrix_rtp() -> np.ndarray:
+    """6x6 matrix whose columns are the unit moment tensors (RTP layout
+    ``[rr, tt, pp, rt, rp, tp]``) of the 6 elementary mechanisms. The 6th column
+    is the isotropic (explosion) source, taken as the identity."""
+    cols = [
+        _sdr_to_mt_rtp(_MT_BASIS_STR[k], _MT_BASIS_DIP[k], _MT_BASIS_RAK[k])
+        for k in range(5)
+    ]
+    cols.append(np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0], dtype=float))  # isotropic
+    return np.array(cols).T
+
+
+def _mt_signed_coeffs(mt) -> np.ndarray:
+    """Signed weights of the 6 elementary mechanisms that reproduce moment tensor
+    ``mt`` (a config object with mrr..mtp and exponent), obtained by decomposing
+    it against the TRUE moment tensors of those mechanisms (correct RTP/USE
+    convention)."""
+    scale = 10.0 ** float(mt.exponent)
+    m_vec = np.array(
+        [mt.mrr, mt.mtt, mt.mpp, mt.mrt, mt.mrp, mt.mtp], dtype=float
+    ) * scale
+    return np.linalg.solve(_elementary_mt_matrix_rtp(), m_vec)
+
+
 class UTMProjection:
     """
     UTM (Universal Transverse Mercator) projection using pyproj.
@@ -267,40 +327,18 @@ class GeometryBuilder:
         return cls(ConfigParser.from_dict(params))
 
     def _mt_basis_and_amplitudes(self, nsubfaults: int) -> Tuple[List[float], List[float], List[float], List[float], List[float], List[float]]:
-        mt = self.config.moment_tensor
-
-        scale = 10.0 ** float(mt.exponent)
-        mrr = float(mt.mrr) * scale
-        mtt = float(mt.mtt) * scale
-        mpp = float(mt.mpp) * scale
-        mrt = float(mt.mrt) * scale
-        mrp = float(mt.mrp) * scale
-        mtp = float(mt.mtp) * scale
-
-        c1 = mrt
-        c2 = mrp
-        c3 = -mtp
-        c5 = mpp - mrr
-        c6 = mtt + mpp - mrr
-        c4 = mtt + mpp - 2.0 * mrr
-
-        vals = [
-            abs(c1),
-            abs(c2),
-            abs(c3),
-            abs(c4),
-            abs(c5),
-            abs(c6) * sqrt(1.5),
-        ]
-        vals = [v / float(nsubfaults) for v in vals]
-
-        b_str = [0.0, 270.0, 0.0, 90.0, 0.0, 0.0]
-        b_dip = [90.0, 90.0, 90.0, 45.0, 45.0, 0.0]
-        b_rak = [0.0, -90.0, 90.0, 90.0, 90.0, 0.0]
-        b_wd = [0.0, 0.0, 0.0, 0.0, 0.0, -1.0]
-        b_len = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-
-        return vals, b_str, b_dip, b_rak, b_wd, b_len
+        # Correct convention: decompose against the true mechanism tensors
+        # (see module-level _mt_signed_coeffs / _elementary_mt_matrix_rtp).
+        coeffs = _mt_signed_coeffs(self.config.moment_tensor)
+        vals = [abs(float(c)) / float(nsubfaults) for c in coeffs]
+        return (
+            vals,
+            list(_MT_BASIS_STR),
+            list(_MT_BASIS_DIP),
+            list(_MT_BASIS_RAK),
+            list(_MT_BASIS_WD),
+            list(_MT_BASIS_LEN),
+        )
 
     def _mt_mode(self) -> str:
         mt = self.config.moment_tensor
@@ -582,35 +620,16 @@ class EllipticalSlipMapper:
         return mode
 
     def _mt_component_weights_signed(self) -> List[float]:
-        mt = self.config.moment_tensor
+        """Signed, sum-of-abs-normalised weights of the 6 elementary mechanisms.
 
-        scale = 10.0 ** float(mt.exponent)
-        mrr = float(mt.mrr) * scale
-        mtt = float(mt.mtt) * scale
-        mpp = float(mt.mpp) * scale
-        mrt = float(mt.mrt) * scale
-        mrp = float(mt.mrp) * scale
-        mtp = float(mt.mtp) * scale
-
-        c1 = mrt
-        c2 = mrp
-        c3 = -mtp
-        c5 = mpp - mrr
-        c6 = mtt + mpp - mrr
-        c4 = mtt + mpp - 2.0 * mrr
-
-        vals = [
-            c1,
-            c2,
-            c3,
-            c4,
-            c5,
-            c6 * sqrt(1.5),
-        ]
-        total = float(sum(abs(v) for v in vals))
+        See module-level ``_mt_signed_coeffs`` for the (corrected) decomposition;
+        here we only normalise so the absolute scale is carried by the slip term.
+        """
+        coeffs = _mt_signed_coeffs(self.config.moment_tensor)
+        total = float(np.sum(np.abs(coeffs)))
         if total <= 0.0:
             return [1.0 / 6.0] * 6
-        return [v / total for v in vals]
+        return [float(c / total) for c in coeffs]
 
     def _mt_target_m0_nm(self) -> float:
         mt = self.config.moment_tensor
