@@ -237,6 +237,7 @@ def _preprocess_trace(
 	units: int,
 	inventory,
 	starttime,
+	zerophase: bool = True,
 ):
 	tr = tr.copy()
 	tr.detrend("demean")
@@ -258,7 +259,7 @@ def _preprocess_trace(
 			water_level=60,
 		)
 
-	tr.filter("bandpass", freqmin=float(freq1), freqmax=float(freq2), corners=4, zerophase=True)
+	tr.filter("bandpass", freqmin=float(freq1), freqmax=float(freq2), corners=4, zerophase=bool(zerophase))
 
 	endtime = starttime + (int(npts) - 1) * float(delta)
 
@@ -334,6 +335,7 @@ def _load_from_raw(raw_dir: Path, cfg: ConfigParser, freq1: float, freq2: float)
 				units=int(cfg.observed_data.units),
 				inventory=inventory,
 				starttime=starttime,
+				zerophase=bool(getattr(cfg.ellipse, "zerophase", True)),
 			)
 
 	if missing:

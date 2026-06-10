@@ -1,0 +1,9 @@
+# Checkpoint del mejor modelo (se actualiza al mejorar el misfit)
+# eval=296  iter=20  misfit=0.360451
+a1 (km)              4.4997
+a2 (km)              6.0563
+theta (x pi)         0.1393
+np (frac)            0.5813
+tp (x 2pi)           0.6476
+dmax (m)             4.4874
+vr (km/s)            3.4941

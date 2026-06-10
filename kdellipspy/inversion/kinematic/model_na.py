@@ -50,6 +50,11 @@ except ImportError:
 # NAConfig
 # ---------------------------------------------------------------------------
 
+try:
+    from joblib import Parallel, delayed
+except ImportError:
+    Parallel = None
+
 @dataclass
 class NAConfig:
     """Hyperparameters for the Neighbourhood Algorithm search.
@@ -61,6 +66,7 @@ class NAConfig:
     n_samples_iteration  : Samples drawn around the best Voronoi cells per iteration (ns)
     n_iterations         : Number of NA iterations after the initial random stage (n)
     n_cells_resample     : Number of best Voronoi cells to resample from (nr)
+    n_jobs               : Number of parallel workers for objective function evaluation (-1 for all)
     random_seed          : Optional seed for reproducibility
     keep_axitra_files    : Keep temporary axitra files (useful for debugging)
     """
@@ -69,8 +75,69 @@ class NAConfig:
     n_samples_iteration: int = 30
     n_iterations: int = 10
     n_cells_resample: int = 7
+    n_jobs: int = 1
     random_seed: Optional[int] = None
     keep_axitra_files: bool = False
+
+
+# ---------------------------------------------------------------------------
+# ParallelNASearcher
+# ---------------------------------------------------------------------------
+
+try:
+    from neighpy import NASearcher
+    
+    class ParallelNASearcher(NASearcher):
+        """
+        Subclass of NASearcher that parallelizes the objective function evaluation.
+        (Subclase de NASearcher que paraleliza la evaluación de la función objetivo.)
+        """
+        def __init__(self, *args, n_jobs: int = 1, inversion_model: Optional[BaseInversionModel] = None, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.n_jobs = n_jobs
+            self.inversion_model = inversion_model
+
+        def _update_ensemble(self, new_samples: np.ndarray):
+            n = new_samples.shape[0]
+            self.samples[self.np : self.np + n] = new_samples
+            
+            if self.n_jobs == 1 or Parallel is None or self.inversion_model is None:
+                # Sequential fallback
+                for i in range(n):
+                    self.objectives[self.np + i] = self.objective(new_samples[i])
+            else:
+                # Parallel evaluation
+                results = Parallel(n_jobs=self.n_jobs)(
+                    delayed(self.inversion_model._evaluate_model)(new_samples[i]) 
+                    for i in range(n)
+                )
+                
+                for i, (misfit, synthetics) in enumerate(results):
+                    self.inversion_model._eval_count += 1
+                    if misfit < self.inversion_model._best_misfit_seen:
+                        self.inversion_model._best_misfit_seen = misfit
+                        if synthetics is not None:
+                            self.inversion_model.best_synthetics = synthetics.copy()
+                    
+                    self.objectives[self.np + i] = misfit
+
+                    # Logging in parallel mode
+                    iter_est = 0
+                    if self.inversion_model._na_cfg_runtime is not None:
+                        n0 = int(self.inversion_model._na_cfg_runtime.n_samples_initial)
+                        ns = max(1, int(self.inversion_model._na_cfg_runtime.n_samples_iteration))
+                        if self.inversion_model._eval_count > n0:
+                            iter_est = 1 + ((self.inversion_model._eval_count - n0 - 1) // ns)
+                    print(
+                        f"[NA-Parallel] iter={iter_est:05d} eval={self.inversion_model._eval_count:05d} "
+                        f"misfit={misfit:.6e} best={self.inversion_model._best_misfit_seen:.6e}",
+                        flush=True,
+                    )
+
+            self.np += n
+except ImportError:
+    NASearcher = object
+    ParallelNASearcher = object
 
 
 # ---------------------------------------------------------------------------
@@ -154,11 +221,17 @@ class NAInversionModel(BaseInversionModel):
             If ``neighpy`` is not installed.
         """
         if na_config is None:
+            # Safely get n_jobs from config, defaulting to 1 if the field is missing
+            n_jobs_cfg = 1
+            if self.cfg.inversion_process is not None:
+                n_jobs_cfg = getattr(self.cfg.inversion_process, "n_jobs", 1)
+
             na_config = NAConfig(
                 n_samples_initial=self.cfg.inversion_process.ss1,
                 n_samples_iteration=self.cfg.inversion_process.ss_other,
                 n_iterations=self.cfg.inversion_process.num_iterations,
                 n_cells_resample=self.cfg.inversion_process.cells_resample,
+                n_jobs=n_jobs_cfg,
             )
 
         # ------------------------------------------------------------------
@@ -190,6 +263,7 @@ class NAInversionModel(BaseInversionModel):
                 n_samples_iteration=int(ns_effective),
                 n_iterations=int(na_config.n_iterations),
                 n_cells_resample=int(nr),
+                n_jobs=int(na_config.n_jobs),
                 random_seed=na_config.random_seed,
                 keep_axitra_files=bool(na_config.keep_axitra_files),
             )
@@ -199,23 +273,32 @@ class NAInversionModel(BaseInversionModel):
         self._eval_count = 0
         self._best_misfit_seen = float("inf")
         self._axitra_id_counter = 0
+        # Reset any stale Green's-function cache from a previous search.
+        self.clear_green_cache()
 
-        try:
-            from neighpy import NASearcher
-        except Exception as exc:
+        if NASearcher is object:
             raise ImportError(
                 "neighpy is required for NA search. Install with: pip install neighpy"
-            ) from exc
+            )
 
         bounds = tuple((float(lo), float(hi)) for lo, hi in self.param_ranges)
 
-        searcher = NASearcher(
+        # Use ParallelNASearcher if n_jobs != 1
+        if na_config.n_jobs != 1 and Parallel is not None:
+            searcher_cls = ParallelNASearcher
+            extra_kwargs = {"n_jobs": na_config.n_jobs, "inversion_model": self}
+        else:
+            searcher_cls = NASearcher
+            extra_kwargs = {}
+
+        searcher = searcher_cls(
             self.objective_function,
             ns=ns_effective,
             nr=nr,
             ni=int(na_config.n_samples_initial),
             n=int(na_config.n_iterations),
             bounds=bounds,
+            **extra_kwargs
         )
 
         expected_models = (
@@ -225,10 +308,10 @@ class NAInversionModel(BaseInversionModel):
         print(
             f"[NA] Starting search: ni={int(na_config.n_samples_initial)}, "
             f"ns={ns_effective}, n={int(na_config.n_iterations)}, nr={nr} "
-            f"-> expected evaluations={expected_models}",
+            f"-> expected evaluations={expected_models} (n_jobs={na_config.n_jobs})",
             flush=True,
         )
-        searcher.run()
+        searcher.run(parallel=(na_config.n_jobs != 1))
 
         samples = np.asarray(searcher.samples)
         objectives = np.asarray(searcher.objectives)
@@ -248,11 +331,18 @@ class NAInversionModel(BaseInversionModel):
 
         self._na_cfg_runtime = None
         self._mcmc_step_index = None
+        # Clean up the cached Green's-function axitra files.
+        self.clear_green_cache()
 
         return NAResult(
             models,
             param_names=self.param_names,
             extra_metadata={"algorithm": "NA", "neighpy": True},
+            best_synthetics=self.best_synthetics,
+            observed=self.observed_waveforms,
+            time=self.time_array,
+            config=self.cfg,
+            azi_times_array=self.azi_times_array,
         )
 
 

@@ -4,19 +4,23 @@ channels:
   - defaults
 dependencies:
   - python=3.11
-  - numpy>=1.26.4
-  - scipy>=1.12.0
+  - numpy>=2.0.0
+  - scipy>=1.13.0
   - matplotlib
   - cartopy
   - pyproj
   - obspy
-  - make
-  - gfortran
+  - compilers
   - gcc
+  - gfortran
+  - make
   - meson
   - ninja
-  - pymc>=5.10.0,<5.20.0
-  - arviz>=0.18.0,<0.20.0
+  - pymc>=5.10.0
+  - arviz>=0.18.0
+  - jupyter
+  - ipykernel
+  - setuptools<70
   - pip
   - pip:
     - neighpy

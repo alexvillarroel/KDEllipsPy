@@ -71,7 +71,21 @@ tar:
 ######################################
 PYTHON?=python
 python: parameter.o dimension1.o fft2cd.o fsource.o dll2km.o axitra2py
-	$(PYTHON) -m numpy.f2py -c -m convmPy -DF2PY_REPORT_ON_ARRAY_COPY=1 $(F2PY) convmPy.F90 parameter.f90 fft2cd.f90 fsource.f90 dll2km.f90 only: moment_conv :
+	@echo "dict(real=dict(fd='double', fs='float'), complex=dict(fd='complex_double', fs='complex_float'))" > .f2py_f2cmap
+	$(PYTHON) -m numpy.f2py convmPy.F90 parameter.f90 fft2cd.f90 fsource.f90 dll2km.f90 -m convmPy only: moment_conv :
+	$(FC) $(FFLAGS) -c convmPy-f2pywrappers2.f90
+	$(FC) $(FFLAGS) -c convmPy.F90
+	$(CC) $(CFLAGS) -fPIC -c convmPymodule.c \
+		-I`$(PYTHON) -c "import numpy; print(numpy.get_include())"` \
+		-I`$(PYTHON) -c "import sysconfig; print(sysconfig.get_path('include'))"` \
+		-I`$(PYTHON) -c "import numpy.f2py; print(numpy.f2py.get_include())"`
+	$(CC) $(CFLAGS) -fPIC -c `$(PYTHON) -c "import numpy.f2py; print(numpy.f2py.get_include())"`/fortranobject.c \
+		-I`$(PYTHON) -c "import numpy; print(numpy.get_include())"` \
+		-I`$(PYTHON) -c "import sysconfig; print(sysconfig.get_path('include'))"` \
+		-I`$(PYTHON) -c "import numpy.f2py; print(numpy.f2py.get_include())"`
+	$(FC) $(FFLAGS) -shared -o convmPy`$(PYTHON) -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))"` \
+		convmPymodule.o fortranobject.o convmPy-f2pywrappers2.o convmPy.o \
+		parameter.o dimension1.o fft2cd.o fsource.o dll2km.o
 
 axitra2py: dimension1.o dimension2.o parameter.o allocateArray.o initdata.o dll2km.o axitra2py.o 
 	$(FC) $(FFLAGS) -o $@ axitra2py.o dimension1.o dimension2.o allocateArray.o initdata.o dll2km.o parameter.o

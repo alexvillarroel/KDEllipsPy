@@ -1,0 +1,39 @@
+======================================================================
+  COMPARACION DE INVERSIONES CINEMATICAS  (mejor modelo)
+======================================================================
+                             |        Calama 2020 |        Calama 2026
+  ------------------------------------------------------------------
+  [ EVENTO ]
+  Fecha UTC                  | 2020-06-03-T07:35:28.000 | 2026-05-25-T21:52:18.000
+  Latitud                    |            -23.247 |            -22.380
+  Longitud                   |            -68.530 |            -68.760
+  Profundidad (km)           |              123.4 |              114.0
+  Strike / Dip / Rake        |         333/60/-91 |         201/20/-70
+  ------------------------------------------------------------------
+  [ PARAMETROS ELIPSE (mejor modelo) ]
+  a1 (km)                    |             6.4185 |            17.2232
+  a2 (km)                    |             5.8705 |             7.5233
+  theta (x pi)               |             1.7230 |             0.8233
+  np (frac)                  |             1.0000 |             1.0000
+  tp (x 2pi)                 |             0.2584 |             0.2001
+  dmax (m)                   |             1.2692 |             0.7237
+  vr (km/s)                  |             1.6374 |             3.6387
+  ------------------------------------------------------------------
+  [ DERIVADOS ]
+  Angulo theta (grados)      |              310.1 |              148.2
+  Area elipse (km^2)         |              118.4 |              407.1
+  M0 (N.m)                   |          7.295e+18 |          1.414e+19
+  Mw                         |               6.51 |               6.70
+  ------------------------------------------------------------------
+  [ CONDICIONES DE INVERSION ]
+  Banda freq (Hz)            |        0.020-0.100 |        0.060-0.150
+  Plano Lx=Ly (km)           |                 32 |                 50
+  Subfallas Nx=Ny            |                 30 |                 25
+  N estaciones               |                  9 |                  7
+  N puntos por traza         |                256 |                256
+  Misfit (NO comparable)     |             0.6194 |             0.2768
+  Iteracion mejor modelo     |                 44 |                 36
+======================================================================
+  NOTA: el misfit y N estaciones difieren entre eventos; el misfit
+  NO es comparable directo. Geometria, slip, Vr, M0 y Mw si lo son.
+======================================================================

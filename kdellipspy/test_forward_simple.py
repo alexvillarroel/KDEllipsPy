@@ -9,7 +9,7 @@ src_root = Path(__file__).resolve().parent.parent
 if str(src_root) not in sys.path:
     sys.path.insert(0, str(src_root))
 
-from kdellipspy import ConfigParser, AxitraForwardModel, GraphicsSuite
+from kdellipspy import ConfigParser, AxitraForwardModel
 
 def create_mock_config():
     """Crea un diccionario de configuración minimal para la prueba."""
@@ -96,7 +96,7 @@ def run_test():
     
     # 5. Convolución
     print("Calculando convolución...")
-    _, sx, sy, sz = fm.conv(ap, geom_with_slip, source_type=5, t0=cfg.ellipse.t0)
+    _, sx, sy, sz = fm.conv(ap, geom_with_slip, source_type=4, t0=cfg.ellipse.t0)
     
     # Reordenar a (nsta, 3, npts)
     synthetics = np.array([sx, sy, sz])
@@ -107,16 +107,10 @@ def run_test():
     
     # 6. Visualización básica
     print("Generando gráficos de prueba...")
-    gs = GraphicsSuite(base_dir=".", cfg=cfg, show=False)
     
-    npts = synthetics.shape[2]
-    dt = float(cfg.observed_data.delta)
-    time_array = np.arange(npts) * dt + float(cfg.observed_data.t1)
+    fm.plot(synthetics, show=False, save_path="Synthetic_Seismograms.png")
     
-    station_names = [s.name for s in cfg.stations.stations]
-    gs.plot_synthetic_components(time_array, synthetics, station_names)
-    
-    print("\n✓ Prueba completada. Revisa 'Figures/Synthetic_Seismograms.png'.")
+    print("\n✓ Prueba completada. Revisa 'Synthetic_Seismograms.png'.")
     
     # Limpieza
     ap.clean()

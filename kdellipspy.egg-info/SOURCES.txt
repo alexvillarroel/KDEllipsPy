@@ -1,9 +1,11 @@
 README.md
+pyproject.toml
 setup.py
 kdellipspy/__init__.py
 kdellipspy/cli.py
 kdellipspy/test_forward_simple.py
 kdellipspy/test_nb.py
+kdellipspy/test_parallel_na.py
 kdellipspy.egg-info/PKG-INFO
 kdellipspy.egg-info/SOURCES.txt
 kdellipspy.egg-info/dependency_links.txt
@@ -37,3 +39,5 @@ kdellipspy/io/input/kinematic_parser.py
 kdellipspy/io/input/shared_parser.py
 kdellipspy/workflows/__init__.py
 kdellipspy/workflows/run_inversion.py
+tests/test_forward.py
+tests/test_inversion_na.py

@@ -4,6 +4,9 @@ import os
 from setuptools.command.install import install
 from setuptools.command.develop import develop
 
+from setuptools.command.build_py import build_py
+from setuptools.command.build_ext import build_ext
+
 def build_axitra():
     print("Building axitra binaries and python wrappers...")
     root_dir = os.path.abspath(os.path.dirname(__file__))
@@ -27,15 +30,15 @@ def build_axitra():
     else:
         print(f"Axitra source directory not found at: {axitra_src}")
 
-class PostInstallCommand(install):
+class CustomBuildPyCommand(build_py):
     def run(self):
-        install.run(self)
         build_axitra()
+        super().run()
 
-class PostDevelopCommand(develop):
+class CustomBuildExtCommand(build_ext):
     def run(self):
-        develop.run(self)
         build_axitra()
+        super().run()
 
 setup(
     name="kdellipspy",
@@ -43,15 +46,16 @@ setup(
     python_requires=">=3.10, <3.14",
     packages=find_packages(),
     install_requires=[
-        "numpy>=1.26.4",
-        "scipy>=1.12.0",
+        "numpy>=2.0.0",
+        "scipy>=1.13.0",
         "matplotlib",
         "cartopy",
         "pyproj",
         "obspy",
         "neighpy",
-        "pymc>=5.10.0,<5.20.0",
-        "arviz>=0.18.0,<0.20.0",
+        "joblib",
+        "pymc>=5.10.0",
+        "arviz>=0.18.0",
     ],
     entry_points={
         "console_scripts": [
@@ -59,7 +63,7 @@ setup(
         ],
     },
     cmdclass={
-        'install': PostInstallCommand,
-        'develop': PostDevelopCommand,
+        'build_py': CustomBuildPyCommand,
+        'build_ext': CustomBuildExtCommand,
     },
 )

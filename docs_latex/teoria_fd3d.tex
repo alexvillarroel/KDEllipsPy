@@ -1,0 +1,479 @@
+\documentclass[11pt,a4paper]{article}
+
+% ============================================================================
+%  Teoría del FD3D dinámico (Madariaga) tal como está implementado en el
+%  código legacy de KDEllipsPy  (legacy/Dynamic_inversion/)
+%  Autor de la nota: documentación interna KDEllipsPy
+% ============================================================================
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-noindentfirst]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.4cm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue!55!black,urlcolor=blue!55!black}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  backgroundcolor=\color{gray!8},
+  columns=fullflexible,
+}
+
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\pd}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\half}{\tfrac{1}{2}}
+
+\title{\textbf{Teoría del solver dinámico FD3D (Madariaga)}\\
+       \large Tal como está implementado en \texttt{legacy/Dynamic\_inversion/} de KDEllipsPy}
+\author{Documentación interna --- KDEllipsPy (parte \emph{Dynamic})}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Este documento describe, ecuación por ecuación y subrutina por subrutina, la
+física que resuelve el código dinámico legacy de KDEllipsPy: un solver de
+\textbf{ruptura espontánea 3D} por diferencias finitas en una malla escalonada
+velocidad--esfuerzo (Madariaga 1976; Virieux 1986), con fricción
+\emph{slip-weakening} aplicada sobre la componente $\sigma_{yz}$ de una falla
+plana, acoplado a las funciones de Green 1D de AXITRA (número de onda discreto)
+para sintetizar sismogramas. El objetivo es servir de base para reimplementar el
+\emph{forward} en Python. Todas las afirmaciones están referidas a los fuentes
+en \texttt{Source/fd3d\_subs/}.
+\end{abstract}
+
+\tableofcontents
+
+% ===========================================================================
+\section{Panorama: la cadena del problema directo}
+% ===========================================================================
+
+Una sola evaluación \emph{forward} (subrutina \texttt{forward\_modelling.f})
+toma un vector de 10 parámetros del modelo \texttt{rmodel} y produce sismogramas
+sintéticos, en esta cadena:
+
+\begin{enumerate}
+  \item \texttt{mkstress} --- construye el campo de \textbf{esfuerzo inicial}
+        $\sigma^0(i,k)$ sobre la falla: una aspereza elíptica de alto esfuerzo
+        más un círculo de nucleación.
+  \item \texttt{mkpeak} --- construye el campo de \textbf{esfuerzo de cedencia}
+        (\emph{peak/yield stress}) $\tau_p(i,k)$.
+  \item \texttt{indyna3d} (\texttt{fd3d\_theo.f}) --- integra las ecuaciones
+        elastodinámicas 3D por diferencias finitas con la condición de borde de
+        fractura (fricción slip-weakening). Produce la historia de
+        \textbf{slip-rate} $\dot{s}(i,k,t)$ sobre la falla.
+  \item \texttt{seismograms} (\texttt{convm\_dynsource.f}) --- convoluciona el
+        slip-rate con las funciones de Green de AXITRA y entrega los
+        desplazamientos en las estaciones.
+  \item \texttt{calcmisfit} --- compara con los datos observados (norma $L_2$
+        rotada R/T/Z, ventanas P/S).
+\end{enumerate}
+
+El bucle de inversión (Neighbourhood Algorithm, \texttt{NA\_src/na.f}) llama
+repetidamente a esta cadena buscando los parámetros que minimizan el misfit.
+
+% ===========================================================================
+\section{Ecuaciones elastodinámicas: formulación velocidad--esfuerzo}
+% ===========================================================================
+
+El medio es elástico, lineal e isótropo. Las incógnitas son el campo de
+\textbf{velocidad de partícula} $\mathbf{v}=(v_x,v_y,v_z)$ y el \textbf{tensor de
+esfuerzos} $\boldsymbol\sigma$. Las ecuaciones de gobierno son la conservación
+del momento (segunda ley de Newton para un continuo)
+\begin{equation}
+  \rho\,\pd{v_i}{t} \;=\; \sum_j \pd{\sigma_{ij}}{x_j},
+  \label{eq:momentum}
+\end{equation}
+y la ley constitutiva de Hooke en su forma de \emph{tasa} (derivada temporal),
+\begin{equation}
+  \pd{\sigma_{ij}}{t}
+  \;=\; \lambda\,\delta_{ij}\,(\nabla\!\cdot\!\mathbf{v})
+      \;+\; \mu\!\left(\pd{v_i}{x_j}+\pd{v_j}{x_i}\right),
+  \label{eq:hooke}
+\end{equation}
+donde $\rho$ es la densidad y $\lambda,\mu$ las constantes de Lamé.
+
+\paragraph{Correspondencia con el código.}
+En el \texttt{common/disp/} de \texttt{parstat} los arreglos \texttt{u1,v1,w1}
+\emph{son las velocidades} $v_x,v_y,v_z$ (aunque los comentarios hablen de
+``displacement fields''): la actualización en \texttt{dvel} es exactamente
+\eqref{eq:momentum}. Los seis arreglos \texttt{xx,yy,zz,xy,yz,xz} son las
+componentes de $\boldsymbol\sigma$. Las propiedades del medio se guardan como
+\begin{equation}
+  \texttt{d1}=\rho,\qquad
+  \texttt{mu1}=\mu=\rho\,v_s^2,\qquad
+  \texttt{lam1}=\lambda=\rho\,(v_p^2-2v_s^2),
+\end{equation}
+que es lo que arma \texttt{rdmd3d} al leer \texttt{model.dat} (un modelo 1D por
+capas, $v_p,v_s,\rho$, replicado en todo el plano horizontal).
+
+% ===========================================================================
+\section{Malla escalonada y operadores de diferencias finitas}
+% ===========================================================================
+
+\subsection{Malla escalonada (staggered grid)}
+El esquema es el clásico de Madariaga (1976), popularizado por Virieux (1986):
+las distintas componentes de $\mathbf{v}$ y $\boldsymbol\sigma$ viven en
+posiciones desplazadas medio paso $\half\,\dd h$ entre sí, y el tiempo se avanza
+en \emph{leapfrog} (las velocidades en $t+\half\dd t$, los esfuerzos en
+$t+\dd t$). Esto da precisión de segundo orden en el tiempo con un solo nivel de
+almacenamiento. El paso espacial es uniforme, \texttt{dh}, e isótropo.
+
+\subsection{Operador espacial de 4.º orden}
+Las derivadas espaciales usan el operador escalonado de cuarto orden, con
+coeficientes (\texttt{deriv.f}: \texttt{c1=9./8.}, \texttt{c2=-1./24.})
+\begin{equation}
+  \pd{f}{x}\bigg|_{i}
+  \;\approx\;
+  \frac{1}{\dd h}\Big[\,c_1\big(f_{i+\frac12}-f_{i-\frac12}\big)
+                     + c_2\big(f_{i+\frac32}-f_{i-\frac32}\big)\Big],
+  \qquad c_1=\tfrac{9}{8},\; c_2=-\tfrac{1}{24}.
+  \label{eq:fd4}
+\end{equation}
+En el código el medio-índice se materializa como diferencias entre nodos
+vecinos; por ejemplo, la actualización de $v_x$ (\texttt{uxx1}) es
+\begin{equation}
+  v_x^{\,t+\frac12} = v_x^{\,t-\frac12}
+   + \frac{\dd t}{\rho\,\dd h}\!\left[
+       c_1(\sigma_{xx}^{i}-\sigma_{xx}^{i-1})+c_2(\sigma_{xx}^{i+1}-\sigma_{xx}^{i-2})
+       + (\text{términos } xy,\,xz)\right],
+\end{equation}
+réplica directa de \eqref{eq:momentum} con el operador \eqref{eq:fd4}.
+Análogamente \texttt{vyy1}, \texttt{wzz1} avanzan $v_y,v_z$, y \texttt{dstres}
+avanza los esfuerzos según \eqref{eq:hooke} con $a=\lambda+2\mu$, $b=\lambda$
+para las normales, y la media armónica/aritmética de $\mu$ entre nodos vecinos
+(\texttt{xmu=xm1+xm2}) para las cizallas $\sigma_{xy},\sigma_{xz},\sigma_{yz}$.
+
+\subsection{Orden reducido en los bordes}
+En la primera capa de nodos junto a cada cara se usa un operador de
+\textbf{segundo orden} (\texttt{uxx0/vyy0/wzz0} para velocidades vía
+\texttt{bnd2d}; \texttt{sxx}, \texttt{sxy0/syz0/sxz0} para esfuerzos vía
+\texttt{strbnd}), porque el operador de 4.º orden necesita dos nodos a cada lado.
+
+\subsection{Estabilidad (CFL)}
+La condición de estabilidad del esquema explícito es de tipo Courant. El código
+la reporta como (\texttt{wrpm3d}, formato 70):
+\begin{equation}
+  \mathrm{CFL} \;=\; \frac{v_p^{\max}\,\dd t}{\dd h} \;<\; 0.5 .
+  \label{eq:cfl}
+\end{equation}
+$v_p^{\max}$ es la mayor velocidad $P$ del modelo. Hay que elegir $\dd t$ acorde
+a $\dd h$ y al modelo para no violar \eqref{eq:cfl}.
+
+% ===========================================================================
+\section{Condiciones de borde del dominio}
+% ===========================================================================
+
+\subsection{Borde absorbente (ABC)}
+Para que la malla finita no refleje energía hacia adentro, \texttt{abc} aplica
+una condición \textbf{paraxial de primer orden} (Clayton--Engquist) en las seis
+caras. Para una onda que sale normal a una cara, la actualización tiene la forma
+\begin{equation}
+  f^{\text{borde}} \mathrel{+}= \frac{c\,\dd t}{\dd h}\,(f^{\text{interior}}-f^{\text{borde}}),
+  \qquad
+  c=\sqrt{\tfrac{\lambda+2\mu}{\rho}}=v_p \;\text{(normal)},\quad
+  c=\sqrt{\tfrac{\mu}{\rho}}=v_s \;\text{(tangencial)},
+\end{equation}
+donde se usa $v_p$ para la componente normal a la cara y $v_s$ para las
+tangenciales. Es una ABC sencilla (la actualización FD3D\_TSN la reemplaza por
+PML, mucho más eficaz).
+
+\subsection{Superficie libre}
+Existen rutinas de superficie libre (\texttt{fres} para esfuerzos: $\sigma_{zz},
+\sigma_{xz},\sigma_{yz}=0$ en $z=n_z$ vía imágenes antisimétricas; \texttt{fuvw}
+para velocidades). En la configuración que nos interesa (fuente profunda,
+$\sim$123 km) el bucle principal de \texttt{indyna3d} usa ABC en todas las caras;
+la superficie libre del semiespacio real la aporta AXITRA al sintetizar.
+
+% ===========================================================================
+\section{La falla: geometría, esfuerzos y fricción}
+% ===========================================================================
+
+\subsection{Geometría de la falla en la malla}
+La falla es un \textbf{plano} ubicado en $j=n_{ysc}$ (índice fijo en $y$); su
+\textbf{normal es $\hat y$}. El deslizamiento (slip) es en dirección $z$, es
+decir \textbf{dip-slip} (comentario en \texttt{fd3d\_theo.f}: ``modified
+september 2011 for dip slip''). La tracción de cizalla relevante sobre el plano
+es $\sigma_{yz}$, y la fricción se impone sobre \emph{esa} componente.
+
+\paragraph{Modelo de media falla (antisimetría).} Sólo se simula la mitad del
+medio: la velocidad de deslizamiento se toma como
+$\dot{s}=2\,v_z(i,n_{ysc}{+}1,k)$ y el slip acumulado y el momento llevan el
+factor $2$ (líneas \texttt{2.*w1}, \texttt{2.*slip} en \texttt{indyna3d} y
+\texttt{wrss3d}). Esto explota la antisimetría del campo a través del plano de
+falla.
+
+\subsection{Esfuerzo inicial: \texttt{mkstress}}
+\texttt{mkstress} llena el campo de tracción inicial de cizalla
+$\sigma^0(i,j)\equiv\texttt{strinix}$ sobre el plano. Para cada punto $(i,j)$ se
+evalúa su posición en el marco propio de la elipse (centro $(x_o,y_o)$, rotada un
+ángulo $\phi$):
+\begin{align}
+  x' &= (i-x_o)\cos\phi + (j-y_o)\sin\phi, \\
+  y' &= -(i-x_o)\sin\phi + (j-y_o)\cos\phi, \qquad
+  r_e = \sqrt{\left(\tfrac{x'}{a}\right)^2+\left(\tfrac{y'}{b}\right)^2}.
+\end{align}
+El punto está \emph{dentro de la aspereza} si $r_e<1$. Entonces
+\begin{equation}
+  \sigma^0(i,j)=
+  \begin{cases}
+    \sigma_{\text{in}} \;(=\texttt{strbin}=T_e\cdot 10^6\ \text{Pa}), & r_e<1 \quad(\text{aspereza}),\\[2pt]
+    \sigma_{\text{out}}\;(=-10^{8}\ \text{Pa}), & r_e\ge 1\quad(\text{fuera}).
+  \end{cases}
+\end{equation}
+El valor exterior fuertemente negativo confina la ruptura a la aspereza (fuera no
+puede romper). Además, dentro de un \textbf{círculo de nucleación} de radio $r$
+centrado en el hipocentro $(x_a,y_a)=(n_x/2,n_y/2)$ se \emph{suma} un sobre-esfuerzo
+$\sigma_{\text{nuc}}$ (\texttt{strain}) para forzar el inicio espontáneo:
+\begin{equation}
+  \text{si } (i-x_a)^2+(j-y_a)^2 \le r^2:\quad \sigma^0(i,j)\mathrel{+}= \sigma_{\text{nuc}}.
+\end{equation}
+
+\subsection{Esfuerzo de cedencia: \texttt{mkpeak}}
+\texttt{mkpeak} arma el campo de \textbf{esfuerzo pico} (yield) $\tau_p(i,j)
+\equiv\texttt{peak\_xz}$. En el código ambas ramas (dentro/fuera de la elipse)
+asignan el mismo valor \texttt{strin}, de modo que el esfuerzo pico resulta
+\textbf{uniforme} sobre la falla:
+\begin{equation}
+  \tau_p(i,j) = \tau_p \equiv \texttt{strin} = c_1\cdot \sigma_{\text{in}}
+              = c_1\,T_e\cdot 10^6\ \text{Pa},
+\end{equation}
+donde $c_1=\texttt{rmodel(7)}$ (parámetro \texttt{cte1}). Es decir, $\tau_p$ es un
+múltiplo del esfuerzo inicial de la aspereza.
+
+\subsection{Ley de fricción slip-weakening y criterio de ruptura}
+En cada paso de tiempo, tras actualizar los esfuerzos, se aplica la
+\textbf{condición de borde de fractura} en el plano $j=n_{ysc}$
+(\texttt{indyna3d}). Se trabaja con la tracción \emph{absoluta}
+\begin{equation}
+  \tau_{\text{abs}}(i,k) = \underbrace{\sigma_{yz}(i,n_{ysc},k)}_{\text{relativa, FD}}
+                          + \underbrace{\sigma^0(i,k)}_{\text{inicial}} .
+\end{equation}
+
+\paragraph{(a) Criterio de iniciación.} Un punto aún intacto rompe cuando su
+tracción absoluta supera el esfuerzo pico:
+\begin{equation}
+  \tau_{\text{abs}}(i,k) > \tau_p(i,k)
+  \;\Longrightarrow\; \text{punto roto},\quad
+  t_{\text{rup}}(i,k)=t .
+\end{equation}
+
+\paragraph{(b) Ley slip-weakening.} Una vez roto y deslizando, la tracción cae
+linealmente con el slip acumulado $s$ hasta una distancia crítica $D_c$
+(\emph{slip-weakening} clásico de Ida/Andrews; aquí en su versión Madariaga):
+\begin{equation}
+  \tau(i,k) = \tau_p(i,k)\cdot
+  \begin{cases}
+    1 - \dfrac{s}{D_{\max}}, & s \le D_{\max},\\[8pt]
+    0, & s > D_{\max},
+  \end{cases}
+  \label{eq:sw}
+\end{equation}
+y se impone como condición de borde escribiendo en el campo relativo
+$\sigma_{yz}(i,n_{ysc},k) = \tau(i,k) - \sigma^0(i,k)$. En el código
+$D_{\max}=\texttt{rmodel(10)}$ es \textbf{$D_c/2$} (consistente con el factor 2 de
+la media falla). El slip se integra explícitamente:
+\begin{equation}
+  s(i,k)\mathrel{+}= v_z(i,n_{ysc}{+}1,k)\,\dd t .
+\end{equation}
+
+\paragraph{(c) Cierre/no-penetración.} Si la apertura normal se vuelve negativa
+($v_z(i,n_{ysc}{+}1,k)<0$, la falla tiende a cerrarse), el punto se ``des-rompe''
+y se anulan las velocidades $v_x,v_z$ en el plano, evitando interpenetración.
+
+\subsection{Salidas de la dinámica}
+Al terminar el bucle temporal, \texttt{indyna3d} escribe (si \texttt{ioutput=1})
+los mapas finales sobre la falla: tiempo de ruptura $t_{\text{rup}}$
+(\texttt{ruptime.res}), slip final $2s$ (\texttt{slip.res}) y caída de esfuerzo
+$\sigma_{yz}$ (\texttt{stressdrop.res}). El momento sísmico (sin escalar por
+$\mu$ y área aún) se acumula como
+\begin{equation}
+  \texttt{amom} = \sum_{i,k} 2\,s(i,k).
+\end{equation}
+
+% ===========================================================================
+\section{De slip-rate a sismogramas: \texttt{seismograms} + AXITRA}
+% ===========================================================================
+
+La radiación se calcula con el \textbf{teorema de representación}: el campo en
+una estación es la convolución del slip-rate de cada subfalla con la función de
+Green del medio 1D. Las Green las provee AXITRA (número de onda discreto,
+Bouchon 1981) y vienen pre-calculadas en \texttt{axi.res} (leídas por
+\texttt{readaxires} en los arreglos \texttt{uuxf,uuyf,uuzf} indexados por
+frecuencia, fuente, receptor y las 6 dislocaciones elementales).
+
+\subsection{Decimación de la fuente}
+La malla dinámica (fina, $n_x\times n_y$) se \textbf{decima} por un factor
+\texttt{idec=4} promediando bloques $4\times4$, de modo que la malla de fuentes
+para la radiación es $4\times$ más gruesa que la del solver FD. Esto reduce el
+número de fuentes puntuales en la convolución sin perder la cinemática gruesa.
+
+\subsection{Tensor de momento por subfalla: \texttt{cmoment}}
+Cada subfalla es un \textbf{doble par} (dislocación de cizalla) con orientación
+$(\text{strike},\text{dip},\text{rake})$. \texttt{cmoment} convierte el mecanismo
+en los seis coeficientes $a_{1..6}$ de las dislocaciones elementales que AXITRA
+sabe propagar. El momento escalar por subfalla es $M_0=\mu\cdot \text{área}$
+(el slip ya entra después vía el espectro de slip-rate), con
+$\mu=\rho\,v_s^2$ evaluado en la capa donde cae la fuente. Los coeficientes son
+las combinaciones estándar de $\sin/\cos$ de strike, dip y rake (ecuaciones
+\texttt{x1..x6} $\to$ \texttt{a(1..6)}).
+
+\subsection{Convolución en frecuencia y frecuencia compleja}
+El slip-rate de cada subfalla $\dot{s}(i,j,t)$ se transforma a frecuencia con una
+FFT. Para suprimir el \emph{wraparound} temporal (artefacto de la transformada
+discreta) se usa una \textbf{frecuencia compleja} con parte imaginaria
+\begin{equation}
+  \omega = 2\pi f - i\,a_w/\text{(escala)} ,\qquad
+  a_w = -\pi\,\texttt{aw}/t_l ,
+\end{equation}
+lo que equivale a multiplicar la señal por $e^{-a_w t}$ antes de transformar y
+deshacerlo al final (técnica de Bouchon/Kennett). El desplazamiento espectral en
+el receptor $r$ es la suma sobre subfuentes $s$ y sobre las 6 dislocaciones:
+\begin{equation}
+  u_c(\omega, r) \;=\; \sum_{s} \Big[\sum_{m=1}^{6} G^{c}_{m}(\omega,s,r)\,a_m(s)\Big]\,
+                       \dot{S}(\omega,s),
+  \qquad c\in\{x,y,z\},
+\end{equation}
+donde $\dot{S}(\omega,s)$ es el espectro del slip-rate de la subfalla $s$ y
+$G^c_m$ las Green de AXITRA. Una FFT inversa devuelve las trazas en tiempo y se
+deshace el peso exponencial de la frecuencia compleja.
+
+\subsection{Filtrado de banda}
+Cada traza sintética se filtra con un pasabanda Butterworth (\texttt{XAPIIR},
+tipo \texttt{BU}, \texttt{BP}) entre \texttt{fr1} y \texttt{fr2} (típicamente
+$0.02$--$0.1$ Hz). El resultado se vuelca a \texttt{predicted\_data} en el orden
+$(x,y,z)$ por estación, que es el que espera el misfit. Si \texttt{ioutput=1}
+también se escriben \texttt{dyn\_disp\_x/y/z}.
+
+% ===========================================================================
+\section{Función de misfit: \texttt{calcmisfit}}
+% ===========================================================================
+
+El misfit es una \textbf{norma $L_2$ normalizada}, calculada sobre componentes
+\textbf{rotadas} radial/transversal/vertical (R/T/Z) y \textbf{ventaneada} por
+fases. Es idéntico en filosofía al misfit cinemático de KDEllipsPy.
+
+\subsection{Rotación a R/T/Z}
+Con el acimut $\phi$ de cada estación (de \texttt{azi\_times.txt}), las
+componentes N ($x$) y E ($y$) se rotan:
+\begin{equation}
+  R = N\cos\phi + E\sin\phi,\qquad
+  T = E\cos\phi - N\sin\phi,\qquad
+  Z = Z .
+\end{equation}
+
+\subsection{Ventanas por fase}
+\begin{itemize}
+  \item Onda \textbf{P}: se evalúan las componentes \textbf{radial} y
+        \textbf{vertical} en una ventana que arranca en el tiempo de arribo
+        $t_P$ y dura \texttt{time\_window} $=20$ s.
+  \item Onda \textbf{S(H)}: se evalúa la componente \textbf{transversal} en una
+        ventana que arranca en $t_S$ y dura $20$ s.
+\end{itemize}
+El muestreo de trabajo del misfit es $4$ Hz, así que el índice de inicio es
+$\texttt{nint}(t_{P/S})\times 4$.
+
+\subsection{Definición del misfit}
+Acumulando sobre componentes, estaciones y muestras dentro de las ventanas:
+\begin{equation}
+  \text{misfit}
+  \;=\; \frac{\displaystyle\sum \big(d^{\text{obs}}-d^{\text{pred}}\big)^2}
+             {\displaystyle\sum \big(d^{\text{obs}}\big)^2}
+  \;=\; \frac{\texttt{num}}{\texttt{den}} .
+  \label{eq:misfit}
+\end{equation}
+Si la ruptura \textbf{no nuclea}, las sintéticas son nulas, $\texttt{num}=
+\texttt{den}$ y el misfit da exactamente $1.0$; el código lo detecta y lo manda a
+$\infty$ ($\texttt{misfitval}/0$) para que el NA descarte ese modelo.
+
+% ===========================================================================
+\section{Parámetros invertidos y algoritmo de inversión}
+% ===========================================================================
+
+El forward depende de \textbf{10 parámetros dinámicos} (\texttt{rmodel(1..10)} en
+\texttt{forward\_modelling.f}; rangos en \texttt{input\_dynamic\_ellipse.txt}):
+
+\begin{table}[h]
+\centering
+\begin{tabular}{>{\ttfamily}c l l}
+\toprule
+\normalfont\# & Símbolo / significado & Unidad \\
+\midrule
+rmodel(1)  & $a$ --- semieje 1 de la aspereza elíptica      & puntos de malla \\
+rmodel(2)  & $b$ --- semieje 2 de la aspereza               & puntos de malla \\
+rmodel(3)  & $x_o$ --- centro de la elipse (strike)         & puntos de malla \\
+rmodel(4)  & $y_o$ --- centro de la elipse (dip)            & puntos de malla \\
+rmodel(5)  & $\phi$ --- ángulo de rotación de la elipse     & radianes \\
+rmodel(6)  & $T_e$ --- esfuerzo inicial de la aspereza ($\sigma_{\text{in}}=T_e\,10^6$) & MPa \\
+rmodel(7)  & $c_1$ --- $\tau_p = c_1\,\sigma_{\text{in}}$ (esfuerzo pico)   & adim. \\
+rmodel(8)  & $c_2$ --- $\sigma_{\text{nuc}} = c_2\,\tau_p$ (sobre-esfuerzo de nucleación) & adim. \\
+rmodel(9)  & $r$ --- radio del círculo de nucleación        & puntos de malla \\
+rmodel(10) & $D_{\max}=D_c/2$ --- distancia crítica slip-weakening & m \\
+\bottomrule
+\end{tabular}
+\caption{Los 10 parámetros del modelo dinámico. El hipocentro está fijo en el
+centro de la malla $(x_a,y_a)=(n_x/2,n_y/2)$; \texttt{strbout}$=-10^8$ Pa y
+\texttt{straout}$=0$ están \emph{hardcodeados}.}
+\end{table}
+
+\paragraph{Neighbourhood Algorithm (NA).} El bucle externo
+(\texttt{Source/NA\_src/na.f}; Sambridge 1999) muestrea el espacio de 10
+parámetros, evalúa el misfit \eqref{eq:misfit} de cada modelo vía la cadena
+forward, y re-muestrea las celdas de Voronoi de menor misfit. Los controles
+(número de iteraciones, tamaño de muestra inicial y por iteración, celdas a
+re-muestrear, número de núcleos) salen de
+\texttt{input\_dynamic\_ellipse.txt}. \texttt{fd3d\_direct} corre un único
+forward del mejor modelo con \texttt{ioutput=1} para volcar todas las salidas.
+
+% ===========================================================================
+\section{Resumen de constantes y archivos clave}
+% ===========================================================================
+
+\begin{itemize}
+  \item \textbf{Malla FD} (\texttt{parstat}): \texttt{nx=ny=nz=160} (en
+        compilación). La malla de fuentes radiantes es $n_x/4 \times n_y/4$.
+  \item \textbf{Operador 4.º orden}: $c_1=9/8$, $c_2=-1/24$.
+  \item \textbf{Estabilidad}: $v_p^{\max}\dd t/\dd h < 0.5$.
+  \item \textbf{Fricción}: slip-weakening sobre $\sigma_{yz}$, $\tau_p$ uniforme,
+        $D_{\max}=D_c/2$.
+  \item \textbf{Green}: AXITRA 1D (número de onda discreto), 6 dislocaciones
+        elementales, frecuencia compleja $a_w$ para anti-wraparound.
+  \item \textbf{Banda}: pasabanda Butterworth \texttt{XAPIIR} $[fr_1,fr_2]$.
+  \item \textbf{Misfit}: $L_2$ normalizado, R/T/Z, ventanas P (R,Z) y S (T) de
+        20 s desde $t_P/t_S$, muestreo 4 Hz.
+  \item \textbf{I/O de la falla}: \texttt{stressin.dat}, \texttt{peakin.dat},
+        \texttt{ruptime.res}, \texttt{slip.res}, \texttt{stressdrop.res},
+        \texttt{sliprate.res}, \texttt{synth.res}, \texttt{dyn\_disp\_\{x,y,z\}}.
+\end{itemize}
+
+% ===========================================================================
+\section{Implicancias para la reimplementación en Python}
+% ===========================================================================
+
+Para portar el \emph{forward} a Python conviene separar tres bloques:
+\begin{enumerate}
+  \item \textbf{Generador elipse $\to$ campos $(\sigma^0,\tau_p)$}: equivale a
+        \texttt{mkstress}+\texttt{mkpeak}; es álgebra vectorizada trivial en
+        NumPy y reutiliza la misma parametrización elíptica del lado cinemático.
+  \item \textbf{Solver FD3D} (\texttt{indyna3d}): es el núcleo costoso. Opciones:
+        (a) envolver el Fortran existente con \texttt{f2py} (igual que ya se hizo
+        con AXITRA), o (b) adoptar \textbf{FD3D\_TSN} (Premus--Gallovič), que es
+        el descendiente directo del mismo solver de Madariaga con
+        \emph{traction-at-split-node}, PML y aceleración GPU. La salida que se
+        necesita es la historia de slip-rate $\dot{s}(i,k,t)$.
+  \item \textbf{Radiación + misfit}: la convolución con AXITRA ya está envuelta
+        en \texttt{kdellipspy/axitra}, y el misfit \eqref{eq:misfit} coincide con
+        el cinemático ya implementado. El NA en Python (\texttt{NAInversionModel})
+        puede orquestar todo, sustituyendo el frágil \texttt{bash+sed} del legacy.
+\end{enumerate}
+
+\end{document}

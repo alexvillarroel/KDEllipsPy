@@ -331,6 +331,10 @@ class NAResult:
     all_models     : List of NAModel instances
     param_names    : Parameter name labels (optional, defaults to 7-param names)
     extra_metadata : Algorithm-specific metadata written to JSON export
+    best_synthetics : Synthetic waveforms of the best model (optional)
+    observed       : Observed waveforms used for inversion (optional)
+    time           : Time array used for inversion (optional)
+    config         : ConfigParser instance (optional)
     """
 
     _DEFAULT_PARAM_NAMES = ["a1", "a2", "theta", "np", "tp", "dmax", "vr"]
@@ -340,6 +344,11 @@ class NAResult:
         all_models: List[NAModel],
         param_names: Optional[Sequence[str]] = None,
         extra_metadata: Optional[Dict[str, Any]] = None,
+        best_synthetics: Optional[np.ndarray] = None,
+        observed: Optional[np.ndarray] = None,
+        time: Optional[np.ndarray] = None,
+        config: Optional[ConfigParser] = None,
+        azi_times_array: Optional[np.ndarray] = None,
     ):
         self.all_models = all_models
         self.best_model = min(all_models, key=lambda m: m.misfit) if all_models else None
@@ -347,6 +356,55 @@ class NAResult:
             list(param_names) if param_names is not None else list(self._DEFAULT_PARAM_NAMES)
         )
         self.extra_metadata = dict(extra_metadata) if extra_metadata else {}
+
+        # Extended fields for full persistence
+        self.best_synthetics = best_synthetics
+        self.observed = observed
+        self.time = time
+        self.config = config
+        # azi_times table (nsta,3) = [azimuth_rad, tP_s, tS_s]; enables rotated
+        # R/T/Z waveform plots with phase windows.
+        self.azi_times_array = azi_times_array
+
+    def save(self, filepath: str | Path) -> None:
+        """
+        Save the entire NAResult object to a file for later reloading.
+        Uses joblib if available (efficient for numpy arrays), otherwise uses pickle.
+        """
+        filepath = Path(filepath)
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+        
+        try:
+            import joblib
+            joblib.dump(self, filepath)
+        except ImportError:
+            import pickle
+            with open(filepath, 'wb') as f:
+                pickle.dump(self, f)
+        
+        print(f"Inversion results saved to {filepath}")
+
+    @classmethod
+    def load(cls, filepath: str | Path) -> 'NAResult':
+        """
+        Load a NAResult object from a saved file.
+        """
+        filepath = Path(filepath)
+        if not filepath.exists():
+            raise FileNotFoundError(f"Result file not found: {filepath}")
+            
+        try:
+            import joblib
+            obj = joblib.load(filepath)
+        except ImportError:
+            import pickle
+            with open(filepath, 'rb') as f:
+                obj = pickle.load(f)
+        
+        if not isinstance(obj, cls):
+            raise TypeError(f"Loaded object is not a {cls.__name__}, got {type(obj)}")
+            
+        return obj
 
     def export_results(self, filepath: Path) -> None:
         """Export all models + metadata as JSON.
@@ -432,6 +490,460 @@ class NAResult:
             show=show, save_path=save_path
         )
 
+    def plot_fit(self, show: bool = True, save_path: Optional[str] = None,
+                 rotate: bool = True, mark_windows: bool = True) -> Tuple[Any, Any]:
+        """
+        Grafica el mejor ajuste de formas de onda encontrado.
+        Requiere que best_synthetics, observed y time estén presentes en el objeto.
+
+        Por defecto rota a R/T/Z y sombrea la ventana del misfit (P→R,Z ; S→T),
+        consistente con cómo se calcula el misfit. Si no hay datos de azimut/
+        tiempos disponibles, cae a las componentes N/E/Z sin ventana.
+        """
+        if self.best_synthetics is None or self.observed is None or self.time is None:
+            print("Datos insuficientes para graficar el ajuste (best_synthetics, observed o time son None).")
+            return None, None
+
+        from ..core.plotting import plot_waveform_fit
+
+        station_names = None
+        station_flags = None
+        if self.config is not None and getattr(self.config, "stations", None) is not None:
+            station_names = [s.name for s in self.config.stations.stations]
+            station_flags = np.array(
+                [[s.use_n, s.use_e, s.use_z] for s in self.config.stations.stations], dtype=bool
+            )
+        else:
+            nsta = self.observed.shape[0]
+            station_names = [f"STA{i+1}" for i in range(nsta)]
+
+        # azi_times: usar el guardado; si falta (joblibs antiguos), recalcular.
+        azt = getattr(self, "azi_times_array", None)
+        if azt is None and self.config is not None:
+            try:
+                from ..core.signal_utils import build_azi_times_array
+                azt = build_azi_times_array(config=self.config)
+            except Exception:
+                azt = None
+        azimuths = tp_s = ts_s = None
+        if azt is not None:
+            azt = np.asarray(azt, dtype=float)
+            azimuths, tp_s, ts_s = azt[:, 0], azt[:, 1], azt[:, 2]
+
+        # Ventana del misfit (0.0 = señal completa -> no se marca ventana).
+        window_s = None
+        try:
+            tw = float(self.config.inversion_process.misfit_time_window)
+            window_s = tw if tw > 0.0 else None
+        except Exception:
+            window_s = None
+
+        return plot_waveform_fit(
+            observed=self.observed,
+            synthetic=self.best_synthetics,
+            time=self.time,
+            station_names=station_names,
+            misfit=self.best_model.misfit if self.best_model else None,
+            show=show,
+            save_path=save_path,
+            azimuths=azimuths,
+            tp_s=tp_s,
+            ts_s=ts_s,
+            window_s=window_s,
+            station_flags=station_flags,
+            rotate=rotate and azimuths is not None,
+            mark_windows=mark_windows and azimuths is not None,
+        )
+
+    def plot_ellipse(self, show: bool = True, save_path: Optional[str] = None, title: Optional[str] = None) -> Tuple[Any, Any]:
+        """
+        Grafica la distribución de slip de la elipse para el mejor misfit.
+        Requiere que config y best_model estén presentes en el objeto.
+        """
+        if self.config is None or self.best_model is None:
+            print("Datos insuficientes para graficar la elipse (config o best_model es None).")
+            return None, None
+
+        from ..core.forward_model import AxitraForwardModel
+        from ..core.plotting import plot_slip_distribution
+
+        fm = AxitraForwardModel.from_config(self.config)
+        geom = fm.build_geometry_with_ellipse_slip(self.best_model.model)
+        plot_title = title or "2D Slip Distribution (Best misfit)"
+        return plot_slip_distribution(
+            geom,
+            title=plot_title,
+            show=show,
+            save_path=save_path,
+        )
+
+    def plot_elipse(self, show: bool = True, save_path: Optional[str] = None, title: Optional[str] = None) -> Tuple[Any, Any]:
+        """Alias por compatibilidad con el nombre en español."""
+        return self.plot_ellipse(show=show, save_path=save_path, title=title)
+
+    def plot_azimuthal(self, show: bool = True, save_path: Optional[str] = None) -> Tuple[Any, Any]:
+        """Diagrama polar (radar) de la cobertura azimutal de las estaciones
+        respecto al epicentro, con el mayor hueco azimutal sombreado."""
+        if self.config is None or getattr(self.config, "stations", None) is None:
+            print("Sin config/estaciones: no se puede graficar la cobertura azimutal.")
+            return None, None
+        from ..core.plotting import plot_azimuthal_coverage
+        sts = self.config.stations.stations
+        sp = self.config.source_position
+        return plot_azimuthal_coverage(
+            [s.latitude for s in sts], [s.longitude for s in sts],
+            [s.name for s in sts], sp.latitude, sp.longitude,
+            show=show, save_path=save_path,
+        )
+
+    def plot_ellipse_map(self, show: bool = True, save_path: Optional[str] = None,
+                         pad: float = 0.25) -> Tuple[Any, Any]:
+        """Mapa cartopy de la elipse de slip proyectada a la superficie (footprint
+        coloreado por slip + borde + hipocentro + estaciones)."""
+        if self.config is None or self.best_model is None:
+            print("Sin config/best_model: no se puede mapear la elipse.")
+            return None, None
+        from ..core.forward_model import AxitraForwardModel
+        from ..core.plotting import plot_ellipse_map as _pem
+        fm = AxitraForwardModel.from_config(self.config)
+        geom = fm.apply_ellipse_model_to_geometry(
+            fm.build_geometry(), self.best_model.model, keep_all_sources=True)
+        src = geom.to_axitra_sources(latlon=True)        # [idx, lat, lon, z]
+        slip = np.array([sp.displacement for sp in geom.source_points], dtype=float)
+        sp_cfg = self.config.source_position
+        sts = self.config.stations.stations if self.config.stations else []
+        return _pem(src[:, 1], src[:, 2], slip, sp_cfg.latitude, sp_cfg.longitude,
+                    [s.latitude for s in sts], [s.longitude for s in sts],
+                    [s.name for s in sts], pad=pad, show=show, save_path=save_path)
+
+    def _misfit_breakdown_arrays(self, window_s="auto"):
+        """Devuelve (num, den, window_s) por estación×(R,T,Z) del mejor modelo,
+        con la misma lógica del misfit (P→R,Z desde tP; S→T desde tS; o señal
+        completa si window_s es None/0)."""
+        obs = np.asarray(self.observed, float)
+        syn = np.asarray(self.best_synthetics, float)
+        time = np.asarray(self.time, float)
+        cfg = self.config
+        flags = np.array([[s.use_n, s.use_e, s.use_z] for s in cfg.stations.stations], bool)
+        azt = getattr(self, "azi_times_array", None)
+        if azt is None:
+            from ..core.signal_utils import build_azi_times_array
+            azt = build_azi_times_array(config=cfg)
+        azt = np.asarray(azt, float)
+        azi, tP, tS = azt[:, 0], azt[:, 1], azt[:, 2]
+        if window_s == "auto":
+            try:
+                tw = float(cfg.inversion_process.misfit_time_window)
+                window_s = tw if tw > 0 else None
+            except Exception:
+                window_s = None
+
+        nsta, _, npts = obs.shape
+        num = np.zeros((nsta, 3)); den = np.zeros((nsta, 3))
+        use_win = window_s is not None and window_s > 0
+        if use_win:
+            dt = float(time[1] - time[0]); samp = max(1, int(np.rint(1.0 / dt)))
+            win = max(1, int(np.rint(window_s * samp)))
+        for j in range(nsta):
+            az = float(azi[j]); un, ue, uz = flags[j]
+            if use_win:
+                sp = int(np.rint(tP[j])) * samp; ss = int(np.rint(tS[j])) * samp
+                kp0, kp1 = max(0, sp - 1), min(npts - 1, sp + win - 1)
+                ks0, ks1 = max(0, ss - 1), min(npts - 1, ss + win - 1)
+            else:
+                kp0, kp1 = 0, npts - 1; ks0, ks1 = 0, npts - 1
+            if kp1 >= kp0:
+                xo, yo, zo = obs[j, 0, kp0:kp1+1], obs[j, 1, kp0:kp1+1], obs[j, 2, kp0:kp1+1]
+                xs, ys, zs = syn[j, 0, kp0:kp1+1], syn[j, 1, kp0:kp1+1], syn[j, 2, kp0:kp1+1]
+                if un:
+                    ro = xo*np.cos(az)+yo*np.sin(az); rs = xs*np.cos(az)+ys*np.sin(az)
+                    num[j, 0] = np.sum((ro-rs)**2); den[j, 0] = np.sum(ro**2)
+                if uz:
+                    num[j, 2] = np.sum((zo-zs)**2); den[j, 2] = np.sum(zo**2)
+            if ks1 >= ks0:
+                xo, yo = obs[j, 0, ks0:ks1+1], obs[j, 1, ks0:ks1+1]
+                xs, ys = syn[j, 0, ks0:ks1+1], syn[j, 1, ks0:ks1+1]
+                if ue:
+                    to = yo*np.cos(az)-xo*np.sin(az); ts = ys*np.cos(az)-xs*np.sin(az)
+                    num[j, 1] = np.sum((to-ts)**2); den[j, 1] = np.sum(to**2)
+        return num, den, window_s
+
+    def plot_misfit_breakdown(self, show: bool = True, save_path: Optional[str] = None,
+                              window_s="auto") -> Tuple[Any, Any]:
+        """Visualiza la contribución al misfit por estación/componente (heatmaps)."""
+        if self.best_synthetics is None or self.observed is None or self.config is None:
+            print("Datos insuficientes para el desglose de misfit.")
+            return None, None
+        num, den, ws = self._misfit_breakdown_arrays(window_s)
+        E = num.sum() / den.sum() if den.sum() > 0 else float("nan")
+        names = [s.name for s in self.config.stations.stations]
+        mode = f"ventana {ws:.0f}s" if ws else "señal completa"
+        from ..core.plotting import plot_misfit_contribution
+        return plot_misfit_contribution(num, den, names, E, mode,
+                                        show=show, save_path=save_path)
+
+    def plot_yolo(self, save_path: str | Path = "dashboard.pdf",
+                  show: bool = False, dpi: int = 200) -> Optional[Path]:
+        """🎲 YOLO: arma un DASHBOARD de una sola página con todos los paneles
+        encajados (GridSpec):
+
+            ┌───────────────── título (evento · misfit · Mw) ─────────────────┐
+            │  mapa elipse (cartopy)          │  ajuste R/T/Z (7 est, ventanas)│
+            │  azimutal (radar) │ heatmap mf  │  (panel alto)                  │
+            │  convergencia de parámetros     │  appraisal (corner)            │
+            └─────────────────────────────────────────────────────────────────┘
+
+        Cada panel se renderiza con su método y se compone como imagen, así se
+        reaprovecha todo el código existente (cartopy, corner, etc.). El appraisal
+        se corre automáticamente si no estaba."""
+        import matplotlib.pyplot as plt
+        from matplotlib.gridspec import GridSpec
+
+        save_path = Path(save_path)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Corre el appraisal si no estaba. El costo del resampleo escala con
+        # n_resample * n_modelos, así que se baja n_resample para ensembles grandes
+        # (con 52k modelos, 20000 resamples tardaría muchísimo).
+        if getattr(self, "appraisal_samples", None) is None:
+            try:
+                n_models = len(self.all_models)
+                n_res = 20000 if n_models <= 6000 else max(4000, int(20000 * 6000 / n_models))
+                self.run_appraisal(n_resample=n_res, verbose=False)
+            except Exception as exc:  # noqa: BLE001
+                print(f"  [plot_yolo] appraisal no disponible: {exc}")
+
+        def _autocrop(buf):
+            """Recorta los márgenes blancos uniformes del panel para que llene mejor."""
+            rgb = buf[:, :, :3]
+            mask = np.any(rgb < 248, axis=2)
+            if not mask.any():
+                return buf
+            rows = np.where(np.any(mask, axis=1))[0]
+            cols = np.where(np.any(mask, axis=0))[0]
+            pad = 4  # margen mínimo para no cortar al ras
+            r0, r1 = max(rows[0] - pad, 0), min(rows[-1] + pad, buf.shape[0] - 1)
+            c0, c1 = max(cols[0] - pad, 0), min(cols[-1] + pad, buf.shape[1] - 1)
+            return buf[r0:r1 + 1, c0:c1 + 1]
+
+        def _render(maker):
+            """Genera una figura componente y la devuelve como array RGBA recortado."""
+            try:
+                fig, _ = maker()
+                if fig is None:
+                    return None
+                fig.set_dpi(150)
+                fig.canvas.draw()
+                buf = np.asarray(fig.canvas.buffer_rgba()).copy()
+                plt.close(fig)
+                return _autocrop(buf)
+            except Exception as exc:  # noqa: BLE001
+                print(f"  [plot_yolo] panel falló: {exc}")
+                return None
+
+        imgs = {
+            "map":  _render(lambda: self.plot_ellipse_map(show=False, pad=2.0)),
+            "fit":  _render(lambda: self.plot_fit(show=False)),
+            "azi":  _render(lambda: self.plot_azimuthal(show=False)),
+            "heat": _render(lambda: self.plot_misfit_breakdown(show=False)),
+            "conv": _render(lambda: self.plot_convergence(show=False)),
+            "appr": (_render(lambda: self.plot_appraisal(show=False))
+                     if getattr(self, "appraisal_samples", None) is not None else None),
+        }
+
+        # --- Componer el dashboard --------------------------------------------
+        fig = plt.figure(figsize=(19, 16))
+        gs = GridSpec(3, 3, figure=fig, width_ratios=[1, 1, 1.7],
+                      height_ratios=[1.1, 1.0, 1.0], hspace=0.04, wspace=0.03,
+                      left=0.01, right=0.99, top=0.955, bottom=0.01)
+        axA = fig.add_subplot(gs[0, 0:2])   # mapa elipse
+        axC = fig.add_subplot(gs[1, 0])     # azimutal
+        axD = fig.add_subplot(gs[1, 1])     # heatmap misfit
+        axB = fig.add_subplot(gs[0:2, 2])   # ajuste R/T/Z (alto)
+        axE = fig.add_subplot(gs[2, 0:2])   # convergencia
+        axF = fig.add_subplot(gs[2, 2])     # appraisal
+
+        for ax, key in [(axA, "map"), (axB, "fit"), (axC, "azi"),
+                        (axD, "heat"), (axE, "conv"), (axF, "appr")]:
+            ax.axis("off")
+            if imgs[key] is not None:
+                ax.imshow(imgs[key], aspect="auto")
+
+        # Título: evento, misfit, Mw.
+        title = "Resultados de la inversión"
+        try:
+            sp = self.config.source_position
+            mw_txt = ""
+            try:
+                from ..core.forward_model import AxitraForwardModel
+                fm = AxitraForwardModel.from_config(self.config)
+                _m0, mw = fm.estimate_total_moment_and_mw(self.best_model.model)
+                mw_txt = f"  ·  Mw {mw:.2f}"
+            except Exception:
+                pass
+            mf = self.best_model.misfit if self.best_model else float("nan")
+            title = (f"{getattr(sp, 'event_name', 'Evento')}  ·  "
+                     f"{sp.latitude:.2f}, {sp.longitude:.2f}  ·  {sp.depth:.0f} km  ·  "
+                     f"misfit {mf:.4f}{mw_txt}")
+        except Exception:
+            pass
+        fig.suptitle(title, fontsize=16, fontweight="bold", y=0.985)
+
+        fig.savefig(str(save_path), dpi=dpi, bbox_inches="tight")
+        if show:
+            plt.show()
+        plt.close(fig)
+        n_ok = sum(1 for v in imgs.values() if v is not None)
+        print(f"🎲 plot_yolo dashboard: {n_ok} paneles → {save_path}")
+        return save_path
+
+    # ------------------------------------------------------------------
+    # Uncertainty appraisal (NA second stage, Sambridge 1999 Part II)
+    # ------------------------------------------------------------------
+    def _get_bounds(self) -> np.ndarray:
+        """Return (n_params, 2) [min, max] per parameter.
+
+        Taken from the stored config (the inversion bounds); if no config is
+        available, falls back to the min/max spanned by the sampled models.
+        (Devuelve los límites por parámetro desde el config; si no hay config,
+        usa el rango cubierto por los modelos muestreados.)
+        """
+        cfg = self.config
+        if cfg is not None and getattr(cfg, "inversion_params", None) is not None:
+            params = cfg.inversion_params.parameters
+            return np.array([[p.min_val, p.max_val] for p in params], dtype=float)
+        M = np.array([m.model for m in self.all_models], dtype=float)
+        return np.column_stack([M.min(axis=0), M.max(axis=0)])
+
+    def run_appraisal(
+        self,
+        n_resample: int = 20000,
+        n_walkers: int = 1,
+        temperature: Optional[float] = None,
+        bounds: Optional[np.ndarray] = None,
+        seed: Optional[int] = None,
+        verbose: bool = True,
+        save: bool = True,
+    ) -> Optional[np.ndarray]:
+        """Run the NA appraisal stage to approximate the posterior.
+        (Ejecuta la etapa de 'appraisal' del NA para aproximar la posterior.)
+
+        Reuses the models already evaluated during the NA search (``all_models``)
+        and resamples their Voronoi cells with ``neighpy.NAAppraiser`` — it does
+        NOT evaluate the forward model again. Populates ``appraisal_samples``,
+        ``appraisal_mean`` and ``appraisal_covariance``.
+
+        Parameters
+        ----------
+        n_resample  : length of the resampling random walk (more = smoother PDFs).
+        n_walkers   : parallel walkers (>1 uses neighpy's multiprocessing).
+        temperature : misfit-to-log-posterior scale, ``log_ppd = -misfit / T``.
+            If ``None``, ``T = 2 * best_misfit`` (auto-scale). SMALLER T → narrower
+            posterior (more trust in the data).
+            NOTE: the misfit here is the *normalized L2* misfit, not a noise-calibrated
+            chi-square, so ``temperature`` implicitly sets the assumed noise level.
+            Tune it (or pass an explicit value) if you need calibrated uncertainties.
+        bounds      : (n_params, 2) optional; derived from the config if ``None``.
+        seed, verbose, save : forwarded to ``NAAppraiser`` / ``NAAppraiser.run``.
+
+        Returns
+        -------
+        np.ndarray | None
+            Posterior ensemble, shape (n_samples, n_params), or ``None`` if
+            ``save=False``.
+        """
+        try:
+            from neighpy import NAAppraiser
+        except ImportError as exc:  # pragma: no cover
+            raise ImportError(
+                "neighpy is required for the appraisal stage. Install with: "
+                "pip install neighpy"
+            ) from exc
+
+        if not self.all_models:
+            raise ValueError("No sampled models available for appraisal.")
+
+        ensemble = np.array([m.model for m in self.all_models], dtype=float)
+        misfits = np.array([m.misfit for m in self.all_models], dtype=float)
+
+        # Drop non-finite misfits (failed forward evaluations) so log_ppd is finite.
+        finite = np.isfinite(misfits)
+        if not finite.all():
+            ensemble = ensemble[finite]
+            misfits = misfits[finite]
+        if ensemble.shape[0] < 2:
+            raise ValueError("Not enough finite models for appraisal.")
+
+        best = float(np.min(misfits))
+        T = float(temperature) if temperature is not None else max(2.0 * best, 1e-9)
+        log_ppd = -misfits / T  # unnormalized log posterior (higher = better fit)
+
+        bnds = self._get_bounds() if bounds is None else np.asarray(bounds, dtype=float)
+        bounds_tuple = tuple((float(lo), float(hi)) for lo, hi in bnds)
+
+        appraiser = NAAppraiser(
+            n_resample=int(n_resample),
+            n_walkers=int(n_walkers),
+            initial_ensemble=ensemble,
+            log_ppd=log_ppd,
+            bounds=bounds_tuple,
+            verbose=verbose,
+            seed=seed,
+        )
+        appraiser.run(save=save)
+
+        self.appraisal_samples = getattr(appraiser, "samples", None)
+        self.appraisal_mean = getattr(appraiser, "mean", None)
+        self.appraisal_covariance = getattr(appraiser, "covariance", None)
+        self.appraisal_temperature = T
+        return self.appraisal_samples
+
+    def plot_appraisal(
+        self,
+        samples: Optional[np.ndarray] = None,
+        show: bool = True,
+        save_path: Optional[str] = None,
+        bins: int = 40,
+        title: Optional[str] = None,
+        **run_kwargs: Any,
+    ) -> Tuple[Any, Any]:
+        """Corner plot of the posterior uncertainty (1D marginals + 2D trade-offs).
+        (Gráfico 'corner' de la incertidumbre: marginales 1D y trade-offs 2D.)
+
+        If ``samples`` is not given and the appraisal has not been run yet, it is
+        executed via :meth:`run_appraisal` (extra kwargs are forwarded there, e.g.
+        ``n_resample``, ``temperature``, ``seed``).
+        """
+        if samples is None:
+            samples = getattr(self, "appraisal_samples", None)
+        if samples is None:
+            samples = self.run_appraisal(**run_kwargs)
+        if samples is None:
+            print("Appraisal did not store samples (save=False?); nothing to plot.")
+            return None, None
+
+        from ..core.plotting import plot_uncertainty_corner
+
+        truths = self.best_model.model if self.best_model is not None else None
+        mean = getattr(self, "appraisal_mean", None)
+        bounds = self._get_bounds()
+        if title is None:
+            T = getattr(self, "appraisal_temperature", None)
+            title = "Posterior uncertainty — NA appraisal"
+            if T is not None:
+                title += f"  (T={T:.3g}, N={len(samples)})"
+        return plot_uncertainty_corner(
+            samples,
+            self.param_names,
+            bounds=bounds,
+            truths=truths,
+            mean=mean,
+            bins=bins,
+            show=show,
+            save_path=save_path,
+            title=title,
+        )
+
 
 # ---------------------------------------------------------------------------
 # BaseInversionModel
@@ -488,6 +1000,7 @@ class BaseInversionModel:
         self.observed_waveforms = observed_waveforms
         self.time_array = time_array
         self.misfit_calc: Optional[MisfitCalculator] = None
+        self.azi_times_array: Optional[np.ndarray] = None
         self.use_full_signal: bool = False
         self.axitra_aw = float(axitra_aw)
         self.axitra_ikmax = int(axitra_ikmax)
@@ -550,6 +1063,7 @@ class BaseInversionModel:
                             logger.info(f"Loaded azi_times from fallback file: {azi_times_path}")
 
             if azi_times_array is not None:
+                self.azi_times_array = np.asarray(azi_times_array, dtype=float)
                 self.misfit_calc = MisfitCalculator(
                     observed_waveforms,
                     time_array,
@@ -584,7 +1098,20 @@ class BaseInversionModel:
         self._pymc_inner: bool = False
         self._eval_count: int = 0
         self._best_misfit_seen: float = np.inf
+        self._best_model_vec: Optional[np.ndarray] = None
         self._axitra_id_counter: int = 0
+        # Si se fija, escribe el mejor modelo actual a este .txt cada vez que mejora
+        # (checkpoint en vivo durante la búsqueda).
+        self.checkpoint_path: Optional[str | Path] = None
+
+        # Green's-function cache: when ``use_green_cache`` is True the Green's
+        # functions for the FULL fixed subfault mesh are computed once and reused
+        # in every model evaluation (only the cheap ``conv`` runs per model).
+        # Valid because Green's functions depend only on source/station positions,
+        # the velocity model and frequencies — not on slip, rupture time or
+        # mechanism (which ``conv`` applies from the per-model source history).
+        self.use_green_cache: bool = False
+        self._green_cache_ap: Optional[Any] = None
 
         # Best synthetic seismograms (nsta, 3, npts) — updated inside objective_function
         self.best_synthetics: Optional[np.ndarray] = None
@@ -642,15 +1169,131 @@ class BaseInversionModel:
         return ns_stamp + pid_part + ctr_part
 
     # ------------------------------------------------------------------
-    def _build_geometry_from_parameters(self, model: np.ndarray):
+    def _build_geometry_from_parameters(self, model: np.ndarray, keep_all_sources: bool = False):
         """Build fault geometry with ellipse slip from a model parameter vector.
         (Construye la geometría de falla con deslizamiento elíptico desde un vector de parámetros.)
 
         Reuses the precomputed invariant mesh stored in ``self.base_geometry``
         and applies model-dependent fields on a deep copy.
+
+        ``keep_all_sources=True`` keeps the full source set (zero slip outside the
+        ellipse) so source positions/indices stay constant across models, enabling
+        the cached-Green's-function path.
         """
         geom = deepcopy(self.base_geometry)
-        return self.fm.apply_ellipse_model_to_geometry(geometry=geom, model=model)
+        return self.fm.apply_ellipse_model_to_geometry(
+            geometry=geom, model=model, keep_all_sources=keep_all_sources
+        )
+
+    # ------------------------------------------------------------------
+    def _ensure_green_cache(self):
+        """Compute (once) and return the cached Green's functions for the full mesh.
+        (Calcula una vez y retorna las funciones de Green cacheadas de la malla completa.)
+
+        The source set is the full fixed mesh (``keep_all_sources=True``), so the
+        same Green's functions serve every model — only ``conv`` runs per model.
+        The returned axitra instance is NOT cleaned during the run.
+        """
+        if self._green_cache_ap is None:
+            # The ellipse parameters do not change WHICH sources exist when
+            # keep_all_sources=True (always the full mesh), so any valid model works.
+            dummy = np.mean(self.param_ranges, axis=1)
+            geom_full = self._build_geometry_from_parameters(dummy, keep_all_sources=True)
+            ap = self.fm.build_axitra(
+                geom_full,
+                latlon=False,
+                freesurface=True,
+                aw=self.axitra_aw,
+                ikmax=self.axitra_ikmax,
+            )
+            ap = self.fm.green(ap, quiet=True)
+            self._green_cache_ap = ap
+        return self._green_cache_ap
+
+    # ------------------------------------------------------------------
+    def clear_green_cache(self) -> None:
+        """Clean up the cached Green's-function axitra files (call at end of run)."""
+        if self._green_cache_ap is not None:
+            try:
+                self._green_cache_ap.clean()
+            except Exception:
+                pass
+            self._green_cache_ap = None
+
+    # ------------------------------------------------------------------
+    def _evaluate_model(self, model: np.ndarray) -> Tuple[float, Optional[np.ndarray]]:
+        """
+        Internal method to evaluate one model vector.
+        (Método interno para evaluar un solo vector de modelo.)
+        
+        Returns
+        -------
+        misfit : float
+        synthetics : np.ndarray or None
+        """
+        ap = None
+        try:
+            if self.misfit_calc is None:
+                return 1e10, None
+
+            if self.use_green_cache:
+                # Cached path: full mesh, Green's functions computed once, reused.
+                # Only the cheap conv runs per model (zero-moment sources outside
+                # the ellipse contribute nothing, so the result is identical).
+                geom = self._build_geometry_from_parameters(model, keep_all_sources=True)
+                ap = self._ensure_green_cache()
+            else:
+                # Standard path: rebuild geometry + recompute Green's functions per model.
+                geom = self._build_geometry_from_parameters(model)
+                ap = self.fm.build_axitra(
+                    geom,
+                    latlon=False,
+                    freesurface=True,
+                    aw=self.axitra_aw,
+                    ikmax=self.axitra_ikmax,
+                )
+                ap = self.fm.green(ap, quiet=True)
+
+            source_type = int(getattr(self.cfg.ellipse, "source_type", 4))
+            _, sx, sy, sz = self.fm.conv(
+                ap, geom, source_type=source_type, t0=float(self.cfg.ellipse.t0), quiet=True
+            )
+
+            synthetics = np.array([sx, sy, sz])
+            synthetics = np.transpose(synthetics, (1, 2, 0))
+            synthetics = np.transpose(synthetics, (0, 2, 1))
+
+            # Filter synthetics to the same frequency band as observed data
+            from kdellipspy.core.signal_utils import bandpass_filter_waveforms
+
+            synthetics = bandpass_filter_waveforms(
+                synthetics,
+                self.time_array,
+                freq1=float(self.cfg.ellipse.freq1),
+                freq2=float(self.cfg.ellipse.freq2),
+                zerophase=bool(getattr(self.cfg.ellipse, "zerophase", True)),
+            )
+
+            misfit = float(self.misfit_calc.l2_misfit(synthetics, use_full_signal=self.use_full_signal))
+            return misfit, synthetics
+
+        except Exception as exc:
+            logger.error("Model evaluation failed: %s", exc)
+            return 1e10, None
+
+        finally:
+            keep = False
+            if self._na_cfg_runtime is not None:
+                keep = bool(self._na_cfg_runtime.keep_axitra_files)
+            elif self._mcmc_cfg_runtime is not None:
+                keep = bool(self._mcmc_cfg_runtime.keep_axitra_files)
+            # Never clean the cached Green's-function instance here — it is reused
+            # across evaluations and cleaned once via clear_green_cache().
+            if ap is not None and ap is not self._green_cache_ap and not keep:
+                try:
+                    ap.clean()
+                except Exception:
+                    pass
 
     # ------------------------------------------------------------------
     def objective_function(self, model: np.ndarray) -> float:
@@ -680,89 +1323,40 @@ class BaseInversionModel:
                 if self._eval_count > n0:
                     iter_est = 1 + ((self._eval_count - n0 - 1) // ns)
 
-        ap = None
-        try:
-            if self.misfit_calc is None:
-                return 1e10
+        misfit, synthetics = self._evaluate_model(model)
 
-            geom = self._build_geometry_from_parameters(model)
-
-            ap = self.fm.build_axitra(
-                geom,
-                latlon=False,
-                freesurface=True,
-                aw=self.axitra_aw,
-                ikmax=self.axitra_ikmax
-            )
-            ap = self.fm.green(ap, quiet=True)
-            _, sx, sy, sz = self.fm.conv(
-                ap, geom, source_type=5, t0=float(self.cfg.ellipse.t0), quiet=True
-            )
-
-            synthetics = np.array([sx, sy, sz])
-            synthetics = np.transpose(synthetics, (1, 2, 0))
-            synthetics = np.transpose(synthetics, (0, 2, 1))
-
-            # Filter synthetics to the same frequency band as observed data
-            from kdellipspy.core.signal_utils import bandpass_filter_waveforms
-
-            synthetics = bandpass_filter_waveforms(
-                synthetics,
-                self.time_array,
-                freq1=float(self.cfg.ellipse.freq1),
-                freq2=float(self.cfg.ellipse.freq2),
-            )
-
-            misfit = float(self.misfit_calc.l2_misfit(synthetics, use_full_signal=self.use_full_signal))
-            if misfit < self._best_misfit_seen:
-                self._best_misfit_seen = misfit
+        if misfit < self._best_misfit_seen:
+            self._best_misfit_seen = misfit
+            self._best_model_vec = np.asarray(model, dtype=float).copy()
+            if synthetics is not None:
                 self.best_synthetics = synthetics.copy()
+            if self.checkpoint_path is not None:
+                self._write_checkpoint(iter_est)
 
-            # Optional slip/moment scaling diagnostics
-            diag = getattr(geom, "slip_scale_diagnostics", None)
-            diag_s = ""
-            if isinstance(diag, dict):
-                m0_t = diag.get("m0_target_nm")
-                m0_t_s = f"{float(m0_t):.6e}" if m0_t is not None else "n/a"
-                diag_s = (
-                    f" mt_mode={diag.get('mt_scaling_mode')} "
-                    f"dmax_req={float(diag.get('dmax_requested_m', 0.0)):.6e} "
-                    f"dmax_eff={float(diag.get('dmax_effective_m', 0.0)):.6e} "
-                    f"M0_target={m0_t_s} "
-                    f"M0_L1={float(diag.get('m0_L1_sum_abs_moments_nm', 0.0)):.6e}"
-                )
-                warn = diag.get("strict_scale_warning")
-                if warn:
-                    diag_s += f" WARN={warn}"
+        print(
+            f"[{log_tag}] iter={iter_est:05d} eval={self._eval_count:05d} "
+            f"misfit={misfit:.6e} best={self._best_misfit_seen:.6e}",
+            flush=True,
+        )
 
-            print(
-                f"[{log_tag}] iter={iter_est:05d} eval={self._eval_count:05d} "
-                f"misfit={misfit:.6e} best={self._best_misfit_seen:.6e}"
-                f"{diag_s}",
-                flush=True,
-            )
-            return misfit
+        return misfit
 
-        except Exception as exc:
-            print(
-                f"[{log_tag}] iter={iter_est:05d} eval={self._eval_count:05d} "
-                f"misfit=1.000000e+10 best={self._best_misfit_seen:.6e}",
-                flush=True,
-            )
-            logger.error("Model evaluation failed: %s", exc)
-            return 1e10
-
-        finally:
-            keep = False
-            if self._na_cfg_runtime is not None:
-                keep = bool(self._na_cfg_runtime.keep_axitra_files)
-            elif self._mcmc_cfg_runtime is not None:
-                keep = bool(self._mcmc_cfg_runtime.keep_axitra_files)
-            if ap is not None and not keep:
-                try:
-                    ap.clean()
-                except Exception:
-                    pass
+    def _write_checkpoint(self, iter_est: int) -> None:
+        """Vuelca el mejor modelo actual a ``self.checkpoint_path`` (escritura atómica)."""
+        try:
+            path = Path(self.checkpoint_path)
+            lines = [
+                "# Checkpoint del mejor modelo (se actualiza al mejorar el misfit)",
+                f"# eval={self._eval_count}  iter={iter_est}  "
+                f"misfit={self._best_misfit_seen:.6f}",
+            ]
+            for name, val in zip(self.param_names, self._best_model_vec):
+                lines.append(f"{name:<14s} {val:12.4f}")
+            tmp = path.with_suffix(path.suffix + ".tmp")
+            tmp.write_text("\n".join(lines) + "\n")
+            tmp.replace(path)   # rename atómico: nunca se lee a medias
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"No se pudo escribir el checkpoint: {exc}")
 
     def plot_fit(self, show: bool = True, save_path: Optional[str] = None) -> Tuple[Any, Any]:
         """

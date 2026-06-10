@@ -341,6 +341,10 @@ class MCMCInversionModel(BaseInversionModel):
                 "mcmc_stored_samples": len(models),
                 "arviz_summary": arviz_summary,
             },
+            best_synthetics=self.best_synthetics,
+            observed=self.observed_waveforms,
+            time=self.time_array,
+            config=self.cfg,
         )
 
 

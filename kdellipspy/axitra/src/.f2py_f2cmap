@@ -1,0 +1,1 @@
+dict(real=dict(fd='double', fs='float'), complex=dict(fd='complex_double', fs='complex_float'))

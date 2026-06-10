@@ -49,15 +49,25 @@ kdellipspy path/to/run_folder
 
 ### Python API
 ```python
+import numpy as np
 from kdellipspy import ConfigParser, AxitraForwardModel
 
 # Load configuration and initialize model
 cfg = ConfigParser("input.ctl")
 fm = AxitraForwardModel("input.ctl")
 
-# Run a synthetic simulation
-model_params = [10.0, 7.0, 0.0, 0.5, 0.5, 3.0, 2.8]
-synthetics, time = fm.simulate_ellipse(model_params)
+# Setup synthetic model parameters (a1, a2, theta, np, tp, dmax, vr)
+model_params = np.array([10.0, 7.0, 0.0, 0.5, 0.5, 3.0, 2.8])
+
+# Build geometry and run simulation
+geom = fm.build_geometry_with_ellipse_slip(model_params)
+ap = fm.build_axitra(geom)
+fm.green(ap)
+time, sx, sy, sz = fm.conv(ap, geom)
+
+# Visualize results directly from objects
+fm.plot(np.array([sx, sy, sz]).transpose(1, 0, 2), time=time)
+geom.plot(title="Synthetic Slip Distribution")
 ```
 
 ---

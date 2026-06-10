@@ -1,0 +1,585 @@
+\documentclass[11pt,a4paper]{article}
+
+% ============================================================================
+%  Curso: Física de la Ruptura Dinámica de Terremotos
+%  Apuntes pedagógicos "desde 0" — KDEllipsPy (parte Dynamic)
+%  Cada clase enlaza la física con el código FD3D legacy.
+% ============================================================================
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-noindentfirst,es-noshorthands]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.4cm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{patterns,decorations.pathmorphing,arrows.meta,calc,positioning}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage[most]{tcolorbox}
+\hypersetup{colorlinks=true,linkcolor=blue!55!black,urlcolor=blue!55!black}
+
+% --- caja "conexión con el código" ---
+\newtcolorbox{codebox}[1][]{
+  colback=green!4, colframe=green!45!black, fonttitle=\bfseries,
+  title={\faIconfallback\ Conexión con tu código FD3D}, #1}
+\newcommand{\faIconfallback}{$\hookrightarrow$}
+
+% --- caja "idea clave" ---
+\newtcolorbox{keybox}[1][]{
+  colback=orange!6, colframe=orange!70!black, fonttitle=\bfseries,
+  title={Idea clave}, #1}
+
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\pd}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\vv}[1]{\mathbf{#1}}
+\newcommand{\Dc}{D_c}
+\newcommand{\taup}{\tau_p}
+\newcommand{\taud}{\tau_d}
+
+\title{\textbf{Física de la Ruptura Dinámica de Terremotos}\\[4pt]
+       \large Apuntes de curso ``desde cero'' \\
+       \normalsize con conexiones al solver FD3D (Madariaga) de KDEllipsPy}
+\author{Apuntes internos --- KDEllipsPy (parte \emph{Dynamic})}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+Estos apuntes enseñan la física de la ruptura dinámica de terremotos partiendo
+de cero, al nivel de un curso universitario, y conectan cada concepto con el
+código de diferencias finitas FD3D (Raúl Madariaga) que vive en
+\texttt{legacy/Dynamic\_inversion/}. El hilo conductor es una sola pregunta:
+\emph{¿por qué una falla pegada empieza a deslizar de golpe y qué controla cómo
+se propaga ese deslizamiento?} Para el detalle de la \emph{implementación}
+numérica (subrutinas, índices, FFT) ver el documento complementario
+\texttt{teoria\_fd3d.tex}.
+\end{abstract}
+
+\tableofcontents
+\bigskip
+\hrule
+
+% ===========================================================================
+\section*{Notación}
+\addcontentsline{toc}{section}{Notación}
+% ===========================================================================
+\begin{center}
+\begin{tabular}{c l l}
+\toprule
+Símbolo & Significado & En el código \\
+\midrule
+$\sigma_{ij}$        & tensor de esfuerzos & \texttt{xx,yy,zz,xy,yz,xz} \\
+$\vv{t}=\sigma\vv{n}$ & tracción sobre un plano de normal $\vv{n}$ & --- \\
+$\sigma_n,\ \tau$    & esfuerzo normal y de cizalla sobre la falla & --- \\
+$\sigma^0$           & esfuerzo de cizalla \emph{inicial} (carga) & \texttt{strinix}/\texttt{strbin} \\
+$\taup$              & esfuerzo \emph{pico} (cedencia/yield) & \texttt{peak\_xz} \\
+$\taud$              & esfuerzo \emph{dinámico}/residual & --- \\
+$\Delta\tau=\sigma^0-\taud$ & caída de esfuerzo & \texttt{stressdrop.res} \\
+$s,\ \dot s$         & deslizamiento (slip) y su tasa (slip-rate) & \texttt{slip}, \texttt{2*w1} \\
+$\Dc$                & distancia crítica de debilitamiento & $2\,D_{\max}$ (param.\ 10) \\
+$\mu,\ \lambda$      & módulo de cizalla y de Lamé & \texttt{mu1},\texttt{lam1} \\
+$\rho$               & densidad & \texttt{d1} \\
+$v_p,\ v_s,\ c_R$    & velocidades P, S y de Rayleigh & --- \\
+$V_r$                & velocidad de ruptura & --- \\
+$G_c$                & energía de fractura & --- \\
+$S$                  & parámetro de fuerza relativa & --- \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\newpage
+% ===========================================================================
+\section{El terremoto como problema mecánico}
+% ===========================================================================
+
+\subsection{La imagen mecánica}
+Olvida por un momento las ondas. Un terremoto es, en esencia, \textbf{dos bloques
+de roca que estaban pegados y de pronto deslizan uno respecto al otro a lo largo
+de una superficie, la falla}. Las ondas sísmicas que registras en tus estaciones
+son solo la \emph{radiación} de ese deslizamiento repentino. Por eso la pregunta
+central de toda la dinámica de ruptura es:
+\begin{center}
+\itshape ¿Por qué una falla pegada empieza a deslizar de golpe,\\
+y qué controla cómo se propaga ese deslizamiento?
+\end{center}
+
+\subsection{Esfuerzo sobre un plano: tracción}
+En un medio elástico el estado de esfuerzo en un punto es el tensor $\sigma$
+($3\times3$, simétrico). Si te paras sobre un plano de normal $\vv{n}$ (la falla),
+la fuerza por unidad de área que un lado ejerce sobre el otro es la
+\textbf{tracción}
+\begin{equation}
+  \vv{t} = \sigma\,\vv{n}.
+\end{equation}
+La descomponemos respecto al plano en
+\begin{equation}
+  \sigma_n = \vv{t}\cdot\vv{n}\quad(\text{normal, aprieta}),
+  \qquad
+  \vv{\tau} = \vv{t} - \sigma_n\vv{n}\quad(\text{cizalla, hace deslizar}).
+\end{equation}
+En la falla el protagonista es la \textbf{cizalla} $\tau$; el normal $\sigma_n$
+importa porque fija la fricción (cuánto aprieta $\Rightarrow$ cuánto cuesta
+deslizar).
+
+\begin{codebox}
+La falla del solver es el plano $j=n_{ysc}$ con \textbf{normal $\hat y$}, y la
+fricción se impone sobre la cizalla $\sigma_{yz}$ (es una falla \emph{dip-slip}:
+el deslizamiento es en $z$). Ver \texttt{fd3d\_theo.f}, bloque de la condición de
+fractura.
+\end{codebox}
+
+\subsection{La falla como interfaz friccional}
+La tectónica carga la falla lentamente (mm/año): la cizalla $\tau$ \emph{crece}
+poco a poco. Pero la falla resiste por fricción. En el modelo de Coulomb la
+resistencia es
+\begin{equation}
+  \tau_s = \mu_f\,\sigma_n,\qquad \mu_f\approx 0.6\ (\text{ley de Byerlee}).
+\end{equation}
+La regla es intuitiva:
+\begin{itemize}
+  \item Si $\tau<\tau_s$: la falla está \textbf{pegada}; $\tau$ sigue acumulándose.
+  \item Cuando $\tau$ alcanza $\tau_s$: la falla \textbf{cede} y empieza a deslizar.
+\end{itemize}
+Esto es estático. La pregunta clave es por qué el deslizamiento resulta
+\emph{violento}. Ahí entra la palabra \textbf{dinámica}.
+
+\subsection{La clave: la resistencia cae al deslizar}
+El ingrediente que vuelve inestable a un terremoto es un hecho de laboratorio:
+\begin{keybox}
+Una vez que la falla empieza a deslizar, su resistencia friccional \textbf{no se
+mantiene: cae.} Hay un \emph{pico} $\taup$ (lo que cuesta arrancar) y un valor
+\emph{dinámico} $\taud<\taup$ (lo que cuesta seguir). Esa diferencia se libera.
+\end{keybox}
+Definimos las cantidades que aparecen en todo el curso:
+\[
+  \sigma^0\ (\text{inicial}),\quad
+  \taup\ (\text{pico}),\quad
+  \taud\ (\text{dinámico}),\quad
+  \Delta\tau=\sigma^0-\taud\ (\text{caída de esfuerzo}).
+\]
+
+\subsection{El experimento mental fundamental: el \emph{spring-slider}}
+Casi toda la intuición sale de un sistema de \textbf{un grado de libertad}: un
+bloque sobre una superficie con fricción, jalado por un resorte cuyo extremo
+avanza a velocidad de carga $V_L$ (la tectónica).
+
+\begin{center}
+\begin{tikzpicture}[>=Stealth]
+  % ground
+  \fill[pattern=north east lines] (-0.3,-0.55) rectangle (8.2,-0.3);
+  \draw[thick] (-0.3,-0.3) -- (8.2,-0.3);
+  % block
+  \draw[thick,fill=blue!12] (4.0,-0.3) rectangle (5.6,0.7);
+  \node at (4.8,0.2) {$m$};
+  \node[below] at (4.8,-0.55) {fricción $\tau(s)$};
+  % spring
+  \draw[decorate,decoration={coil,aspect=0.6,segment length=5pt,amplitude=4pt}]
+       (1.2,0.2) -- (4.0,0.2);
+  \node[above] at (2.6,0.45) {resorte $k$};
+  % wall / load point
+  \draw[thick] (1.2,-0.1) -- (1.2,0.5);
+  \draw[->,thick] (0.2,0.2) -- (1.1,0.2);
+  \node[left] at (0.2,0.2) {$V_L$};
+  % slip arrow
+  \draw[->,thick,red] (5.7,0.9) -- (6.6,0.9);
+  \node[right,red] at (6.6,0.9) {$s$ (slip)};
+\end{tikzpicture}
+\end{center}
+
+\noindent
+El bloque (masa $m$) representa el parche de falla; su posición $s$ es el slip.
+La segunda ley de Newton:
+\begin{equation}
+  m\,\ddot s \;=\; \underbrace{k\,(V_L\,t - s)}_{\text{resorte}}
+                 \;-\; \underbrace{\tau(s)}_{\text{fricción}}.
+  \label{eq:slider}
+\end{equation}
+El resorte tira proporcional a su estiramiento; la fricción resiste pero
+\emph{se debilita} con el slip.
+
+\paragraph{¿Cuándo se vuelve inestable?} Cerca del umbral compiten dos rigideces:
+el resorte se \emph{endurece} (rigidez $+k$); la fricción se \emph{ablanda} con
+pendiente $W=(\taup-\taud)/\Dc$, que actúa como rigidez \emph{negativa}. El
+balance da el resultado más importante del curso:
+\begin{keybox}
+\centering
+$\displaystyle
+\text{INESTABLE (terremoto) si } k < k_{\mathrm{crit}}=\frac{\taup-\taud}{\Dc};
+\qquad
+\text{ESTABLE (creep) si } k>k_{\mathrm{crit}}.
+$
+\end{keybox}
+\noindent
+\textbf{Intuición:} si el medio elástico (el resorte) es más \emph{blando} que la
+velocidad a la que la falla pierde resistencia, apenas arranca el deslizamiento
+nada puede frenar la caída de fricción $\Rightarrow$ la falla se acelera sola
+$\Rightarrow$ \emph{runaway} = terremoto. Si el resorte es rígido, contiene la
+caída $\Rightarrow$ deslizamiento lento (creep, slow-slip).
+
+\subsection{Del bloque a una falla real: tamaño crítico de nucleación}
+En una falla real el papel del resorte lo hace \textbf{la roca elástica que rodea
+al parche}. Para un parche de tamaño $L$ esa rigidez efectiva escala como
+$k_{\text{ef}}\sim \mu/L$ (parche grande $=$ resorte blando). Sustituyendo en
+$k<k_{\mathrm{crit}}$:
+\begin{equation}
+  \frac{\mu}{L} < \frac{\taup-\taud}{\Dc}
+  \;\Longrightarrow\;
+  \boxed{\,L > L_c \sim \frac{\mu\,\Dc}{\taup-\taud}\,}.
+  \label{eq:Lc}
+\end{equation}
+Acabas de derivar el \textbf{tamaño crítico de nucleación} $L_c$: un parche
+debilitado solo arranca una ruptura que se propaga si es \emph{más grande} que
+$L_c$; más chico, se estabiliza y muere.
+
+\begin{codebox}
+El \textbf{círculo de nucleación} de \texttt{mkstress} (sobre-esfuerzo
+\texttt{strain} en un radio $r$) impone justo una zona inicial lo bastante grande
+para superar $L_c$ y arrancar la ruptura espontánea. El \textbf{parámetro 9}
+(radio de nucleación) es, físicamente, este $L_c$.
+\end{codebox}
+
+% ===========================================================================
+\section{Leyes de fricción}
+% ===========================================================================
+
+\subsection{Slip-weakening lineal (la del código)}
+La forma más usada (Ida 1972; Andrews 1976) hace que la resistencia caiga
+\emph{linealmente} con el slip desde $\taup$ hasta $\taud$ a lo largo de una
+distancia crítica $\Dc$:
+\begin{equation}
+  \tau(s)=
+  \begin{cases}
+    \taup-(\taup-\taud)\,\dfrac{s}{\Dc}, & s<\Dc,\\[8pt]
+    \taud, & s\ge \Dc.
+  \end{cases}
+  \label{eq:sw}
+\end{equation}
+
+\begin{center}
+\begin{tikzpicture}
+\begin{axis}[
+  width=10cm,height=5.6cm,
+  xlabel={slip $s$},ylabel={resistencia $\tau$},
+  xtick={0,3},xticklabels={$0$,$\Dc$},
+  ytick={1.5,4},yticklabels={$\taud$,$\taup$},
+  xmin=-0.3,xmax=6,ymin=0,ymax=5,
+  axis lines=left,clip=false]
+  % peak then linear down to taud at Dc, then flat
+  \addplot[very thick,blue] coordinates {(0,4) (3,1.5) (6,1.5)};
+  % initial stress level
+  \addplot[dashed,gray] coordinates {(-0.3,3.0) (6,3.0)};
+  \node[gray,anchor=west] at (axis cs:5,3.25) {$\sigma^0$};
+  % fracture energy shading
+  \addplot[draw=none,fill=orange!25] coordinates {(0,1.5) (0,4) (3,1.5)} \closedcycle;
+  \node at (axis cs:0.9,2.4) {\small $G_c$};
+\end{axis}
+\end{tikzpicture}
+\end{center}
+
+\noindent
+La pendiente de debilitamiento es $W=(\taup-\taud)/\Dc$, la misma que apareció en
+el criterio de inestabilidad.
+
+\begin{codebox}
+El código usa $\tau=\taup\,(1-s/D_{\max})$ con $\taud\to0$, e identifica
+$D_{\max}=\Dc/2$ (por el modelo de \emph{media falla}, donde slip y slip-rate
+llevan factor 2). Es la ec.~\eqref{eq:sw} con $\taud=0$.
+\end{codebox}
+
+\subsection{Tres regímenes de esfuerzo}
+En cada punto de la falla conviven tres niveles (ver figura): el inicial
+$\sigma^0$, el pico $\taup$ y el residual $\taud$. De ellos salen dos diferencias
+con nombre propio:
+\begin{align}
+  \text{exceso de resistencia (strength excess):}\quad & \taup-\sigma^0,\\
+  \text{caída de esfuerzo dinámica:}\quad & \sigma^0-\taud.
+\end{align}
+Su cociente es el \textbf{parámetro $S$} (Clase 5), que controla la velocidad de
+ruptura.
+
+\subsection{Una palabra sobre rate-and-state}
+El slip-weakening es fenomenológico. Las leyes \emph{rate-and-state}
+(Dieterich--Ruina) son más completas: la fricción depende de la velocidad de
+deslizamiento $\dot s$ y de una variable de estado $\theta$ (la ``edad'' del
+contacto),
+\begin{equation}
+  \tau = \sigma_n\Big[\mu_0 + a\ln\tfrac{\dot s}{\dot s_0}
+        + b\ln\tfrac{\dot s_0\,\theta}{\Dc}\Big],\qquad
+  \dot\theta = 1-\frac{\dot s\,\theta}{\Dc}.
+\end{equation}
+La inestabilidad ocurre si $a-b<0$ (debilitamiento por velocidad). Para
+modelado de un único evento, el slip-weakening lineal captura lo esencial y es lo
+que usa tu código; rate-and-state es indispensable para \emph{ciclos sísmicos} y
+nucleación realista. (FD3D\_TSN soporta ambas.)
+
+% ===========================================================================
+\section{Balance de energía}
+% ===========================================================================
+
+\subsection{¿A dónde va la energía liberada?}
+Cuando la falla desliza $s$ bajo una caída de esfuerzo, se libera energía. Se
+reparte en tres destinos:
+\begin{equation}
+  \underbrace{W}_{\text{trabajo total}}=
+  \underbrace{E_R}_{\text{radiada (ondas)}}+
+  \underbrace{E_G}_{\text{fractura}}+
+  \underbrace{E_H}_{\text{calor friccional}}.
+\end{equation}
+La energía radiada $E_R$ es la que llega a tus sismómetros; la de fractura $E_G$
+es la que cuesta romper/debilitar la falla; el resto es calor.
+
+\subsection{Energía de fractura $G_c$}
+Es el trabajo (por unidad de área) que se gasta en debilitar la falla durante el
+deslizamiento, es decir el \emph{área bajo la curva} de slip-weakening por encima
+del nivel residual (la región naranja en la figura de la Clase 2). Para la ley
+lineal:
+\begin{equation}
+  \boxed{\,G_c = \tfrac12\,(\taup-\taud)\,\Dc\,}.
+  \label{eq:Gc}
+\end{equation}
+$G_c$ es \emph{el} parámetro que gobierna si la ruptura crece o se detiene: es la
+contraparte de la tenacidad en mecánica de fractura.
+
+\begin{keybox}
+Combinando \eqref{eq:Gc} con el tamaño crítico \eqref{eq:Lc}:
+$\;L_c \sim \dfrac{\mu\,\Dc}{\taup-\taud}\sim \dfrac{2\,\mu\,G_c}{(\taup-\taud)^2}$.
+Más energía de fractura $\Rightarrow$ parche crítico más grande $\Rightarrow$
+más difícil nuclear.
+\end{keybox}
+
+\subsection{Tasa de liberación de energía y criterio de Griffith}
+Una ruptura es una grieta. Su punta avanza solo si la energía que el campo
+elástico le entrega por unidad de avance (la \emph{tasa de liberación}
+$\mathcal{G}$) iguala o supera la energía de fractura:
+\begin{equation}
+  \mathcal{G} \ge G_c \quad(\text{criterio de Griffith para una grieta que corre}).
+\end{equation}
+$\mathcal{G}$ crece con el tamaño de la ruptura y con la caída de esfuerzo; $G_c$
+es una propiedad del material. El balance entre ambos fija la velocidad de
+ruptura (Clase 4).
+
+\subsection{Eficiencia de radiación}
+La fracción de la energía disponible que termina como ondas se mide con la
+\emph{eficiencia de radiación} $\eta_R=E_R/(E_R+E_G)$. Rupturas rápidas
+(supershear) son muy eficientes; rupturas lentas gastan casi todo en fractura y
+calor. Esto conecta con tus observaciones: el contenido de alta frecuencia de los
+sismogramas refleja la dinámica de la punta de grieta.
+
+% ===========================================================================
+\section{La ruptura como una grieta que corre}
+% ===========================================================================
+
+\subsection{Concentración de esfuerzo en la punta}
+En mecánica de fractura elástica, el esfuerzo cerca de la punta de una grieta
+\emph{diverge} como $1/\sqrt{r}$ (distancia $r$ a la punta), con amplitud dada por
+el \textbf{factor de intensidad de esfuerzo} $K$. Esa concentración es la que
+rompe el material siguiente y hace avanzar la ruptura.
+
+\begin{center}
+\begin{tikzpicture}[>=Stealth]
+  \draw[thick] (-3,0) -- (3,0);
+  \fill[red!18] (-3,-0.12) rectangle (0.6,0.12);
+  \node[below] at (-1.4,-0.15) {\small ya rota (desliza, $\tau\!\to\!\taud$)};
+  \node[above] at (1.8,0.15) {\small intacta ($\tau\!=\!\sigma^0$)};
+  % stress peak near tip
+  \draw[->,thick] (0.6,0) .. controls (0.9,1.4) and (1.1,1.4) .. (1.4,0.1);
+  \node at (1.05,1.6) {\small pico de $\tau$ ($\sim\taup$)};
+  % cohesive zone
+  \draw[<->] (0.6,-0.7) -- (1.4,-0.7);
+  \node[below] at (1.0,-0.7) {\small zona cohesiva $\Lambda$};
+  \draw[->,very thick,blue] (0.6,0.55) -- (1.6,0.55);
+  \node[blue,above] at (1.1,0.6) {\small $V_r$};
+\end{tikzpicture}
+\end{center}
+
+\subsection{La zona cohesiva}
+La divergencia $1/\sqrt r$ es no física (esfuerzo infinito). El slip-weakening la
+\emph{regulariza}: existe una zona finita detrás de la punta, la \textbf{zona
+cohesiva} $\Lambda$, donde el esfuerzo baja de $\taup$ a $\taud$ mientras el slip
+crece de $0$ a $\Dc$ (modelo de Barenblatt/Andrews). Su tamaño escala como
+\begin{equation}
+  \Lambda \sim \frac{\mu\,\Dc}{\taup-\taud}\sim L_c.
+\end{equation}
+
+\begin{codebox}
+\textbf{Implicación numérica crucial:} la malla FD debe resolver $\Lambda$ con
+\emph{varios} puntos ($\Lambda/\dd h \gtrsim 3$--$5$), o la ruptura se propaga
+mal. Si subes $\taup$ o bajas $\Dc$, $\Lambda$ se encoge y necesitas $\dd h$ más
+fino (más coste). Es el criterio que limita \texttt{dh} y \texttt{nx,ny,nz} en
+\texttt{parstat}.
+\end{codebox}
+
+\subsection{Velocidades límite}
+Una ruptura no puede ir a cualquier velocidad. Los topes son las velocidades
+elásticas:
+\begin{itemize}
+  \item \textbf{Modo III} (anti-plano, deslizamiento $\parallel$ frente): tope
+        $=v_s$.
+  \item \textbf{Modo II} (in-plano, deslizamiento $\perp$ frente): zona
+        prohibida entre $c_R$ (Rayleigh, $\approx0.92\,v_s$) y $v_s$; puede saltar
+        a \textbf{supershear} ($v_s<V_r<v_p$).
+\end{itemize}
+La transición a supershear (mecanismo de Burridge--Andrews) ocurre cuando el
+esfuerzo es alto (parámetro $S$ bajo, Clase 5) y deja una firma clara en los
+sismogramas (frente de Mach).
+
+% ===========================================================================
+\section{Nucleación y el parámetro $S$}
+% ===========================================================================
+
+\subsection{Cómo arranca de verdad}
+La nucleación es la fase \emph{lenta y cuasi-estática} en que un parche crece
+hasta alcanzar $L_c$. Superado el tamaño crítico (ec.~\eqref{eq:Lc}; estimaciones
+finas tipo Uenishi--Rice dan $L_c\approx1.16\,\mu\Dc/(\taup-\taud)$ para
+slip-weakening lineal), la ruptura se vuelve dinámica y se ``suelta''.
+
+\begin{codebox}
+En el código la nucleación no se simula con física cuasi-estática realista: se
+\emph{fuerza} con un círculo sobre-esforzado (\texttt{strain} en radio $r$) que
+ya supera $L_c$, para que la ruptura arranque sola en los primeros pasos de
+\texttt{indyna3d}. Es la práctica estándar en modelado de un único evento.
+\end{codebox}
+
+\subsection{El parámetro $S$}
+Adimensionaliza los tres niveles de esfuerzo:
+\begin{equation}
+  \boxed{\,S=\frac{\taup-\sigma^0}{\sigma^0-\taud}
+          =\frac{\text{exceso de resistencia}}{\text{caída de esfuerzo}}\,}.
+\end{equation}
+Interpretación:
+\begin{itemize}
+  \item \textbf{$S$ bajo} ($\lesssim1.7$): falla muy cargada respecto a su
+        resistencia $\Rightarrow$ ruptura rápida, posible \textbf{supershear}.
+  \item \textbf{$S$ alto}: poco margen sobre el residual $\Rightarrow$ ruptura
+        lenta, sub-Rayleigh, que se detiene con facilidad.
+\end{itemize}
+$S$ es probablemente \emph{el} número adimensional que más resume el carácter de
+una ruptura.
+
+\begin{codebox}
+Tus parámetros invertidos fijan $S$ punto a punto: $\sigma^0$ viene de
+\texttt{strbin}$=T_e$, $\taup$ de \texttt{strin}$=c_1 T_e$ (parámetro 7), y
+$\taud\approx0$. Entonces, dentro de la aspereza,
+$S=(c_1 T_e - T_e)/(T_e-0)=c_1-1$. ¡El parámetro 7 ($c_1$) \emph{es}, casi
+literalmente, $S+1$ en la aspereza!
+\end{codebox}
+
+% ===========================================================================
+\section{Ecuaciones elastodinámicas y cómo se resuelven}
+% ===========================================================================
+
+\subsection{Las dos ecuaciones de gobierno}
+Todo lo anterior vive sobre un medio elástico que obedece (i) conservación del
+momento y (ii) la ley de Hooke en forma de tasa:
+\begin{align}
+  \rho\,\pd{v_i}{t} &= \sum_j \pd{\sigma_{ij}}{x_j}, \label{eq:mom}\\
+  \pd{\sigma_{ij}}{t} &= \lambda\,\delta_{ij}\,(\nabla\!\cdot\!\vv{v})
+        +\mu\Big(\pd{v_i}{x_j}+\pd{v_j}{x_i}\Big). \label{eq:hk}
+\end{align}
+Las incógnitas son la \textbf{velocidad de partícula} $\vv{v}$ y el tensor
+$\sigma$. La ruptura entra como una \textbf{condición de borde} sobre el plano de
+falla: ahí la tracción de cizalla está atada a la ley de fricción
+\eqref{eq:sw}, y el salto de velocidad a través del plano es el slip-rate
+$\dot s$.
+
+\subsection{Malla escalonada y diferencias finitas (Madariaga 1976)}
+El esquema discretiza \eqref{eq:mom}--\eqref{eq:hk} en una \textbf{malla
+escalonada} velocidad--esfuerzo: $\vv v$ y $\sigma$ viven en posiciones
+desplazadas medio paso, y el tiempo avanza en \emph{leapfrog}. Las derivadas
+espaciales usan un operador de \textbf{4.º orden} ($c_1=9/8$, $c_2=-1/24$). El
+esquema es explícito y estable bajo la condición de Courant
+\begin{equation}
+  \frac{v_p^{\max}\,\dd t}{\dd h} < 0.5 .
+\end{equation}
+
+\begin{codebox}
+Esto es \texttt{deriv.f} (operadores \texttt{dvel}/\texttt{dstres}) y el bucle
+temporal de \texttt{indyna3d}. Los bordes del dominio usan condiciones
+absorbentes (\texttt{abc}) para no reflejar ondas. Todo el detalle de índices
+está en \texttt{teoria\_fd3d.tex}.
+\end{codebox}
+
+\subsection{La condición de fractura, paso a paso}
+En cada paso de tiempo, tras actualizar los esfuerzos, sobre el plano de falla:
+\begin{enumerate}
+  \item Se calcula la tracción \emph{absoluta} $\tau_{\text{abs}}=\sigma_{yz}+\sigma^0$.
+  \item Si $\tau_{\text{abs}}>\taup$ y el punto estaba intacto $\Rightarrow$
+        \textbf{rompe} (se registra el tiempo de ruptura).
+  \item Si está deslizando, se impone la ley \eqref{eq:sw}:
+        $\sigma_{yz}\leftarrow \tau(s)-\sigma^0$, y se acumula
+        $s\mathrel{+}=\dot s\,\dd t$.
+\end{enumerate}
+El resultado de la simulación es la \textbf{historia de slip-rate}
+$\dot s(\text{punto},t)$ sobre la falla: la fuente sísmica cinemática que produjo
+la dinámica.
+
+% ===========================================================================
+\section{De slip a sismograma: teorema de representación}
+% ===========================================================================
+
+\subsection{La idea}
+Ya tienes el slip-rate sobre la falla. ¿Cómo se convierte en el sismograma de una
+estación? Por el \textbf{teorema de representación}: el desplazamiento en un
+receptor $\vv x$ es la suma (convolución) de las contribuciones de cada elemento
+de falla, propagadas por la \textbf{función de Green} $G$ del medio:
+\begin{equation}
+  u_n(\vv x,t)=\int_{\Sigma}\!\!\int \Delta\dot u_i(\vv\xi,\tau)\,
+     c_{ijpq}\nu_j\,\pd{G_{np}}{\xi_q}(\vv x,t-\tau;\vv\xi)\,\dd\tau\,\dd\Sigma,
+\end{equation}
+que, para una dislocación de cizalla, equivale a colocar en cada subfalla un
+\textbf{doble par} (tensor de momento) cuya tasa es $\mu\,\dot s\,\times$ área, y
+sumar su radiación.
+
+\subsection{Funciones de Green 1D: número de onda discreto (AXITRA)}
+Para un medio estratificado 1D, $G$ se calcula eficientemente con el método de
+\textbf{número de onda discreto} (Bouchon 1981): se expande el campo en
+ondas planas (integral en número de onda $\to$ suma discreta) y se usa una
+\emph{frecuencia compleja} para suprimir el \emph{wraparound} temporal.
+
+\begin{codebox}
+Esto es AXITRA (\texttt{kdellipspy/axitra}, ya envuelto con f2py) y la convolución
+está en \texttt{convm\_dynsource.f}: decima la malla por 4, calcula los
+coeficientes del tensor de momento (\texttt{cmoment}), convoluciona en frecuencia
+con la frecuencia compleja $a_w$, antitransforma y filtra en banda. El misfit
+final (\texttt{calcmisfit.f}) compara con los datos en R/T/Z, idéntico al lado
+cinemático de KDEllipsPy.
+\end{codebox}
+
+\subsection{El círculo completo}
+\begin{center}
+\begin{tikzpicture}[node distance=6mm and 10mm,>=Stealth,
+   box/.style={draw,rounded corners,fill=blue!7,align=center,inner sep=4pt,font=\small}]
+  \node[box] (p) {10 parámetros\\(elipse+nucleación)};
+  \node[box,right=of p] (s) {$\sigma^0,\ \taup$\\\texttt{mkstress/mkpeak}};
+  \node[box,right=of s] (fd) {FD3D\\$\dot s(\text{falla},t)$};
+  \node[box,below=of fd] (g) {Green AXITRA\\+ convolución};
+  \node[box,left=of g] (syn) {sismogramas\\sintéticos};
+  \node[box,left=of syn] (m) {misfit R/T/Z};
+  \draw[->] (p)--(s); \draw[->] (s)--(fd); \draw[->] (fd)--(g);
+  \draw[->] (g)--(syn); \draw[->] (syn)--(m);
+\end{tikzpicture}
+\end{center}
+Ese es exactamente el problema directo que queremos reimplementar en Python,
+manteniendo la elipse y el NA, y usando FD3D (legacy vía f2py, o FD3D\_TSN) como
+motor de $\dot s$.
+
+% ===========================================================================
+\section*{Epílogo: qué estudiar después}
+\addcontentsline{toc}{section}{Epílogo: qué estudiar después}
+% ===========================================================================
+\begin{itemize}
+  \item \textbf{Libro:} Scholz, \emph{The Mechanics of Earthquakes and Faulting}.
+  \item \textbf{Fundacionales:} Madariaga (1976); Andrews (1976); Day (1982).
+  \item \textbf{Tu solver modernizado:} Premus \& Gallovič et al.\ (2020), FD3D\_TSN.
+  \item \textbf{Benchmarks:} ejercicios SCEC/USGS (Harris et al.\ 2009, 2018).
+  \item \textbf{Implementación:} el documento hermano \texttt{teoria\_fd3d.tex}.
+\end{itemize}
+
+\end{document}

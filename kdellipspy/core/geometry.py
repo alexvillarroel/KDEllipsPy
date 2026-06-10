@@ -657,7 +657,16 @@ class EllipticalSlipMapper:
         self,
         geom: FaultGeometry,
         model: np.ndarray,
+        keep_all_sources: bool = False,
     ) -> FaultGeometry:
+        """Apply the ellipse slip model to ``geom``.
+
+        When ``keep_all_sources`` is True the source-point set is NOT pruned to
+        the subfaults inside the ellipse: every source point is kept with zero
+        moment/slip outside the ellipse. This keeps the source set (positions
+        and indices) constant across models, which lets the caller compute the
+        Green's functions once for the full mesh and reuse them via ``conv``.
+        """
         prepared = self._prepare(model)
         dmax = float(prepared["dmax"])
         vr_m_s = float(prepared["vr_m_s"])
@@ -727,12 +736,15 @@ class EllipticalSlipMapper:
                 sp.displacement = slip_real
 
         # Filter source points with near-zero source terms that do not contribute to synthetics.
-        if geom.mt_enabled:
-            threshold_moment = 1e-20
-            geom.source_points = [sp for sp in geom.source_points if abs(sp.moment) > threshold_moment]
-        else:
-            threshold_disp = 1e-14
-            geom.source_points = [sp for sp in geom.source_points if abs(sp.displacement) > threshold_disp]
+        # Skipped when keep_all_sources=True so the source set stays constant across models
+        # (required for caching the Green's functions of the full fixed mesh).
+        if not keep_all_sources:
+            if geom.mt_enabled:
+                threshold_moment = 1e-20
+                geom.source_points = [sp for sp in geom.source_points if abs(sp.moment) > threshold_moment]
+            else:
+                threshold_disp = 1e-14
+                geom.source_points = [sp for sp in geom.source_points if abs(sp.displacement) > threshold_disp]
 
         # axitra expects sequential source indices 1..N.
         for i, sp in enumerate(geom.source_points, start=1):

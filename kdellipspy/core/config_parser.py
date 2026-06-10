@@ -84,6 +84,10 @@ class EllipseParams:
     freq1: float       # Hz
     freq2: float       # Hz
     t0: float          # Time shift (s)
+    source_type: int   # Axitra source time function type
+    # Fase del filtro pasabanda: True = acausal (filtfilt, fase cero),
+    # False = causal (una pasada). Por defecto True para retrocompatibilidad.
+    zerophase: bool = True
 
     @classmethod
     def from_dict(cls, params: Dict) -> 'EllipseParams':
@@ -94,7 +98,10 @@ class EllipseParams:
             slip_shape=int(get('Slip shape', 1)),
             freq1=float(get('Frequency 1 (Freq1)', 0.02)),
             freq2=float(get('Frequency 2 (Freq2)', 0.10)),
-            t0=float(get('Time shift (T0)', 3.0))
+            t0=float(get('Time shift (T0)', 3.0)),
+            source_type=int(get('Source type', params.get('source_type', 4))),
+            # 1 = acausal (zero-phase), 0 = causal. Default 1 si no esta en input.ctl.
+            zerophase=bool(int(get('Zerophase filter', 1))),
         )
 
 
@@ -152,6 +159,7 @@ class InversionProcessParams:
     ss_other: int        # Sample size for other iterations (NA)
     cells_resample: int
     misfit_time_window: float = 0.0 # 0=full signal, >0=window in seconds
+    n_jobs: int = 1      # Parallel workers for NA/Forward evaluation
     # MCMC (only used when algorithm_type == 1); optional lines in input.ctl
     mcmc_total_steps: int = 500
     mcmc_burn_in: int = 0
@@ -169,6 +177,7 @@ class InversionProcessParams:
             ss_other=int(get('Sample size for other iterations', 30)),
             cells_resample=int(get('Cells to resample', 7)),
             misfit_time_window=float(get('Misfit time window', 0.0)),
+            n_jobs=int(get('Parallel workers', get('n_jobs', 1))),
             mcmc_total_steps=int(get('MCMC total steps', 500)),
             mcmc_burn_in=int(get('MCMC burn-in', 0)),
             mcmc_proposal_scale=float(get('MCMC proposal scale', 0.08)),
@@ -294,8 +303,10 @@ class ConfigParser:
     def get_base_template_path() -> Path:
         return Path(__file__).parent.parent / "io" / "templates" / "input.ctl.base"
 
-    def __init__(self, filepath: str):
-        self.filepath = filepath
+    def __init__(self, filepath: Optional[str | Path] = None):
+        if filepath is None:
+            filepath = "<manual>"
+        self.filepath = str(filepath)
         self.observed_data = None
         self.source_position = None
         self.fault_plane = None
@@ -306,7 +317,7 @@ class ConfigParser:
         self.stations = None
         self.velocity_model = None
         
-        if filepath not in ("<manual>", "<from_dict>"):
+        if self.filepath not in ("<manual>", "<from_dict>"):
             self.parse()
 
     def plot_stations(self, show: bool = True, save_path: Optional[str] = None, use_cartopy: bool = True) -> Tuple[Any, Any]:
@@ -518,6 +529,8 @@ class ConfigParser:
         p["frequency 1 (freq1)"] = f"{self.ellipse.freq1:.6f}"
         p["frequency 2 (freq2)"] = f"{self.ellipse.freq2:.6f}"
         p["time shift (t0)"] = f"{self.ellipse.t0:.6f}"
+        p["source type"] = str(self.ellipse.source_type)
+        p["zerophase filter"] = str(int(self.ellipse.zerophase))
         # Section 6
         p["algorithm type"] = str(self.inversion_process.algorithm_type)
         p["number of iterations"] = str(self.inversion_process.num_iterations)
@@ -525,6 +538,7 @@ class ConfigParser:
         p["sample size for other iterations"] = str(self.inversion_process.ss_other)
         p["cells to resample"] = str(self.inversion_process.cells_resample)
         p["misfit time window"] = f"{self.inversion_process.misfit_time_window:.6f}"
+        p["parallel workers (n_jobs)"] = str(self.inversion_process.n_jobs)
         p["mcmc total steps"] = str(self.inversion_process.mcmc_total_steps)
         p["mcmc burn-in"] = str(self.inversion_process.mcmc_burn_in)
         p["mcmc proposal scale"] = f"{self.inversion_process.mcmc_proposal_scale:.6f}"
@@ -684,6 +698,7 @@ def read_input_ctl(filepath: str) -> Dict[str, Any]:
         'freq1': cfg.ellipse.freq1,
         'freq2': cfg.ellipse.freq2,
         't0': cfg.ellipse.t0,
+        'source_type': cfg.ellipse.source_type,
         'algorithm_type': cfg.inversion_process.algorithm_type,
         'num_iterations': cfg.inversion_process.num_iterations,
         'ss1': cfg.inversion_process.ss1,

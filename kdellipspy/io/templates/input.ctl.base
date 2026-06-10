@@ -44,6 +44,7 @@
  Frequency 1 (Freq1)                      (Hz)  :    0.02
  Frequency 2 (Freq2)                      (Hz)  :    0.10
  Time shift (T0)                           (s)  :     2.0
+ Source type (axitra)                           :       4
 
 #===============================================:===============================
 # 5. Parameters to Invert (Min, Max, Flag)      :   Min      Max     Flag      |

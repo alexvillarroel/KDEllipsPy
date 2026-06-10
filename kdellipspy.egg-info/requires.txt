@@ -1,9 +1,10 @@
-numpy>=1.26.4
-scipy>=1.12.0
+numpy>=2.0.0
+scipy>=1.13.0
 matplotlib
 cartopy
 pyproj
 obspy
 neighpy
-pymc<5.20.0,>=5.10.0
-arviz<0.20.0,>=0.18.0
+joblib
+pymc>=5.10.0
+arviz>=0.18.0

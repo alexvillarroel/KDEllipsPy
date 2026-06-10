@@ -225,7 +225,8 @@ class DataPreprocessor:
                 extracted[:, np.newaxis, :],
                 time_target,
                 freq1=freq1,
-                freq2=freq2
+                freq2=freq2,
+                zerophase=bool(getattr(self.cfg.ellipse, "zerophase", True)),
             ).squeeze(1)
 
             if units == 1:

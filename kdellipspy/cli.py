@@ -212,12 +212,15 @@ def main() -> None:
 
     json_path = output_dir / "na_results.json"
     csv_path = output_dir / "na_results.csv"
+    save_path = output_dir / "inversion_result.joblib"
 
     result.export_results(json_path)
     result.export_csv(csv_path)
+    result.save(save_path)
 
     print(f"Resultados guardados en: {json_path}", flush=True)
     print(f"Resultados guardados en: {csv_path}", flush=True)
+    print(f"Objeto de inversión guardado en: {save_path}", flush=True)
 
     try:
         import matplotlib
