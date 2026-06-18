@@ -1,0 +1,106 @@
+
+=== 20201025T213242  M4.6  d3D=5.5 km ===
+  CX.PB01: 6 trazas
+  CX.PB02: 6 trazas
+  CX.PB03: 6 trazas
+  CX.PB05: 6 trazas
+  CX.PB06: 6 trazas
+  CX.PB07: 3 trazas
+  CX.PB09: 6 trazas
+  CX.PB10: 6 trazas
+  CX.PB14: 3 trazas
+  CX.PB19: 6 trazas
+  C1.AF01: 6 trazas
+  -> 60 trazas en /home/alex/KDEllipsPy/inversions/2020-06-03/egf/20201025T213242/RAW
+
+=== 20200607T212632  M4.0  d3D=3.6 km ===
+  CX.PB01: 6 trazas
+  CX.PB02: 6 trazas
+  CX.PB03: 6 trazas
+  CX.PB05: 6 trazas
+  CX.PB06: 6 trazas
+  CX.PB07: 3 trazas
+  CX.PB09: 6 trazas
+  CX.PB10: 6 trazas
+  CX.PB14: 3 trazas
+  CX.PB19: 6 trazas
+  C1.AF01: 6 trazas
+  -> 60 trazas en /home/alex/KDEllipsPy/inversions/2020-06-03/egf/20200607T212632/RAW
+
+=== 20200616T175441  M4.89  d3D=17.7 km ===
+  CX.PB01: 6 trazas
+  CX.PB02: 6 trazas
+  CX.PB03: 6 trazas
+  CX.PB05: 6 trazas
+  CX.PB06: 6 trazas
+  CX.PB07: 3 trazas
+  CX.PB09: 6 trazas
+  CX.PB10: 6 trazas
+  CX.PB14: 3 trazas
+  CX.PB19: 6 trazas
+  C1.AF01: 6 trazas
+  -> 60 trazas en /home/alex/KDEllipsPy/inversions/2020-06-03/egf/20200616T175441/RAW
+
+Listo: 180 trazas en total para 3 candidatos.
+Validando EGF 20201025T213242 (M4.6, d3D=5.5 km), banda 0.1-0.3 Hz
+  PB05: SNR_P(egf)=1.2  CC_P(Z)=0.68 (-6.2s)  CC_S(T)=0.67 (+3.9s)
+  PB06: SNR_P(egf)=0.7  CC_P(Z)=0.53 (+2.2s)  CC_S(T)=0.60 (+9.1s)
+  PB08: faltan datos (egf=False, main=True)
+  PB19: SNR_P(egf)=1.3  CC_P(Z)=0.63 (+0.8s)  CC_S(T)=0.54 (+1.1s)
+figura -> /home/alex/KDEllipsPy/inversions/2020-06-03/egf/validacion_20201025T213242.png
+informe -> /home/alex/KDEllipsPy/inversions/2020-06-03/egf/INFORME_egf.md
+Veredicto: VALIDA (CC_S mediana >= 0.6)
+Validando EGF 20200607T212632 (M4.0, d3D=3.6 km), banda 0.1-0.3 Hz
+Traceback (most recent call last):
+  File "/home/alex/KDEllipsPy/inversions/2020-06-03/egf/codigos/validar_egf.py", line 257, in <module>
+    main()
+  File "/home/alex/KDEllipsPy/inversions/2020-06-03/egf/codigos/validar_egf.py", line 163, in main
+    egf = cargar_egf(tag, ev, sta)
+          ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alex/KDEllipsPy/inversions/2020-06-03/egf/codigos/validar_egf.py", line 130, in cargar_egf
+    preparar(tr, ev["time"], integrar=False)
+  File "/home/alex/KDEllipsPy/inversions/2020-06-03/egf/codigos/validar_egf.py", line 80, in preparar
+    tr.interpolate(sampling_rate=FS, starttime=t0 - 60.0)
+  File "/home/alex/.conda/envs/kdellipspy/lib/python3.11/site-packages/decorator/__init__.py", line 247, in fun
+    return caller(func, *(extras + args), **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alex/.conda/envs/kdellipspy/lib/python3.11/site-packages/obspy/core/util/decorator.py", line 244, in skip_if_no_data
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alex/.conda/envs/kdellipspy/lib/python3.11/site-packages/decorator/__init__.py", line 247, in fun
+    return caller(func, *(extras + args), **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alex/.conda/envs/kdellipspy/lib/python3.11/site-packages/obspy/core/util/decorator.py", line 233, in raise_if_masked
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alex/.conda/envs/kdellipspy/lib/python3.11/site-packages/decorator/__init__.py", line 247, in fun
+    return caller(func, *(extras + args), **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alex/.conda/envs/kdellipspy/lib/python3.11/site-packages/obspy/core/trace.py", line 284, in _add_processing_info
+    result = func(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alex/.conda/envs/kdellipspy/lib/python3.11/site-packages/obspy/core/trace.py", line 2513, in interpolate
+    self.data = np.atleast_1d(func(
+                              ^^^^^
+  File "/home/alex/.conda/envs/kdellipspy/lib/python3.11/site-packages/obspy/signal/interpolation.py", line 135, in weighted_average_slopes
+    old_end, new_end = _validate_parameters(data, old_start, old_dt,
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/alex/.conda/envs/kdellipspy/lib/python3.11/site-packages/obspy/signal/interpolation.py", line 34, in _validate_parameters
+    raise ValueError("The new array must be fully contained in the old "
+ValueError: The new array must be fully contained in the old array. No extrapolation can be performed.
+Validando EGF 20200607T212632 (M4.0, d3D=3.6 km), banda 0.1-0.3 Hz
+  PB05: SNR_P(egf)=2.1  CC_P(Z)=0.59 (-9.4s)  CC_S(T)=0.49 (-4.1s)
+  PB06: SNR_P(egf)=1.0  CC_P(Z)=0.64 (+0.6s)  CC_S(T)=0.45 (-9.6s)
+  PB08: faltan datos (egf=False, main=True)
+  PB19: SNR_P(egf)=1.2  CC_P(Z)=0.46 (+4.5s)  CC_S(T)=0.43 (+4.6s)
+figura -> /home/alex/KDEllipsPy/inversions/2020-06-03/egf/validacion_20200607T212632.png
+informe -> /home/alex/KDEllipsPy/inversions/2020-06-03/egf/INFORME_egf.md
+Veredicto: MARGINAL (0.4 <= CC_S < 0.6)
+Validando EGF 20200616T175441 (M4.89, d3D=17.7 km), banda 0.1-0.3 Hz
+  PB05: SNR_P(egf)=1.6  CC_P(Z)=0.78 (-1.2s)  CC_S(T)=0.66 (+3.3s)
+  PB06: SNR_P(egf)=3.0  CC_P(Z)=0.54 (-0.1s)  CC_S(T)=0.77 (+3.5s)
+  PB08: faltan datos (egf=False, main=True)
+  PB19: SNR_P(egf)=2.7  CC_P(Z)=0.57 (+0.8s)  CC_S(T)=0.81 (-0.9s)
+figura -> /home/alex/KDEllipsPy/inversions/2020-06-03/egf/validacion_20200616T175441.png
+informe -> /home/alex/KDEllipsPy/inversions/2020-06-03/egf/INFORME_egf.md
+Veredicto: VALIDA (CC_S mediana >= 0.6)

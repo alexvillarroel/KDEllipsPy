@@ -9,20 +9,15 @@
 #===============================================:===============================
  Time window start (t1)                         :     0.0
  Time window end (t2)                           :   128.0
- Number of points (Npts)                        :     512
- Delta / Time step                              :    0.25
+ Number of points (Npts)                        :     128
+ Delta / Time step                              :    1.0
  Units                        (1:disp, 2:vel)   :       2
 
 #===============================================:===============================
 # 2. Source & Focal Mechanism          :     Values                   |
 #===============================================:===============================
  Event Name                                     :     Calama 2020 Intraplate
-<<<<<<< HEAD
- Origin Time (UTC)                              :     2020-06-03T07:35:28.000Z
-=======
- Event Origin Date (UTC, YYYY-MM-DD)           :     2020-06-03
- Event Origin Time (UTC, HH:MM:SS[.sss])       :     07:35:34.000
->>>>>>> origin/main
+ Origin Time (UTC)                              :     2020-06-03T07:35:34.000Z
  Latitude                                       :   -23.2470
  Longitude                                      :   -68.530
  Depth                                     (km) :      123.400
@@ -49,6 +44,7 @@
  Frequency 1 (Freq1)                      (Hz)  :    0.02
  Frequency 2 (Freq2)                      (Hz)  :    0.1
  Time shift (T0)                           (s)  :     3.0
+ Zerophase filter (0:causal, 1:acausal)         :     0
 
 #===============================================:===============================
 # 5. Parameters to Invert (Min, Max, Flag)      :   Min      Max     Flag      |
@@ -66,11 +62,11 @@
 # 6. Inversion Process Parameters               :     Values                   |
 #===============================================:===============================
  Algorithm type                 (0:NA, 1:MC)    :      0
- NA: Number of iterations                           :      5
- NA: Sample size for first iteration (SS1)          :      200
- NA: Sample size for other iterations               :      30
- NA: Cells to resample                              :      4
- Misfit time window     (s, 0.0=Full signal)    :      0.0
+ NA: Number of iterations                           :      50
+ NA: Sample size for first iteration (SS1)          :      500
+ NA: Sample size for other iterations               :      50
+ NA: Cells to resample                              :      10
+ Misfit time window     (s, 0.0=Full signal)    :      20.0
  MCMC: total steps                               :      500
  MCMC: burn-in                                   :      100
  MCMC: proposal scale                            :      0.05

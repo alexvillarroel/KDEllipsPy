@@ -1,0 +1,212 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+
+% --- Sustitutos ligeros de siunitx (paquete no disponible) ---
+\newcommand{\km}{km}
+\newcommand{\s}{s}
+\newcommand{\Hz}{Hz}
+\newcommand{\m}{m}
+\newcommand{\num}[1]{#1}
+\newcommand{\SI}[2]{#1\,#2}
+\newcommand{\SIrange}[3]{#1--#2\,#3}
+\usepackage[hidelinks]{hyperref}
+\geometry{margin=2.5cm}
+
+\title{Inversión cinemática del sismo de Calama 2020 ($M_w$ 6.8):\\
+de la fuente puntual a la función de Green empírica}
+\author{Alex Villarroel}
+\date{12 de junio de 2026}
+
+\newcommand{\fn}[1]{\texttt{\small #1}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Se documenta el avance en la inversión cinemática del sismo intraslab de Calama
+del 2020-06-03 ($M_w$ 6.8, $-23.247^\circ$, $-68.530^\circ$, profundidad
+\SI{123.4}{\km}) con el paquete \fn{kdellipspy} (parche elíptico de
+\emph{slip}, 7 parámetros, algoritmo Neighbourhood). El objetivo es resolver la
+geometría de la aspereza, que las funciones de Green sintéticas 1D (AXITRA) no
+logran constreñir pese a buenos ajustes de forma de onda. Se construyó un flujo
+de función de Green empírica (EGF) y se mostró, mediante un control limpio, que
+la ``aspereza compacta'' obtenida inicialmente era un artefacto de errores de
+alineación temporal, no una característica robusta de los datos.
+\end{abstract}
+
+\section{Datos y preprocesamiento}
+Registros de acelerómetros de las redes CSN/IPOC. Todos los canales (\fn{HN*} y
+\fn{HL*}) son acelerómetros en este conjunto; se integran una vez a velocidad.
+El observado se construye a partir de los \fn{.txt} crudos: \emph{detrend},
+\emph{demean}, \emph{taper}, integración (\fn{cumtrapz}), filtro
+\emph{bandpass} Butterworth de 4º orden \textbf{causal} (idéntico al aplicado a
+las sintéticas), y remuestreo a una rejilla común. El misfit es el L2
+normalizado global
+\begin{equation}
+  \chi^2 = \frac{\sum_{s}\sum_{c\in W}(o_{sc}-u_{sc})^2}
+                {\sum_{s}\sum_{c\in W} o_{sc}^2},
+\end{equation}
+evaluado en \textbf{ventanas de \SI{20}{\s}}: P (radial $+$ vertical) desde
+$t_P-\SI{1}{\s}$ y S (transversal) desde $t_S-\SI{1}{\s}$ (tiempos de
+\texttt{taup}, iasp91). Las amplitudes relativas entre estaciones importan; un
+factor de amplitud uniforme se cancela.
+
+\section{Reajuste del caso AXITRA \emph{legacy}}
+Se reprodujo el resultado de referencia en \fn{inversions/calama2020}:
+$N_\text{pts}=128$, $\Delta t=\SI{1}{\s}$, tiempo de origen corregido a
+\texttt{07:35:34}, ventana de misfit de \SI{20}{\s}, filtro causal, y
+\num{3000} evaluaciones del NA. Banda \SIrange{0.02}{0.1}{\Hz}, 8 estaciones.
+
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+Cantidad & Valor \\
+\midrule
+Misfit (mejor) & \num{0.204} \\
+$M_w$ recuperado & \num{6.91} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Buen ajuste de forma, pero el \emph{appraisal} confirma (5.ª vez)
+que la geometría queda sin resolver: misfit bajo $\neq$ resolución.
+
+\section{Espectros}
+\paragraph{Amplitud (desplazamiento).} Para las 48 estaciones se calculó el
+espectro de desplazamiento en el dominio de la frecuencia,
+$|U(f)| = |A(f)|/(2\pi f)^2$, evitando la deriva de la doble integración
+temporal; combinación vectorial de las 3 componentes. Salida:
+\fn{output/espectros\_amplitud.pdf}.
+
+\paragraph{Señal vs.\ ruido (metodología ISOLA).} Siguiendo Sokos \&
+Zahradník: ventana de ruido (NTW) del mismo largo que la de señal (STW) y
+terminando donde ésta comienza; $\mathrm{SNR}(f)$ como promedio por componente
+de $S_c(f)/N_c(f)$; valor único $=$ promedio de la curva sobre la banda de
+inversión. Curvas guardadas en \fn{output/snr\_curvas.csv}, figura en
+\fn{output/espectros\_snr.pdf}. \textbf{Hallazgo:} el ruido microsísmico
+oceánico tiene su máximo justo en \SIrange{0.1}{0.3}{\Hz} (la banda EGF
+elegida), y el SNR de la EGF mejora $2$--$3\times$ al desplazarse a
+\SIrange{0.15}{0.4}{\Hz}.
+
+\begin{table}[h]
+\centering
+\caption{SNR promedio (ISOLA) de la EGF $M$4.9 por estación.}
+\begin{tabular}{lcc}
+\toprule
+Estación & \SIrange{0.1}{0.3}{\Hz} & \SIrange{0.15}{0.4}{\Hz} \\
+\midrule
+PB06 & 7.1 & 24.5 \\
+PB09 & 5.6 & 23.2 \\
+AF01 & 4.5 & 17.9 \\
+PB03 & 4.1 & 14.6 \\
+PB19 & 4.7 & 12.0 \\
+PB01 & 4.2 & 11.3 \\
+PB05 & 3.8 & 10.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Función de Green empírica (EGF)}
+\paragraph{Selección y validación.} Búsqueda FDSN (56 candidatos); el mejor es
+el evento \textbf{2020-06-16 $M$4.9} ($\Delta_\text{3D}=\SI{17.7}{\km}$),
+con CC$_S$(T) mediana $0.77$ en \SIrange{0.1}{0.3}{\Hz}. Lección: a baja
+frecuencia pesa más el SNR (magnitud) que la co-localización fina.
+
+\paragraph{Operador.} \emph{Shift-and-sum} con directividad,
+\begin{equation}
+  u_i(t) = \sum_k \frac{m_k}{M_0^\text{egf}}\,
+           \mathrm{EGF}_i\!\left(t-\tau_{ki}\right), \qquad
+  \tau_{ki} = t_\text{rup}(k) + \frac{r_{ki}-r_{0i}}{c},
+\end{equation}
+con retardo fraccional vía rampa de fase en FFT. Tres tests de cordura pasan
+(límite puntual exacto, retardo, conservación de momento a baja frecuencia).
+La geometría se toma de \fn{kdellipspy}
+(\fn{build\_geometry\_with\_ellipse\_slip} $\to$ momentos y tiempos de ruptura).
+
+\paragraph{Revalidación CC por banda.} La CC mainshock$\leftrightarrow$EGF se
+sostiene en \SIrange{0.15}{0.4}{\Hz} (mediana $0.72$) y \textbf{recupera PB02}
+(de $0.48$ a $0.73$): su problema en la banda baja era el microsismo, no el
+sitio. Pasa de 7/8 a \textbf{8/8} estaciones válidas, ganando cobertura
+azimutal. Los lags azimutales de directividad se preservan
+(norte $+5/+6$ s, sur $-1$ s).
+
+\section{Inversión EGF: el problema de la compacidad}
+La primera batería (banda \SIrange{0.1}{0.3}{\Hz}, sin corrección de lags,
+9 corridas) entregó por primera vez un paisaje discriminante (aleatorios
+$\sim 1.12$ vs.\ mejor $0.87$) y una \emph{aspereza compacta} ($a_1\,a_2 \approx
+3\times6$ km, área $40$--$80$ km$^2$). Sin embargo, el piso de misfit
+$\sim0.87$ y los pisos de fase por ventana ($1-\mathrm{CC}^2$) sugerían que el
+ajuste estaba limitado por desalineaciones estáticas de $2$--$4$ s
+(localización del catálogo de la EGF $+$ trayecto 3D).
+
+\paragraph{Lags estáticos.} Se añadió al misfit un \textbf{corrimiento estático
+por estación y ventana} ($\pm\SI{4}{\s}$, P y S independientes), y se excluyeron
+las ventanas P de menor SNR (PB02, PB09). Nueva batería de 6 corridas en
+\SIrange{0.15}{0.4}{\Hz} con dos controles para aislar el efecto.
+
+\begin{table}[h]
+\centering
+\caption{Mejor modelo por corrida (\num{3000} evaluaciones NA c/u).
+Área $=\pi a_1 a_2$.}
+\small
+\begin{tabular}{lccccccccc}
+\toprule
+Corrida & banda & lags & misfit & $a_1$ & $a_2$ & dmax & $v_r$ & área & $M_w$ \\
+        & (Hz)  &      &        & (km)  & (km)  & (m)  & (km/s)& (km$^2$) & \\
+\midrule
+principal           & 0.15--0.4 & $\pm4$ & 0.629 & 8.0 & 9.8  & 6.8 & 4.1 & 246 & 7.24 \\
+semilla 22          & 0.15--0.4 & $\pm4$ & 0.556 & 8.5 & 12.3 & 7.4 & 1.8 & 330 & 7.35 \\
+semilla 33          & 0.15--0.4 & $\pm4$ & 0.621 & 9.8 & 8.4  & 4.5 & 1.6 & 257 & 7.13 \\
+sin PB02            & 0.15--0.4 & $\pm4$ & 0.601 & 6.6 & 12.0 & 7.7 & 1.9 & 249 & 7.28 \\
+\textbf{nolag (ctrl)} & 0.15--0.4 & no    & 0.767 & 7.7 & \textbf{3.8} & 7.3 & 1.5 & \textbf{92} & 6.97 \\
+\textbf{0.1--0.3+lag (ctrl)} & 0.1--0.3 & $\pm4$ & 0.543 & 5.2 & 11.6 & 7.7 & 1.6 & 189 & 7.21 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Conclusión.} El control limpio (misma banda, estaciones y
+exclusiones; sólo lags on/off) es inequívoco: \textbf{92 km$^2$ sin lags vs.\
+246--330 km$^2$ con lags}. Los errores de alineación penalizaban las fuentes
+extendidas y favorecían artificialmente la solución compacta. La compacidad de
+la primera batería era, en gran medida, un \emph{artefacto de timing}.
+
+\section{Estado actual y recomendación}
+\begin{itemize}
+  \item \textbf{Robusto:} fuente \emph{extendida} (área $\sim190$--330 km$^2$),
+        dmax $\sim\SI{7}{\m}$; el paisaje discrimina ($\Delta\approx0.3$ sobre
+        aleatorios).
+  \item \textbf{No resuelto:} orientación ($\theta$), posición temporal ($t_p$),
+        $v_r$ ($1.6$--$4.1$); $M_0$ \emph{sobreestimado} (factor 3--6,
+        $M_w$ 7.0--7.35 vs.\ 6.8), acoplado a la incertidumbre de
+        $M_0^\text{egf}$.
+  \item \textbf{Riesgo metodológico:} lags libres de $\pm4$ s eliminan el
+        \emph{moveout} azimutal, que es la señal que constriñe la fuente finita
+        $\Rightarrow$ varios lags rielan en $+4$ s y la geometría se
+        desordena.
+\end{itemize}
+
+\paragraph{Recomendación.} (i) Mantener AXITRA 1D
+(\SIrange{0.02}{0.1}{\Hz} \emph{legacy}; \SIrange{0.06}{0.15}{\Hz} evento nuevo)
+como resultado de producción para lo que sí constriñe ($M_0$, mecanismo,
+profundidad, duración). (ii) Tratar la EGF como línea complementaria para la
+geometría, pero \textbf{reemplazar los lags libres por una alineación estática
+medida una sola vez} (lag de CC, \fn{cc\_bandas.csv}) horneada en los datos $+$
+lag residual $\pm1$ s, preservando así la directividad. (iii) Calibrar
+$M_0^\text{egf}$ por cociente espectral de \emph{plateaus} a baja frecuencia
+antes de interpretar dmax$/M_0$ en términos absolutos.
+
+\paragraph{Reproducibilidad.} Flujo en
+\fn{inversions/2020-06-03/egf/codigos/}; inversión vía
+\fn{invertir\_egf.py} con \fn{-{}-banda}, \fn{-{}-csv}, \fn{-{}-lagmax},
+\fn{-{}-sinP}, \fn{-{}-dmax}. Informes: \fn{INFORME\_NOCHE.md} (1.ª batería),
+\fn{INFORME\_b1540.md} (lags estáticos).
+
+\end{document}

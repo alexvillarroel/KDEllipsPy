@@ -1,0 +1,424 @@
+========================================================================
+KINEMATIC INVERSION - PYTHON PIPELINE
+========================================================================
+
+========================================================================
+[1/6] Validando rutas de entrada y datos
+========================================================================
+✓ Directorio de configuración: /home/alex/KDEllipsPy/inversions/calama2020
+✓ Directorio de datos: /home/alex/KDEllipsPy/inversions/calama2020/DATA
+
+========================================================================
+[2/6] Cargando configuración
+========================================================================
+Evento: Calama 2020 Intraplate
+Estaciones: 8
+Frecuencia: 0.02 - 0.1 Hz
+
+========================================================================
+[3/6] Preparando datos observados
+========================================================================
+Datos observados listos con forma: (8, 3, 128)
+
+========================================================================
+[4/6] Inicializando inversión (NA / neighpy)
+========================================================================
+
+========================================================================
+[5/6] Ejecutando inversión
+========================================================================
+[NA] Adjusting n_samples_iteration from 30 to 32 to satisfy neighpy constraint (must be a multiple of n_cells_resample=4).
+[NA] Starting search: ni=200, ns=32, n=5, nr=4 -> expected evaluations=360 (n_jobs=1)
+NAI - Initial Random Search
+[NA] iter=00000 eval=00001 misfit=1.055010e+00 best=1.055010e+00
+[NA] iter=00000 eval=00002 misfit=1.646419e+00 best=1.055010e+00
+[NA] iter=00000 eval=00003 misfit=3.837528e+00 best=1.055010e+00
+[NA] iter=00000 eval=00004 misfit=8.892010e-01 best=8.892010e-01
+[NA] iter=00000 eval=00005 misfit=7.983981e-01 best=7.983981e-01
+[NA] iter=00000 eval=00006 misfit=5.395180e+00 best=7.983981e-01
+[NA] iter=00000 eval=00007 misfit=1.550182e+00 best=7.983981e-01
+[NA] iter=00000 eval=00008 misfit=9.736244e-01 best=7.983981e-01
+[NA] iter=00000 eval=00009 misfit=3.910671e+00 best=7.983981e-01
+[NA] iter=00000 eval=00010 misfit=1.661884e+00 best=7.983981e-01
+[NA] iter=00000 eval=00011 misfit=1.639182e+00 best=7.983981e-01
+[NA] iter=00000 eval=00012 misfit=4.078911e+00 best=7.983981e-01
+[NA] iter=00000 eval=00013 misfit=9.635827e-01 best=7.983981e-01
+[NA] iter=00000 eval=00014 misfit=2.739688e+00 best=7.983981e-01
+[NA] iter=00000 eval=00015 misfit=2.194700e+00 best=7.983981e-01
+[NA] iter=00000 eval=00016 misfit=4.270323e+00 best=7.983981e-01
+[NA] iter=00000 eval=00017 misfit=3.662794e+00 best=7.983981e-01
+[NA] iter=00000 eval=00018 misfit=1.061326e+00 best=7.983981e-01
+[NA] iter=00000 eval=00019 misfit=8.759023e-01 best=7.983981e-01
+[NA] iter=00000 eval=00020 misfit=1.622805e+01 best=7.983981e-01
+[NA] iter=00000 eval=00021 misfit=3.427911e+00 best=7.983981e-01
+[NA] iter=00000 eval=00022 misfit=1.503879e+00 best=7.983981e-01
+[NA] iter=00000 eval=00023 misfit=4.343308e+00 best=7.983981e-01
+[NA] iter=00000 eval=00024 misfit=2.054359e+00 best=7.983981e-01
+[NA] iter=00000 eval=00025 misfit=2.958479e+00 best=7.983981e-01
+[NA] iter=00000 eval=00026 misfit=1.651468e+00 best=7.983981e-01
+[NA] iter=00000 eval=00027 misfit=8.272697e+00 best=7.983981e-01
+[NA] iter=00000 eval=00028 misfit=1.556629e+00 best=7.983981e-01
+[NA] iter=00000 eval=00029 misfit=1.468876e+01 best=7.983981e-01
+[NA] iter=00000 eval=00030 misfit=3.344831e+01 best=7.983981e-01
+[NA] iter=00000 eval=00031 misfit=1.015195e+00 best=7.983981e-01
+[NA] iter=00000 eval=00032 misfit=2.839868e+00 best=7.983981e-01
+[NA] iter=00000 eval=00033 misfit=1.377444e+01 best=7.983981e-01
+[NA] iter=00000 eval=00034 misfit=2.461339e+00 best=7.983981e-01
+[NA] iter=00000 eval=00035 misfit=1.264142e+00 best=7.983981e-01
+[NA] iter=00000 eval=00036 misfit=1.399097e+00 best=7.983981e-01
+[NA] iter=00000 eval=00037 misfit=1.154589e+00 best=7.983981e-01
+[NA] iter=00000 eval=00038 misfit=1.368020e+00 best=7.983981e-01
+[NA] iter=00000 eval=00039 misfit=3.996028e+00 best=7.983981e-01
+[NA] iter=00000 eval=00040 misfit=3.043152e+00 best=7.983981e-01
+[NA] iter=00000 eval=00041 misfit=1.150060e+00 best=7.983981e-01
+[NA] iter=00000 eval=00042 misfit=4.629591e+00 best=7.983981e-01
+[NA] iter=00000 eval=00043 misfit=8.233709e-01 best=7.983981e-01
+[NA] iter=00000 eval=00044 misfit=1.348428e+00 best=7.983981e-01
+[NA] iter=00000 eval=00045 misfit=1.199955e+00 best=7.983981e-01
+[NA] iter=00000 eval=00046 misfit=1.050507e+00 best=7.983981e-01
+[NA] iter=00000 eval=00047 misfit=2.542855e+00 best=7.983981e-01
+[NA] iter=00000 eval=00048 misfit=1.053521e+01 best=7.983981e-01
+[NA] iter=00000 eval=00049 misfit=1.340184e+01 best=7.983981e-01
+[NA] iter=00000 eval=00050 misfit=1.087445e+00 best=7.983981e-01
+[NA] iter=00000 eval=00051 misfit=9.809375e-01 best=7.983981e-01
+[NA] iter=00000 eval=00052 misfit=1.921099e+00 best=7.983981e-01
+[NA] iter=00000 eval=00053 misfit=2.930911e+00 best=7.983981e-01
+[NA] iter=00000 eval=00054 misfit=1.452291e+00 best=7.983981e-01
+[NA] iter=00000 eval=00055 misfit=4.759219e+00 best=7.983981e-01
+[NA] iter=00000 eval=00056 misfit=2.110325e+00 best=7.983981e-01
+[NA] iter=00000 eval=00057 misfit=1.048859e+00 best=7.983981e-01
+[NA] iter=00000 eval=00058 misfit=2.651930e+00 best=7.983981e-01
+[NA] iter=00000 eval=00059 misfit=1.232643e+00 best=7.983981e-01
+[NA] iter=00000 eval=00060 misfit=5.197356e+00 best=7.983981e-01
+[NA] iter=00000 eval=00061 misfit=2.796898e+00 best=7.983981e-01
+[NA] iter=00000 eval=00062 misfit=2.973242e+00 best=7.983981e-01
+[NA] iter=00000 eval=00063 misfit=9.191324e-01 best=7.983981e-01
+[NA] iter=00000 eval=00064 misfit=3.032775e+00 best=7.983981e-01
+[NA] iter=00000 eval=00065 misfit=1.908736e+01 best=7.983981e-01
+[NA] iter=00000 eval=00066 misfit=1.494939e+00 best=7.983981e-01
+[NA] iter=00000 eval=00067 misfit=4.109784e+00 best=7.983981e-01
+[NA] iter=00000 eval=00068 misfit=1.081215e+00 best=7.983981e-01
+[NA] iter=00000 eval=00069 misfit=1.124793e+00 best=7.983981e-01
+[NA] iter=00000 eval=00070 misfit=1.192989e+01 best=7.983981e-01
+[NA] iter=00000 eval=00071 misfit=3.488839e+00 best=7.983981e-01
+[NA] iter=00000 eval=00072 misfit=4.288936e+00 best=7.983981e-01
+[NA] iter=00000 eval=00073 misfit=1.168571e+01 best=7.983981e-01
+[NA] iter=00000 eval=00074 misfit=3.478900e+00 best=7.983981e-01
+[NA] iter=00000 eval=00075 misfit=1.549436e+00 best=7.983981e-01
+[NA] iter=00000 eval=00076 misfit=1.513925e+00 best=7.983981e-01
+[NA] iter=00000 eval=00077 misfit=4.148484e+00 best=7.983981e-01
+[NA] iter=00000 eval=00078 misfit=1.426688e+00 best=7.983981e-01
+[NA] iter=00000 eval=00079 misfit=9.425069e+00 best=7.983981e-01
+[NA] iter=00000 eval=00080 misfit=2.768202e+00 best=7.983981e-01
+[NA] iter=00000 eval=00081 misfit=9.167502e+00 best=7.983981e-01
+[NA] iter=00000 eval=00082 misfit=2.198004e+00 best=7.983981e-01
+[NA] iter=00000 eval=00083 misfit=2.946426e+00 best=7.983981e-01
+[NA] iter=00000 eval=00084 misfit=2.113250e+00 best=7.983981e-01
+[NA] iter=00000 eval=00085 misfit=4.764881e+00 best=7.983981e-01
+[NA] iter=00000 eval=00086 misfit=7.832574e-01 best=7.832574e-01
+[NA] iter=00000 eval=00087 misfit=4.686089e+00 best=7.832574e-01
+[NA] iter=00000 eval=00088 misfit=1.784201e+00 best=7.832574e-01
+[NA] iter=00000 eval=00089 misfit=1.428159e+00 best=7.832574e-01
+[NA] iter=00000 eval=00090 misfit=3.415794e+00 best=7.832574e-01
+[NA] iter=00000 eval=00091 misfit=3.645137e+00 best=7.832574e-01
+[NA] iter=00000 eval=00092 misfit=4.193014e+00 best=7.832574e-01
+[NA] iter=00000 eval=00093 misfit=3.968544e+00 best=7.832574e-01
+[NA] iter=00000 eval=00094 misfit=5.682603e+00 best=7.832574e-01
+[NA] iter=00000 eval=00095 misfit=2.674866e+00 best=7.832574e-01
+[NA] iter=00000 eval=00096 misfit=1.347538e+00 best=7.832574e-01
+[NA] iter=00000 eval=00097 misfit=8.451134e+00 best=7.832574e-01
+[NA] iter=00000 eval=00098 misfit=1.204182e+01 best=7.832574e-01
+[NA] iter=00000 eval=00099 misfit=2.028499e+00 best=7.832574e-01
+[NA] iter=00000 eval=00100 misfit=1.018105e+00 best=7.832574e-01
+[NA] iter=00000 eval=00101 misfit=4.193038e+00 best=7.832574e-01
+[NA] iter=00000 eval=00102 misfit=1.717394e+01 best=7.832574e-01
+[NA] iter=00000 eval=00103 misfit=4.224941e+00 best=7.832574e-01
+[NA] iter=00000 eval=00104 misfit=3.016813e+00 best=7.832574e-01
+[NA] iter=00000 eval=00105 misfit=1.730048e+00 best=7.832574e-01
+[NA] iter=00000 eval=00106 misfit=8.630862e+00 best=7.832574e-01
+[NA] iter=00000 eval=00107 misfit=1.149886e+01 best=7.832574e-01
+[NA] iter=00000 eval=00108 misfit=8.752808e+00 best=7.832574e-01
+[NA] iter=00000 eval=00109 misfit=8.363626e+00 best=7.832574e-01
+[NA] iter=00000 eval=00110 misfit=2.487364e+00 best=7.832574e-01
+[NA] iter=00000 eval=00111 misfit=1.850773e+00 best=7.832574e-01
+[NA] iter=00000 eval=00112 misfit=1.227547e+00 best=7.832574e-01
+[NA] iter=00000 eval=00113 misfit=2.825700e+00 best=7.832574e-01
+[NA] iter=00000 eval=00114 misfit=2.674022e+00 best=7.832574e-01
+[NA] iter=00000 eval=00115 misfit=1.545035e+00 best=7.832574e-01
+[NA] iter=00000 eval=00116 misfit=7.234285e+00 best=7.832574e-01
+[NA] iter=00000 eval=00117 misfit=1.013414e+01 best=7.832574e-01
+[NA] iter=00000 eval=00118 misfit=1.175152e+00 best=7.832574e-01
+[NA] iter=00000 eval=00119 misfit=2.443471e+00 best=7.832574e-01
+[NA] iter=00000 eval=00120 misfit=1.351982e+00 best=7.832574e-01
+[NA] iter=00000 eval=00121 misfit=3.410111e+00 best=7.832574e-01
+[NA] iter=00000 eval=00122 misfit=1.246741e+00 best=7.832574e-01
+[NA] iter=00000 eval=00123 misfit=1.085553e+00 best=7.832574e-01
+[NA] iter=00000 eval=00124 misfit=1.560132e+00 best=7.832574e-01
+[NA] iter=00000 eval=00125 misfit=8.609219e-01 best=7.832574e-01
+[NA] iter=00000 eval=00126 misfit=2.108598e+00 best=7.832574e-01
+[NA] iter=00000 eval=00127 misfit=2.352518e+00 best=7.832574e-01
+[NA] iter=00000 eval=00128 misfit=4.730000e+00 best=7.832574e-01
+[NA] iter=00000 eval=00129 misfit=8.841752e-01 best=7.832574e-01
+[NA] iter=00000 eval=00130 misfit=1.766524e+00 best=7.832574e-01
+[NA] iter=00000 eval=00131 misfit=8.064023e-01 best=7.832574e-01
+[NA] iter=00000 eval=00132 misfit=4.910092e+00 best=7.832574e-01
+[NA] iter=00000 eval=00133 misfit=1.049028e+01 best=7.832574e-01
+[NA] iter=00000 eval=00134 misfit=1.051129e+00 best=7.832574e-01
+[NA] iter=00000 eval=00135 misfit=1.161719e+00 best=7.832574e-01
+[NA] iter=00000 eval=00136 misfit=1.597493e+01 best=7.832574e-01
+[NA] iter=00000 eval=00137 misfit=1.770179e+00 best=7.832574e-01
+[NA] iter=00000 eval=00138 misfit=1.054989e+01 best=7.832574e-01
+[NA] iter=00000 eval=00139 misfit=1.370603e+00 best=7.832574e-01
+[NA] iter=00000 eval=00140 misfit=1.403009e+00 best=7.832574e-01
+[NA] iter=00000 eval=00141 misfit=2.097115e+00 best=7.832574e-01
+[NA] iter=00000 eval=00142 misfit=1.127377e+00 best=7.832574e-01
+[NA] iter=00000 eval=00143 misfit=1.960585e+00 best=7.832574e-01
+[NA] iter=00000 eval=00144 misfit=1.253935e+00 best=7.832574e-01
+[NA] iter=00000 eval=00145 misfit=1.066835e+00 best=7.832574e-01
+[NA] iter=00000 eval=00146 misfit=4.285618e+00 best=7.832574e-01
+[NA] iter=00000 eval=00147 misfit=1.082303e+00 best=7.832574e-01
+[NA] iter=00000 eval=00148 misfit=2.518371e+00 best=7.832574e-01
+[NA] iter=00000 eval=00149 misfit=2.403758e+00 best=7.832574e-01
+[NA] iter=00000 eval=00150 misfit=1.972108e+00 best=7.832574e-01
+[NA] iter=00000 eval=00151 misfit=1.227102e+00 best=7.832574e-01
+[NA] iter=00000 eval=00152 misfit=3.101928e+00 best=7.832574e-01
+[NA] iter=00000 eval=00153 misfit=3.195525e+00 best=7.832574e-01
+[NA] iter=00000 eval=00154 misfit=1.103191e+00 best=7.832574e-01
+[NA] iter=00000 eval=00155 misfit=1.544574e+01 best=7.832574e-01
+[NA] iter=00000 eval=00156 misfit=1.312872e+00 best=7.832574e-01
+[NA] iter=00000 eval=00157 misfit=1.069276e+00 best=7.832574e-01
+[NA] iter=00000 eval=00158 misfit=1.014709e+01 best=7.832574e-01
+[NA] iter=00000 eval=00159 misfit=2.103119e+00 best=7.832574e-01
+[NA] iter=00000 eval=00160 misfit=1.040609e+00 best=7.832574e-01
+[NA] iter=00000 eval=00161 misfit=9.428698e-01 best=7.832574e-01
+[NA] iter=00000 eval=00162 misfit=1.770501e+00 best=7.832574e-01
+[NA] iter=00000 eval=00163 misfit=9.817748e+00 best=7.832574e-01
+[NA] iter=00000 eval=00164 misfit=1.929602e+00 best=7.832574e-01
+[NA] iter=00000 eval=00165 misfit=1.431500e+00 best=7.832574e-01
+[NA] iter=00000 eval=00166 misfit=6.270808e+00 best=7.832574e-01
+[NA] iter=00000 eval=00167 misfit=2.488845e+00 best=7.832574e-01
+[NA] iter=00000 eval=00168 misfit=1.178376e+00 best=7.832574e-01
+[NA] iter=00000 eval=00169 misfit=1.292478e+01 best=7.832574e-01
+[NA] iter=00000 eval=00170 misfit=1.960684e+00 best=7.832574e-01
+[NA] iter=00000 eval=00171 misfit=2.269323e+00 best=7.832574e-01
+[NA] iter=00000 eval=00172 misfit=6.272350e+00 best=7.832574e-01
+[NA] iter=00000 eval=00173 misfit=8.907709e-01 best=7.832574e-01
+[NA] iter=00000 eval=00174 misfit=2.457299e+01 best=7.832574e-01
+[NA] iter=00000 eval=00175 misfit=3.702433e+00 best=7.832574e-01
+[NA] iter=00000 eval=00176 misfit=2.117661e+00 best=7.832574e-01
+[NA] iter=00000 eval=00177 misfit=2.079427e+00 best=7.832574e-01
+[NA] iter=00000 eval=00178 misfit=1.883161e+00 best=7.832574e-01
+[NA] iter=00000 eval=00179 misfit=4.713481e+00 best=7.832574e-01
+[NA] iter=00000 eval=00180 misfit=1.815382e+00 best=7.832574e-01
+[NA] iter=00000 eval=00181 misfit=1.274956e+00 best=7.832574e-01
+[NA] iter=00000 eval=00182 misfit=1.772440e+00 best=7.832574e-01
+[NA] iter=00000 eval=00183 misfit=2.104690e+00 best=7.832574e-01
+[NA] iter=00000 eval=00184 misfit=2.508930e+00 best=7.832574e-01
+[NA] iter=00000 eval=00185 misfit=2.496107e+00 best=7.832574e-01
+[NA] iter=00000 eval=00186 misfit=4.368273e+00 best=7.832574e-01
+[NA] iter=00000 eval=00187 misfit=6.170537e+00 best=7.832574e-01
+[NA] iter=00000 eval=00188 misfit=1.490047e+00 best=7.832574e-01
+[NA] iter=00000 eval=00189 misfit=1.565635e+00 best=7.832574e-01
+[NA] iter=00000 eval=00190 misfit=1.461014e+01 best=7.832574e-01
+[NA] iter=00000 eval=00191 misfit=4.618661e+00 best=7.832574e-01
+[NA] iter=00000 eval=00192 misfit=7.001984e+00 best=7.832574e-01
+[NA] iter=00000 eval=00193 misfit=1.909188e+00 best=7.832574e-01
+[NA] iter=00000 eval=00194 misfit=1.460438e+00 best=7.832574e-01
+[NA] iter=00000 eval=00195 misfit=1.272359e+01 best=7.832574e-01
+[NA] iter=00000 eval=00196 misfit=1.590696e+01 best=7.832574e-01
+[NA] iter=00000 eval=00197 misfit=1.303313e+01 best=7.832574e-01
+[NA] iter=00000 eval=00198 misfit=5.271594e+00 best=7.832574e-01
+[NA] iter=00000 eval=00199 misfit=8.472998e-01 best=7.832574e-01
+[NA] iter=00000 eval=00200 misfit=2.373908e+00 best=7.832574e-01
+NAI - Optimisation Loop:   0%|          | 0/5 [00:00<?, ?it/s][NA] iter=00001 eval=00201 misfit=8.351017e-01 best=7.832574e-01
+[NA] iter=00001 eval=00202 misfit=9.315007e-01 best=7.832574e-01
+[NA] iter=00001 eval=00203 misfit=1.076642e+00 best=7.832574e-01
+[NA] iter=00001 eval=00204 misfit=9.328780e-01 best=7.832574e-01
+[NA] iter=00001 eval=00205 misfit=8.855982e-01 best=7.832574e-01
+[NA] iter=00001 eval=00206 misfit=8.991395e-01 best=7.832574e-01
+[NA] iter=00001 eval=00207 misfit=8.812326e-01 best=7.832574e-01
+[NA] iter=00001 eval=00208 misfit=8.976891e-01 best=7.832574e-01
+[NA] iter=00001 eval=00209 misfit=7.892720e-01 best=7.832574e-01
+[NA] iter=00001 eval=00210 misfit=9.083521e-01 best=7.832574e-01
+[NA] iter=00001 eval=00211 misfit=9.704577e-01 best=7.832574e-01
+[NA] iter=00001 eval=00212 misfit=8.896684e-01 best=7.832574e-01
+[NA] iter=00001 eval=00213 misfit=1.197542e+00 best=7.832574e-01
+[NA] iter=00001 eval=00214 misfit=1.127641e+00 best=7.832574e-01
+[NA] iter=00001 eval=00215 misfit=1.337027e+00 best=7.832574e-01
+[NA] iter=00001 eval=00216 misfit=7.604486e-01 best=7.604486e-01
+[NA] iter=00001 eval=00217 misfit=1.030922e+00 best=7.604486e-01
+[NA] iter=00001 eval=00218 misfit=1.516093e+00 best=7.604486e-01
+[NA] iter=00001 eval=00219 misfit=9.723157e-01 best=7.604486e-01
+[NA] iter=00001 eval=00220 misfit=9.366418e-01 best=7.604486e-01
+[NA] iter=00001 eval=00221 misfit=8.703163e-01 best=7.604486e-01
+[NA] iter=00001 eval=00222 misfit=1.090964e+00 best=7.604486e-01
+[NA] iter=00001 eval=00223 misfit=8.974025e-01 best=7.604486e-01
+[NA] iter=00001 eval=00224 misfit=9.122623e-01 best=7.604486e-01
+[NA] iter=00001 eval=00225 misfit=9.488434e-01 best=7.604486e-01
+[NA] iter=00001 eval=00226 misfit=7.781902e-01 best=7.604486e-01
+[NA] iter=00001 eval=00227 misfit=9.446411e-01 best=7.604486e-01
+[NA] iter=00001 eval=00228 misfit=9.558180e-01 best=7.604486e-01
+[NA] iter=00001 eval=00229 misfit=9.529278e-01 best=7.604486e-01
+[NA] iter=00001 eval=00230 misfit=1.164791e+00 best=7.604486e-01
+[NA] iter=00001 eval=00231 misfit=7.743532e-01 best=7.604486e-01
+[NA] iter=00001 eval=00232 misfit=1.006592e+00 best=7.604486e-01
+NAI - Optimisation Loop:  20%|██        | 1/5 [00:10<00:42, 10.75s/it][NA] iter=00002 eval=00233 misfit=8.000814e-01 best=7.604486e-01
+[NA] iter=00002 eval=00234 misfit=7.752804e-01 best=7.604486e-01
+[NA] iter=00002 eval=00235 misfit=8.161111e-01 best=7.604486e-01
+[NA] iter=00002 eval=00236 misfit=1.062834e+00 best=7.604486e-01
+[NA] iter=00002 eval=00237 misfit=7.697616e-01 best=7.604486e-01
+[NA] iter=00002 eval=00238 misfit=8.109558e-01 best=7.604486e-01
+[NA] iter=00002 eval=00239 misfit=1.141227e+00 best=7.604486e-01
+[NA] iter=00002 eval=00240 misfit=8.369647e-01 best=7.604486e-01
+[NA] iter=00002 eval=00241 misfit=1.017153e+00 best=7.604486e-01
+[NA] iter=00002 eval=00242 misfit=8.414514e-01 best=7.604486e-01
+[NA] iter=00002 eval=00243 misfit=1.107494e+00 best=7.604486e-01
+[NA] iter=00002 eval=00244 misfit=1.021862e+00 best=7.604486e-01
+[NA] iter=00002 eval=00245 misfit=1.093568e+00 best=7.604486e-01
+[NA] iter=00002 eval=00246 misfit=9.829174e-01 best=7.604486e-01
+[NA] iter=00002 eval=00247 misfit=9.709358e-01 best=7.604486e-01
+[NA] iter=00002 eval=00248 misfit=8.280491e-01 best=7.604486e-01
+[NA] iter=00002 eval=00249 misfit=8.698788e-01 best=7.604486e-01
+[NA] iter=00002 eval=00250 misfit=1.037349e+00 best=7.604486e-01
+[NA] iter=00002 eval=00251 misfit=1.048010e+00 best=7.604486e-01
+[NA] iter=00002 eval=00252 misfit=9.280712e-01 best=7.604486e-01
+[NA] iter=00002 eval=00253 misfit=8.824930e-01 best=7.604486e-01
+[NA] iter=00002 eval=00254 misfit=8.709421e-01 best=7.604486e-01
+[NA] iter=00002 eval=00255 misfit=9.612165e-01 best=7.604486e-01
+[NA] iter=00002 eval=00256 misfit=8.287476e-01 best=7.604486e-01
+[NA] iter=00002 eval=00257 misfit=8.857313e-01 best=7.604486e-01
+[NA] iter=00002 eval=00258 misfit=8.753883e-01 best=7.604486e-01
+[NA] iter=00002 eval=00259 misfit=7.914419e-01 best=7.604486e-01
+[NA] iter=00002 eval=00260 misfit=8.271537e-01 best=7.604486e-01
+[NA] iter=00002 eval=00261 misfit=9.733460e-01 best=7.604486e-01
+[NA] iter=00002 eval=00262 misfit=8.793261e-01 best=7.604486e-01
+[NA] iter=00002 eval=00263 misfit=9.343642e-01 best=7.604486e-01
+[NA] iter=00002 eval=00264 misfit=7.987629e-01 best=7.604486e-01
+NAI - Optimisation Loop:  40%|████      | 2/5 [00:22<00:33, 11.23s/it][NA] iter=00003 eval=00265 misfit=9.194617e-01 best=7.604486e-01
+[NA] iter=00003 eval=00266 misfit=8.331024e-01 best=7.604486e-01
+[NA] iter=00003 eval=00267 misfit=7.724956e-01 best=7.604486e-01
+[NA] iter=00003 eval=00268 misfit=8.249204e-01 best=7.604486e-01
+[NA] iter=00003 eval=00269 misfit=7.626575e-01 best=7.604486e-01
+[NA] iter=00003 eval=00270 misfit=8.818859e-01 best=7.604486e-01
+[NA] iter=00003 eval=00271 misfit=7.600119e-01 best=7.600119e-01
+[NA] iter=00003 eval=00272 misfit=7.778593e-01 best=7.600119e-01
+[NA] iter=00003 eval=00273 misfit=1.070782e+00 best=7.600119e-01
+[NA] iter=00003 eval=00274 misfit=9.145932e-01 best=7.600119e-01
+[NA] iter=00003 eval=00275 misfit=9.927006e-01 best=7.600119e-01
+[NA] iter=00003 eval=00276 misfit=9.394141e-01 best=7.600119e-01
+[NA] iter=00003 eval=00277 misfit=9.804234e-01 best=7.600119e-01
+[NA] iter=00003 eval=00278 misfit=7.712933e-01 best=7.600119e-01
+[NA] iter=00003 eval=00279 misfit=8.033477e-01 best=7.600119e-01
+[NA] iter=00003 eval=00280 misfit=9.136446e-01 best=7.600119e-01
+[NA] iter=00003 eval=00281 misfit=9.593192e-01 best=7.600119e-01
+[NA] iter=00003 eval=00282 misfit=9.299228e-01 best=7.600119e-01
+[NA] iter=00003 eval=00283 misfit=7.966985e-01 best=7.600119e-01
+[NA] iter=00003 eval=00284 misfit=8.526853e-01 best=7.600119e-01
+[NA] iter=00003 eval=00285 misfit=9.279119e-01 best=7.600119e-01
+[NA] iter=00003 eval=00286 misfit=9.385713e-01 best=7.600119e-01
+[NA] iter=00003 eval=00287 misfit=7.885227e-01 best=7.600119e-01
+[NA] iter=00003 eval=00288 misfit=8.037865e-01 best=7.600119e-01
+[NA] iter=00003 eval=00289 misfit=1.133514e+00 best=7.600119e-01
+[NA] iter=00003 eval=00290 misfit=8.250668e-01 best=7.600119e-01
+[NA] iter=00003 eval=00291 misfit=8.071694e-01 best=7.600119e-01
+[NA] iter=00003 eval=00292 misfit=7.908806e-01 best=7.600119e-01
+[NA] iter=00003 eval=00293 misfit=7.883495e-01 best=7.600119e-01
+[NA] iter=00003 eval=00294 misfit=1.070809e+00 best=7.600119e-01
+[NA] iter=00003 eval=00295 misfit=8.569455e-01 best=7.600119e-01
+[NA] iter=00003 eval=00296 misfit=7.852369e-01 best=7.600119e-01
+NAI - Optimisation Loop:  60%|██████    | 3/5 [00:30<00:19,  9.98s/it][NA] iter=00004 eval=00297 misfit=8.299518e-01 best=7.600119e-01
+[NA] iter=00004 eval=00298 misfit=7.871088e-01 best=7.600119e-01
+[NA] iter=00004 eval=00299 misfit=8.805698e-01 best=7.600119e-01
+[NA] iter=00004 eval=00300 misfit=8.975431e-01 best=7.600119e-01
+[NA] iter=00004 eval=00301 misfit=7.741483e-01 best=7.600119e-01
+[NA] iter=00004 eval=00302 misfit=7.736898e-01 best=7.600119e-01
+[NA] iter=00004 eval=00303 misfit=8.073852e-01 best=7.600119e-01
+[NA] iter=00004 eval=00304 misfit=7.606130e-01 best=7.600119e-01
+[NA] iter=00004 eval=00305 misfit=7.549828e-01 best=7.549828e-01
+[NA] iter=00004 eval=00306 misfit=7.708783e-01 best=7.549828e-01
+[NA] iter=00004 eval=00307 misfit=7.547380e-01 best=7.547380e-01
+[NA] iter=00004 eval=00308 misfit=7.749594e-01 best=7.547380e-01
+[NA] iter=00004 eval=00309 misfit=7.705679e-01 best=7.547380e-01
+[NA] iter=00004 eval=00310 misfit=7.668272e-01 best=7.547380e-01
+[NA] iter=00004 eval=00311 misfit=7.784581e-01 best=7.547380e-01
+[NA] iter=00004 eval=00312 misfit=7.727006e-01 best=7.547380e-01
+[NA] iter=00004 eval=00313 misfit=8.071058e-01 best=7.547380e-01
+[NA] iter=00004 eval=00314 misfit=7.604397e-01 best=7.547380e-01
+[NA] iter=00004 eval=00315 misfit=7.881747e-01 best=7.547380e-01
+[NA] iter=00004 eval=00316 misfit=7.621374e-01 best=7.547380e-01
+[NA] iter=00004 eval=00317 misfit=8.021693e-01 best=7.547380e-01
+[NA] iter=00004 eval=00318 misfit=7.775580e-01 best=7.547380e-01
+[NA] iter=00004 eval=00319 misfit=7.538530e-01 best=7.538530e-01
+[NA] iter=00004 eval=00320 misfit=7.820688e-01 best=7.538530e-01
+[NA] iter=00004 eval=00321 misfit=7.755008e-01 best=7.538530e-01
+[NA] iter=00004 eval=00322 misfit=7.697476e-01 best=7.538530e-01
+[NA] iter=00004 eval=00323 misfit=7.622824e-01 best=7.538530e-01
+[NA] iter=00004 eval=00324 misfit=7.829168e-01 best=7.538530e-01
+[NA] iter=00004 eval=00325 misfit=7.792921e-01 best=7.538530e-01
+[NA] iter=00004 eval=00326 misfit=7.725412e-01 best=7.538530e-01
+[NA] iter=00004 eval=00327 misfit=7.874252e-01 best=7.538530e-01
+[NA] iter=00004 eval=00328 misfit=7.790911e-01 best=7.538530e-01
+NAI - Optimisation Loop:  80%|████████  | 4/5 [00:39<00:09,  9.34s/it][NA] iter=00005 eval=00329 misfit=7.605196e-01 best=7.538530e-01
+[NA] iter=00005 eval=00330 misfit=7.604698e-01 best=7.538530e-01
+[NA] iter=00005 eval=00331 misfit=7.811497e-01 best=7.538530e-01
+[NA] iter=00005 eval=00332 misfit=7.553328e-01 best=7.538530e-01
+[NA] iter=00005 eval=00333 misfit=7.591542e-01 best=7.538530e-01
+[NA] iter=00005 eval=00334 misfit=7.512525e-01 best=7.512525e-01
+[NA] iter=00005 eval=00335 misfit=7.657510e-01 best=7.512525e-01
+[NA] iter=00005 eval=00336 misfit=7.522816e-01 best=7.512525e-01
+[NA] iter=00005 eval=00337 misfit=7.679325e-01 best=7.512525e-01
+[NA] iter=00005 eval=00338 misfit=7.603523e-01 best=7.512525e-01
+[NA] iter=00005 eval=00339 misfit=7.635928e-01 best=7.512525e-01
+[NA] iter=00005 eval=00340 misfit=7.625450e-01 best=7.512525e-01
+[NA] iter=00005 eval=00341 misfit=7.643605e-01 best=7.512525e-01
+[NA] iter=00005 eval=00342 misfit=7.481072e-01 best=7.481072e-01
+[NA] iter=00005 eval=00343 misfit=7.511785e-01 best=7.481072e-01
+[NA] iter=00005 eval=00344 misfit=7.768204e-01 best=7.481072e-01
+[NA] iter=00005 eval=00345 misfit=7.531091e-01 best=7.481072e-01
+[NA] iter=00005 eval=00346 misfit=7.578856e-01 best=7.481072e-01
+[NA] iter=00005 eval=00347 misfit=7.559285e-01 best=7.481072e-01
+[NA] iter=00005 eval=00348 misfit=7.607542e-01 best=7.481072e-01
+[NA] iter=00005 eval=00349 misfit=7.589159e-01 best=7.481072e-01
+[NA] iter=00005 eval=00350 misfit=7.566527e-01 best=7.481072e-01
+[NA] iter=00005 eval=00351 misfit=7.704339e-01 best=7.481072e-01
+[NA] iter=00005 eval=00352 misfit=7.522994e-01 best=7.481072e-01
+[NA] iter=00005 eval=00353 misfit=7.639486e-01 best=7.481072e-01
+[NA] iter=00005 eval=00354 misfit=7.754632e-01 best=7.481072e-01
+[NA] iter=00005 eval=00355 misfit=7.758923e-01 best=7.481072e-01
+[NA] iter=00005 eval=00356 misfit=7.696208e-01 best=7.481072e-01
+[NA] iter=00005 eval=00357 misfit=7.739165e-01 best=7.481072e-01
+[NA] iter=00005 eval=00358 misfit=7.895427e-01 best=7.481072e-01
+[NA] iter=00005 eval=00359 misfit=7.972832e-01 best=7.481072e-01
+[NA] iter=00005 eval=00360 misfit=7.743210e-01 best=7.481072e-01
+NAI - Optimisation Loop: 100%|██████████| 5/5 [00:47<00:00,  8.93s/it]NAI - Optimisation Loop: 100%|██████████| 5/5 [00:47<00:00,  9.47s/it]
+Mejor misfit: 7.481072e-01
+Parámetros del mejor modelo:
+  a1 (km)              =    4.914
+  a2 (km)              =    6.163
+  theta (x pi)         =    1.032
+  np (frac)            =    0.935
+  tp (x 2pi)           =    0.133
+  dmax (m)             =    3.719
+  vr (km/s)            =    0.917
+
+--- Slip / MT scaling (mejor modelo) ---
+  dmax_effective_m: 3.718942494608216
+  dmax_requested_m: 3.718942494608216
+  m0_L1_sum_abs_moments_nm: 1.719175317554268e+19
+  m0_target_nm: None
+  mt_scaling_mode: no_mt
+  mt_strict_scale_applied: False
+  mu_a_slipfactor_sum: None
+
+========================================================================
+[6/6] Exportando resultados y generando gráficos
+========================================================================
+Inversion results saved to /home/alex/KDEllipsPy/inversions/calama2020/output/inversion_result.joblib
+Resultados guardados en: /home/alex/KDEllipsPy/inversions/calama2020/output/na_results.json
+Resultados guardados en: /home/alex/KDEllipsPy/inversions/calama2020/output/na_results.csv
+Objeto de inversión guardado en: /home/alex/KDEllipsPy/inversions/calama2020/output/inversion_result.joblib
+QApplication: invalid style override 'kvantum' passed, ignoring it.
+	Available styles: Windows, Fusion
+✓ Gráficos generados (sin mostrar en modo no-interactivo)
+
+✓ Inversión terminada correctamente.
