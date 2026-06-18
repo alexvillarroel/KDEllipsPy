@@ -61,12 +61,6 @@ from .inversion.kinematic.model_mcmc import (
     MCMCInversionModel,
 )
 
-# --- Inversión: Dinámica (legacy bridge) ---
-from .inversion.dynamic.model_dynamic import (
-    DynamicInversionConfig,
-    DynamicInversionModel,
-)
-
 # --- Procesamiento de Señales ---
 from .core.signal_utils import (
     build_azi_times_array, write_azi_times_file,
@@ -105,10 +99,7 @@ __all__ = [
     # MCMC
     "MCMCConfig",
     "MCMCInversionModel",
-    # Dynamic
-    "DynamicInversionConfig",
-    "DynamicInversionModel",
-    
+
     # Procesamiento de Señales
     "build_azi_times_array", "write_azi_times_file",
     "load_and_filter_observed_data", "bandpass_filter_waveforms", "integrate_waveforms",

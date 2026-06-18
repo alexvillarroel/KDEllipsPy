@@ -14,10 +14,6 @@ from .kinematic.model_mcmc import (
     MCMCConfig,
     MCMCInversionModel,
 )
-from .dynamic.model_dynamic import (
-    DynamicInversionConfig,
-    DynamicInversionModel,
-)
 
 __all__ = [
     "NAModel",
@@ -28,6 +24,4 @@ __all__ = [
     "NAInversionModel",
     "MCMCConfig",
     "MCMCInversionModel",
-    "DynamicInversionConfig",
-    "DynamicInversionModel",
 ]
