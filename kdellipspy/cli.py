@@ -1,252 +1,297 @@
-import sys
-from pathlib import Path
+#!/usr/bin/env python3
+"""
+kdellipspy CLI
+==============
+Corre la inversión cinemática (Neighbourhood Algorithm) de KDEllipsPy.
+
+Lee ``input.ctl`` + ``DATA/`` de la carpeta del proyecto (por defecto el
+directorio actual) y guarda la solución y las figuras en ``output/``:
+
+    <proyecto>/
+    ├── input.ctl
+    ├── DATA/
+    └── output/
+        ├── inversion_result.joblib   ← la solución
+        ├── best_model_live.txt
+        ├── misfit_breakdown.txt
+        └── figures/                  ← PNGs + all_plots.pdf
+
+Ejemplos:
+    kdellipspy                       # usa ./input.ctl + ./DATA → ./output
+    kdellipspy ruta/al/proyecto
+    kdellipspy --freq1 0.06 --freq2 0.15
+    kdellipspy --no-plots
+    python -m kdellipspy             # equivalente sin instalar el comando
+"""
+
 import argparse
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
 
-# --- Bloque de resolución de rutas para que los imports funcionen siempre ---
-# Agregamos la raíz del proyecto al path si no está presente
-src_root = Path(__file__).resolve().parent.parent
-if str(src_root) not in sys.path:
-    sys.path.insert(0, str(src_root))
+# Backend no interactivo: evita que las figuras intenten abrir ventana en terminal.
+import matplotlib
+matplotlib.use("Agg")
 
-from kdellipspy import (
-    ConfigParser,
-    load_and_filter_observed_data,
-    build_azi_times_array,
-    NAInversionModel,
-    NAConfig,
-    MCMCInversionModel,
-    MCMCConfig
-)
+# --------------------------------------------------------------------------- #
+#  Utilidades de impresión estilo CLI
+# --------------------------------------------------------------------------- #
+_T0 = time.perf_counter()
 
-def step(number: int, total: int, title: str) -> None:
-    print("\n" + "=" * 72, flush=True)
-    print(f"[{number}/{total}] {title}", flush=True)
-    print("=" * 72, flush=True)
 
-def validate_paths(input_dir: Path, data_dir: Path) -> Path:
-    """Validate that input_dir contains input.ctl and data_dir exists."""
-    input_dir = input_dir.resolve()
-    data_dir = data_dir.resolve()
-    
-    input_ctl = input_dir / "input.ctl"
-    
-    errors = []
-    if not input_ctl.is_file():
-        errors.append(f"  ✗ {input_ctl} (no se encontró o no es un archivo)")
-    if not data_dir.is_dir():
-        errors.append(f"  ✗ {data_dir} (no se encontró o no es un directorio)")
-    
-    if errors:
-        print("ERROR: Estructura de directorios inválida", flush=True)
-        print(f"Directorio input: {input_dir}", flush=True)
-        print(f"Directorio datos: {data_dir}", flush=True)
-        print("Faltan archivos o directorios requeridos:", flush=True)
-        for error in errors:
-            print(error, flush=True)
-        print("\nUso: python cli.py <INPUT_DIR> [DATA_DIR]", flush=True)
-        print("       <INPUT_DIR> debe contener: input.ctl", flush=True)
-        print("       [DATA_DIR] por defecto es <INPUT_DIR>/DATA", flush=True)
-        sys.exit(1)
-    
-    return input_ctl
+def _clock():
+    return datetime.now().strftime("%H:%M:%S")
 
-def get_axitra_dir(input_dir: Path, src_root: Path) -> Path:
-    """
-    Resolve axitra directory: try input_dir first, then kdellipspy/, then parent directory.
-    """
-    search_paths = [
-        input_dir / "axitra" / "src",           # Check in input directory first
-        src_root / "axitra" / "src",          # Check in kdellipspy/ (src_root)
-        src_root.parent / "axitra" / "src",   # Check in KDEllipsPy/ (parent)
-        input_dir / "axitra",
-        src_root / "axitra",
-    ]
-    
-    for path in search_paths:
-        if path.is_dir():
-            return path
-    
-    raise RuntimeError(
-        f"axitra directory not found in:\n" +
-        "\n".join(f"  - {p}" for p in search_paths) +
-        "\nPlease ensure axitra is available in one of these locations."
+
+def _el():
+    return f"{time.perf_counter() - _T0:6.1f}s"
+
+
+def banner(title, subtitle=""):
+    line = "═" * 70
+    print(f"\n╔{line}╗")
+    print(f"║ {title:<68} ║")
+    if subtitle:
+        print(f"║ {subtitle:<68} ║")
+    print(f"╚{line}╝")
+
+
+def section(name):
+    print(f"\n┌─[{_clock()} | {_el()}] {name}")
+
+
+def info(msg):
+    print(f"│  {msg}")
+
+
+def ok(msg):
+    print(f"│  \033[32m✓\033[0m {msg}")
+
+
+def warn(msg):
+    print(f"│  \033[33m!\033[0m {msg}")
+
+
+def err(msg):
+    print(f"\033[31m✗ ERROR:\033[0m {msg}", file=sys.stderr)
+
+
+# --------------------------------------------------------------------------- #
+#  Argumentos
+# --------------------------------------------------------------------------- #
+def parse_args(argv=None):
+    p = argparse.ArgumentParser(
+        prog="kdellipspy",
+        description="Inversión cinemática NA (KDEllipsPy). Corre desde la "
+                    "carpeta del proyecto (input.ctl + DATA/ → output/).",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
+    p.add_argument("project_dir", type=Path, nargs="?", default=Path.cwd(),
+                   help="Carpeta del proyecto (contiene input.ctl y DATA/)")
+    p.add_argument("--input-ctl", type=Path, default=None,
+                   help="Ruta a input.ctl (por defecto <project_dir>/input.ctl)")
+    p.add_argument("--data-dir", type=Path, default=None,
+                   help="Carpeta de datos (por defecto <project_dir>/DATA)")
+    p.add_argument("-o", "--output", type=Path, default=None,
+                   help="Carpeta de salida (por defecto <project_dir>/output)")
+    p.add_argument("--freq1", type=float, default=None,
+                   help="Sobrescribe Freq1 (Hz); por defecto usa input.ctl")
+    p.add_argument("--freq2", type=float, default=None,
+                   help="Sobrescribe Freq2 (Hz); por defecto usa input.ctl")
+    p.add_argument("--n-jobs", type=int, default=None,
+                   help="Workers paralelos para NA; por defecto usa input.ctl")
+    p.add_argument("--model", default="iasp91",
+                   help="Modelo de Tierra para tiempos P/S (azi_times)")
+    p.add_argument("--prefer-raw", action="store_true",
+                   help="Cargar desde DATA/RAW en vez de archivos planos")
+    p.add_argument("--no-plots", action="store_true",
+                   help="No generar figuras (solo guardar el .joblib)")
+    args = p.parse_args(argv)
+    base = args.project_dir
+    # Defaults derivados del project_dir si no se pasaron explícitos.
+    args.input_ctl = (args.input_ctl or base / "input.ctl").resolve()
+    args.data_dir = (args.data_dir or base / "DATA").resolve()
+    args.output = (args.output or base / "output").resolve()
+    return args
 
-def main() -> None:
-    src_root = Path(__file__).resolve().parent
-    
-    # Parse arguments first
-    parser = argparse.ArgumentParser(
-        description="Pipeline de inversión cinemática con soporte para directorios de entrada y datos"
-    )
-    parser.add_argument(
-        "input_dir",
-        type=str,
-        nargs="?",
-        default=".",
-        help="Carpeta que contiene input.ctl (por defecto: .)"
-    )
-    parser.add_argument(
-        "data_dir",
-        type=str,
-        nargs="?",
-        help="Carpeta que contiene los datos observados (por defecto: <INPUT_DIR>/DATA)"
-    )
-    parser.add_argument(
-        "--run",
-        type=str,
-        help="Legacy: Carpeta de ejecución (contiene input.ctl y DATA/)"
-    )
-    parser.add_argument(
-        "--no-plot",
-        action="store_true",
-        help="Saltar la generación de gráficos"
-    )
-    
-    args = parser.parse_args()
-    
-    # Resolvimiento de rutas basado en los nuevos parámetros
-    if args.run:
-        input_dir = Path(args.run).resolve()
-        data_dir = input_dir / "DATA"
-    else:
-        input_dir = Path(args.input_dir).resolve()
-        if args.data_dir:
-            data_dir = Path(args.data_dir).resolve()
-        else:
-            data_dir = input_dir / "DATA"
 
-    print("=" * 72, flush=True)
-    print("KINEMATIC INVERSION - PYTHON PIPELINE", flush=True)
-    print("=" * 72, flush=True)
-    
-    step(1, 6, "Validando rutas de entrada y datos")
-    input_ctl = validate_paths(input_dir, data_dir)
-    print(f"✓ Directorio de configuración: {input_dir}", flush=True)
-    print(f"✓ Directorio de datos: {data_dir}", flush=True)
+# --------------------------------------------------------------------------- #
+#  Programa principal
+# --------------------------------------------------------------------------- #
+def main(argv=None):
+    args = parse_args(argv)
 
-    step(2, 6, "Cargando configuración")
-    cfg = ConfigParser(str(input_ctl))
-    print(f"Evento: {cfg.source_position.event_name}", flush=True)
-    print(f"Estaciones: {len(cfg.stations.stations)}", flush=True)
-    print(f"Frecuencia: {cfg.ellipse.freq1} - {cfg.ellipse.freq2} Hz", flush=True)
+    banner("KDEllipsPy · Inversión cinemática (NA)")
 
-    step(3, 6, "Preparando datos observados")
-    observed_waveforms, time_array = load_and_filter_observed_data(
-        freq1=cfg.ellipse.freq1,
-        freq2=cfg.ellipse.freq2,
-        input_ctl_path=input_ctl,
-        data_dir=data_dir,
-        prefer_raw=False,
-    )
-    print(f"Datos observados listos con forma: {observed_waveforms.shape}", flush=True)
-
-    algo = int(cfg.inversion_process.algorithm_type)
-    if algo == 0:
-        step(4, 6, "Inicializando inversión (NA / neighpy)")
-    elif algo == 1:
-        step(4, 6, "Inicializando inversión MCMC (PyMC + ArviZ)")
-    else:
-        print(f"ERROR: Algorithm type {algo} not supported (0=NA, 1=MCMC).", flush=True)
-        sys.exit(1)
-
-    axitra_dir = get_axitra_dir(input_dir, src_root)
-
-    if algo == 0:
-        inversion = NAInversionModel(
-            config=cfg,
-            axitra_dir=str(axitra_dir),
-            observed_waveforms=observed_waveforms,
-            time_array=time_array,
-        )
-    else:
-        inversion = MCMCInversionModel(
-            config=cfg,
-            axitra_dir=str(axitra_dir),
-            observed_waveforms=observed_waveforms,
-            time_array=time_array,
-        )
-
-    step(5, 6, "Ejecutando inversión")
-    if algo == 0:
-        na_config = NAConfig(
-            n_samples_initial=cfg.inversion_process.ss1,
-            n_samples_iteration=cfg.inversion_process.ss_other,
-            n_iterations=cfg.inversion_process.num_iterations,
-            n_cells_resample=cfg.inversion_process.cells_resample,
-            random_seed=None,
-        )
-        result = inversion.run_na_search(na_config)
-    else:
-        mc_config = MCMCConfig(
-            total_steps=cfg.inversion_process.mcmc_total_steps,
-            burn_in=cfg.inversion_process.mcmc_burn_in,
-            proposal_scale=cfg.inversion_process.mcmc_proposal_scale,
-            thin=cfg.inversion_process.mcmc_thin,
-            random_seed=None,
-            keep_axitra_files=False,
-            chains=cfg.inversion_process.mcmc_chains,
-        )
-        result = inversion.run_mcmc_search(mc_config)
-
-    best = result.best_model
-    if best is None:
-        print("ERROR: la inversión no devolvió modelos evaluados.", flush=True)
-        sys.exit(1)
-
-    print(f"Mejor misfit: {best.misfit:.6e}", flush=True)
-    print(f"Parámetros del mejor modelo:", flush=True)
-    for name, value in zip(inversion.param_names, best.model):
-        print(f"  {name:20s} = {value:8.3f}", flush=True)
-
-    best_geom = inversion._build_geometry_from_parameters(best.model)
-    diag = getattr(best_geom, "slip_scale_diagnostics", None)
-    if isinstance(diag, dict):
-        print("\n--- Slip / MT scaling (mejor modelo) ---", flush=True)
-        for key in sorted(diag.keys()):
-            print(f"  {key}: {diag[key]}", flush=True)
-
-    step(6, 6, "Exportando resultados y generando gráficos")
-    output_dir = input_dir / "output"
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    json_path = output_dir / "na_results.json"
-    csv_path = output_dir / "na_results.csv"
-    save_path = output_dir / "inversion_result.joblib"
-
-    result.export_results(json_path)
-    result.export_csv(csv_path)
-    result.save(save_path)
-
-    print(f"Resultados guardados en: {json_path}", flush=True)
-    print(f"Resultados guardados en: {csv_path}", flush=True)
-    print(f"Objeto de inversión guardado en: {save_path}", flush=True)
-
+    # --- Importar la librería (puede tardar un poco) ------------------------ #
+    section("Cargando KDEllipsPy")
     try:
-        import matplotlib
-        # Check if we're in an interactive environment
-        is_interactive = hasattr(sys, 'ps1') or 'ipython' in sys.modules or 'pytest' in sys.modules
-        show_plots = is_interactive and not args.no_plot
-        
-        # 1. Plot inversion convergence
-        result.plot(show=show_plots)
+        import numpy as np
+        import kdellipspy as kde
+    except Exception as exc:  # noqa: BLE001
+        err(f"No se pudo importar kdellipspy: {exc}")
+        return 1
+    ok(f"kdellipspy importado (numpy {np.__version__})")
 
-        # 2. Plot waveform fit
-        if inversion.best_synthetics is not None:
-            inversion.plot_fit(show=show_plots)
-        else:
-            print("⚠ No se generaron sintéticos del mejor modelo (best_synthetics es None).", flush=True)
-        
-        if show_plots:
-            print("✓ Gráficos mostrados", flush=True)
-        else:
-            print("✓ Gráficos generados (sin mostrar en modo no-interactivo)", flush=True)
-    except Exception as e:
-        print(f"⚠ Advertencia al generar gráficos: {e}", flush=True)
-        print("  Los resultados JSON/CSV se han guardado correctamente.", flush=True)
+    # --- Validar rutas ------------------------------------------------------ #
+    section("Validando rutas")
+    if not args.input_ctl.is_file():
+        err(f"No existe input.ctl: {args.input_ctl}")
+        return 1
+    if not args.data_dir.is_dir():
+        err(f"No existe la carpeta de datos: {args.data_dir}")
+        return 1
+    figdir = args.output / "figures"
+    figdir.mkdir(parents=True, exist_ok=True)
+    ok(f"input.ctl : {args.input_ctl}")
+    ok(f"DATA      : {args.data_dir}")
+    ok(f"output    : {args.output}  (figuras en figures/)")
 
-    print("\n✓ Inversión terminada correctamente.", flush=True)
+    # --- Leer configuración ------------------------------------------------- #
+    section("Leyendo configuración")
+    cfg = kde.ConfigParser(filepath=str(args.input_ctl))
+    if args.n_jobs is not None:
+        cfg.inversion_process.n_jobs = args.n_jobs
+
+    sp, el, od, ip = (cfg.source_position, cfg.ellipse,
+                      cfg.observed_data, cfg.inversion_process)
+    f1 = args.freq1 if args.freq1 is not None else el.freq1
+    f2 = args.freq2 if args.freq2 is not None else el.freq2
+    fase = "causal" if not el.zerophase else "acausal (fase cero)"
+    algo = "Neighbourhood Algorithm" if ip.algorithm_type == 0 else "MCMC"
+
+    info(f"Evento      : {getattr(sp, 'event_name', '?')}  "
+         f"({sp.latitude:.3f}, {sp.longitude:.3f}, {sp.depth:.1f} km)")
+    info(f"Mecanismo   : strike {sp.strike:g} / dip {sp.dip:g} / rake {sp.rake:g}"
+         f"  ({'doble cupla' if cfg.moment_tensor.flag == 0 else 'MT completo'})")
+    info(f"Banda       : {f1:g}–{f2:g} Hz   |  filtro {fase}")
+    info(f"Ventana     : t1={od.t1:g}s  t2={od.t2:g}s  npts={od.npts}  dt={od.delta:g}s"
+         f"  (units={'disp' if od.units == 1 else 'vel'})")
+    info(f"Estaciones  : {len(cfg.stations.stations)}  "
+         f"[{', '.join(s.name for s in cfg.stations.stations)}]")
+    info(f"Mod. veloc. : {len(cfg.velocity_model.layers)} capas")
+    info(f"Algoritmo   : {algo}  |  n_jobs={ip.n_jobs}")
+    ok("Configuración leída")
+
+    # --- Cargar datos observados ------------------------------------------- #
+    section("Cargando datos observados")
+    observed, time_array = kde.load_and_filter_observed_data(
+        input_ctl_path=str(args.input_ctl),
+        data_dir=str(args.data_dir),
+        prefer_raw=args.prefer_raw,
+        freq1=f1,
+        freq2=f2,
+    )
+    ok(f"observed shape = {observed.shape}  (estaciones, comp, npts)")
+    ok(f"eje de tiempo  = {time_array[0]:g} … {time_array[-1]:g} s "
+       f"({len(time_array)} pts)")
+
+    # --- Tiempos P/S (azimutes) -------------------------------------------- #
+    section("Calculando tiempos P/S por estación (azi_times)")
+    azi_times_array = kde.build_azi_times_array(config=cfg, model_name=args.model)
+    ok(f"azi_times_array shape = {azi_times_array.shape}  (modelo {args.model})")
+
+    # --- Construir modelo --------------------------------------------------- #
+    section("Construyendo modelo de inversión")
+    model = kde.NAInversionModel(
+        config=cfg,
+        observed_waveforms=observed,
+        time_array=time_array,
+        azi_times_array=azi_times_array,
+    )
+    # Cachear las funciones de Green de la malla completa: se calculan una vez y
+    # se reutilizan en cada eval. ~4-8x más rápido.
+    model.use_green_cache = True
+    # Checkpoint en vivo: mejor modelo a output/best_model_live.txt al mejorar.
+    model.checkpoint_path = args.output / "best_model_live.txt"
+    n_fwd = ip.ss1 + ip.num_iterations * ip.ss_other
+    ok("NAInversionModel listo  (cache de Green ACTIVADO)")
+    info(f"checkpoint en vivo → {model.checkpoint_path}")
+    info(f"NA: {ip.num_iterations} iter · SS1={ip.ss1} · "
+         f"SS={ip.ss_other} · resample={ip.cells_resample} "
+         f"→ ~{n_fwd} modelos directos")
+
+    # --- Correr la inversión ------------------------------------------------ #
+    section("Corriendo búsqueda NA  (esto puede tardar)")
+    t_inv = time.perf_counter()
+    result = model.run_na_search()
+    dt_inv = time.perf_counter() - t_inv
+    ok(f"Inversión terminada en {dt_inv:.1f} s")
+
+    # --- Mejor solución ----------------------------------------------------- #
+    section("Mejor solución")
+    best = result.best_model
+    print("│  ┌──────────────────────────────────────────────┐")
+    for name, val in zip(result.param_names, best.model):
+        print(f"│  │ {name:<32s} {val:12.4f} │")
+    print("│  └──────────────────────────────────────────────┘")
+    ok(f"misfit mínimo = {best.misfit:.6g}")
+
+    # --- Stress drop (crack circular, Eshelby) ------------------------------ #
+    # r = promedio de los dos semiejes (a1, a2 ya son semiejes en km).
+    # M0 del propio modelo (mu = rho*Vs^2 del modelo de velocidades).
+    # Delta_sigma = (7/16) * M0 / r^3  [Pa]  (Eshelby 1957, crack circular).
+    try:
+        m0, mw = model.fm.estimate_total_moment_and_mw(best.model)
+        a1, a2 = float(best.model[0]), float(best.model[1])   # semiejes (km)
+        r = 0.5 * (a1 + a2) * 1000.0                          # radio equiv. (m)
+        dsigma = (7.0 / 16.0) * m0 / r**3                     # Pa
+        ok(f"M0 = {m0:.3e} N·m  (Mw {mw:.2f})")
+        ok(f"radio equiv. r = {r/1000:.2f} km  (semiejes {a1:.2f}, {a2:.2f} km)")
+        ok(f"stress drop Δσ = {dsigma/1e6:.3f} MPa")
+    except Exception as exc:  # noqa: BLE001
+        warn(f"no se pudo calcular el stress drop: {exc}")
+
+    # --- Guardar resultados ------------------------------------------------- #
+    section("Guardando resultados")
+    joblib_path = args.output / "inversion_result.joblib"
+    result.save(str(joblib_path))
+    ok(f"resultado     → {joblib_path}")
+
+    if not args.no_plots:
+        section("Generando figuras")
+        figs = [
+            ("plot",             "na_results.png"),
+            ("plot_convergence", "parameter_convergence.png"),
+            ("plot_fit",         "waveform_fit.png"),
+            ("plot_elipse",      "ellipse_fit.png"),
+            ("plot_ellipse_depth", "ellipse_depth.png"),
+            ("plot_ellipse_map",   "ellipse_map.png"),
+            ("plot_azimuthal",   "mapa_azimutal.png"),
+            ("plot_misfit_breakdown", "misfit_breakdown.png"),
+        ]
+        for method, fname in figs:
+            try:
+                getattr(result, method)(show=False, save_path=str(figdir / fname))
+                ok(f"figura        → {figdir / fname}")
+            except Exception as exc:  # noqa: BLE001
+                warn(f"no se pudo generar {fname}: {exc}")
+
+        # Dashboard de una página con todos los paneles.
+        try:
+            pdf = result.plot_yolo(save_path=str(figdir / "all_plots.pdf"))
+            if pdf:
+                ok(f"dashboard     → {pdf}")
+        except Exception as exc:  # noqa: BLE001
+            warn(f"no se pudo generar all_plots.pdf: {exc}")
+    else:
+        info("(--no-plots) figuras omitidas")
+
+    # --- Resumen ------------------------------------------------------------ #
+    banner("Inversión completada",
+           f"tiempo total {_el().strip()}  ·  salida en {args.output}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        err("Interrumpido por el usuario (Ctrl-C).")
+        sys.exit(130)
+    except Exception as exc:  # noqa: BLE001
+        err(str(exc))
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)

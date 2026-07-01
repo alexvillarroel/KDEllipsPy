@@ -12,6 +12,7 @@ banda_0.02-0.1/
 ├── input.ctl   ← config exacto de esta corrida (banda 0.02–0.1, plano 32 km)
 ├── codigos/    ← scripts (copia de ../codigos)
 └── output/     ← resultados (inversion_result.joblib, figuras, logs)
+└── Herreraetal/  Replica de la carpeta Herreraetal, misma configuracion
 ```
 
 | Campo | Valor |

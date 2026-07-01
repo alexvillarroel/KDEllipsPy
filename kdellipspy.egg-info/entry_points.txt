@@ -1,2 +1,6 @@
 [console_scripts]
+kde-dashboard = kdellipspy.dashboard:main
+kde-map = kdellipspy.map:main
+kde-prep = kdellipspy.prep_data:main
+kde-traces = kdellipspy.plot_traces:main
 kdellipspy = kdellipspy.cli:main

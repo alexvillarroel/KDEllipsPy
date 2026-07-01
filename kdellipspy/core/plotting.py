@@ -31,6 +31,7 @@ def plot_waveform_fit(
     station_flags: Optional[np.ndarray] = None,
     rotate: bool = False,
     mark_windows: bool = False,
+    fig: Optional[Any] = None,
 ) -> Tuple[Any, Any]:
     """
     Plot observed vs synthetic waveforms.
@@ -80,14 +81,18 @@ def plot_waveform_fit(
 
     flags = np.asarray(station_flags, dtype=bool) if station_flags is not None else None
 
-    fig, axs = plt.subplots(nsta, 3, figsize=(11, 1.6 * nsta), squeeze=False, sharex=True)
+    own = fig is None
+    if own:
+        fig = plt.figure(figsize=(11, 1.6 * nsta))
+    axs = fig.subplots(nsta, 3, squeeze=False, sharex=True)
 
-    title = "Waveform Fit (R/T/Z)" if do_rotate else "Waveform Fit"
-    if do_win:
-        title += f" · ventana {float(window_s):.0f}s (P→R,Z ; S→T)"
-    if misfit is not None:
-        title += f"  (Misfit: {misfit:.4f})"
-    fig.suptitle(title, fontsize=14, y=1.01)
+    if own:
+        title = "Waveform Fit (R/T/Z)" if do_rotate else "Waveform Fit"
+        if do_win:
+            title += f" · ventana {float(window_s):.0f}s (P→R,Z ; S→T)"
+        if misfit is not None:
+            title += f"  (Misfit: {misfit:.4f})"
+        fig.suptitle(title, fontsize=14, y=1.01)
 
     for i in range(nsta):
         for j in range(3):
@@ -119,12 +124,12 @@ def plot_waveform_fit(
             ax.tick_params(axis='both', which='both', bottom=False, top=False, left=False, right=False, labelleft=False)
 
     fig.legend(loc='upper right', bbox_to_anchor=(1.1, 1.0))
-    plt.tight_layout()
-
-    if save_path:
-        fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
-    if show:
-        plt.show()
+    if own:
+        fig.tight_layout()
+        if save_path:
+            fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
+        if show:
+            plt.show()
     return fig, axs
 
 def plot_azimuthal_coverage(
@@ -136,10 +141,14 @@ def plot_azimuthal_coverage(
     show: bool = True,
     save_path: Optional[str | Path] = None,
     dpi: int = 200,
+    ax: Optional[Any] = None,
 ) -> Tuple[Any, Any]:
     """Diagrama polar (radar) de la cobertura azimutal de las estaciones respecto
     al epicentro. Ángulo = azimut evento→estación (N arriba, horario), radio =
-    distancia epicentral (km). Sombrea el mayor hueco azimutal (gap)."""
+    distancia epicentral (km). Sombrea el mayor hueco azimutal (gap).
+
+    Si se pasa ``ax`` (debe ser un eje polar) dibuja ahí y no guarda/abre figura
+    (modo composición, p. ej. desde ``plot_yolo``)."""
     import matplotlib.pyplot as plt
     from obspy.geodetics import gps2dist_azimuth
 
@@ -156,8 +165,11 @@ def plot_azimuthal_coverage(
     gi = int(np.argmax(gaps))
     gap_max = float(gaps[gi]); gap_lo = a_sorted[gi]; gap_hi = gap_lo + gap_max
 
-    fig = plt.figure(figsize=(8, 8))
-    ax = plt.subplot(111, projection="polar")
+    if ax is None:
+        fig = plt.figure(figsize=(8, 8))
+        ax = fig.add_subplot(111, projection="polar")
+    else:
+        fig = ax.figure
     ax.set_theta_zero_location("N")
     ax.set_theta_direction(-1)
     rmax = dist_km.max() * 1.15
@@ -181,7 +193,7 @@ def plot_azimuthal_coverage(
         fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
     if show:
         plt.show()
-    return fig, ax
+    return fig, ax  # ax compone en plot_yolo si se pasó
 
 
 def plot_ellipse_map(
@@ -192,6 +204,7 @@ def plot_ellipse_map(
     show: bool = True,
     save_path: Optional[str | Path] = None,
     dpi: int = 200,
+    fig: Optional[Any] = None,
 ) -> Tuple[Any, Any]:
     """Mapa cartopy de la elipse de slip proyectada a la superficie: footprint
     (subfallas coloreadas por slip) + contorno del borde a 0.15*max_slip,
@@ -205,8 +218,10 @@ def plot_ellipse_map(
     max_slip = float(slip.max()) if slip.size else 0.0
 
     proj = ccrs.PlateCarree()
-    fig = plt.figure(figsize=(8, 8))
-    ax = plt.axes(projection=proj)
+    own = fig is None
+    if own:
+        fig = plt.figure(figsize=(8, 8))
+    ax = fig.add_subplot(projection=proj)
     if max_slip > 0:
         m = slip > 0.05 * max_slip
         west, east = lons[m].min() - pad, lons[m].max() + pad
@@ -243,13 +258,15 @@ def plot_ellipse_map(
                         ha="center", transform=proj, zorder=7)
     gl = ax.gridlines(draw_labels=True, linewidth=0.4, color="gray", alpha=0.5, linestyle="--")
     gl.top_labels = gl.right_labels = False
-    ax.set_title("Elipse de slip (proyectada a superficie)", fontsize=12)
+    if own:
+        ax.set_title("Elipse de slip (proyectada a superficie)", fontsize=12)
     ax.legend(loc="upper right", fontsize=8)
 
-    if save_path:
-        fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
-    if show:
-        plt.show()
+    if own:
+        if save_path:
+            fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
+        if show:
+            plt.show()
     return fig, ax
 
 
@@ -262,6 +279,7 @@ def plot_misfit_contribution(
     show: bool = True,
     save_path: Optional[str | Path] = None,
     dpi: int = 200,
+    fig: Optional[Any] = None,
 ) -> Tuple[Any, Any]:
     """Visualiza la 'tabla' de contribución al misfit como dos heatmaps
     estaciones×(R,T,Z): (izq) %% del residuo total que aporta cada componente;
@@ -279,7 +297,10 @@ def plot_misfit_contribution(
     names = [station_names[i] for i in order]
     comps = ["R", "T", "Z"]
 
-    fig, axes = plt.subplots(1, 2, figsize=(11, 0.5 * len(names) + 2.5))
+    own = fig is None
+    if own:
+        fig = plt.figure(figsize=(11, 0.5 * len(names) + 2.5))
+    axes = fig.subplots(1, 2, gridspec_kw={"wspace": 0.35})
     for ax, data, ttl, cmap, vmax in [
         (axes[0], pct, "% del residuo total", "magma_r", None),
         (axes[1], mfl, "misfit local (num/den)", "RdYlGn_r", 1.0),
@@ -294,14 +315,15 @@ def plot_misfit_contribution(
                         fontsize=8, color="0.15")
         ax.set_title(ttl, fontsize=11)
         fig.colorbar(im, ax=ax, shrink=0.7, pad=0.02)
-    fig.suptitle(f"Contribución al misfit por estación/componente "
-                 f"({mode_label})  ·  E = {total_E:.4f}", fontsize=13, y=1.02)
-    plt.tight_layout()
-
-    if save_path:
-        fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
-    if show:
-        plt.show()
+    axes[1].set_yticklabels([])   # mismas estaciones que el izquierdo: no duplicar
+    if own:
+        fig.suptitle(f"Contribución al misfit por estación/componente "
+                     f"({mode_label})  ·  E = {total_E:.4f}", fontsize=13, y=1.02)
+        fig.tight_layout()
+        if save_path:
+            fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
+        if show:
+            plt.show()
     return fig, axes
 
 
@@ -389,7 +411,8 @@ def plot_slip_distribution(
     title: str = "2D Slip Distribution",
     show: bool = True,
     save_path: Optional[str | Path] = None,
-    dpi: int = 300
+    dpi: int = 300,
+    fig: Optional[Any] = None,
 ) -> Tuple[Any, Any]:
     """
     Plot 2D slip distribution on the fault-plane subfault grid (no interpolation).
@@ -423,7 +446,10 @@ def plot_slip_distribution(
     max_slip = float(np.max(Z))
     vmax = max(1.0, np.ceil(max_slip * 10.0) / 10.0)   # colorbar fijo 0 -> 1+
 
-    fig, ax = plt.subplots(figsize=(10, 6))
+    own = fig is None
+    if own:
+        fig = plt.figure(figsize=(10, 6))
+    ax = fig.subplots()
     mapa_calor = ax.pcolormesh(X, Y, Z, cmap='gnuplot', shading='nearest',
                                vmin=0.0, vmax=vmax)
 
@@ -439,15 +465,17 @@ def plot_slip_distribution(
 
     ax.set_xlabel("Along Strike (km)", fontsize=11)
     ax.set_ylabel("Along Dip (km)", fontsize=11)
-    ax.set_title(title, fontsize=14, fontweight='bold', pad=15)
+    if own:
+        ax.set_title(title, fontsize=14, fontweight='bold', pad=15)
     ax.invert_yaxis()
     ax.set_aspect('equal')
     ax.legend(loc='upper right', frameon=True, shadow=True)
 
-    if save_path:
-        fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
-    if show:
-        plt.show()
+    if own:
+        if save_path:
+            fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
+        if show:
+            plt.show()
     return fig, ax
 
 def plot_stations_map(
@@ -524,8 +552,9 @@ def plot_stations_map(
                 transform=ccrs.PlateCarree() if cartopy_active else None)
         
         comps = []
-        if getattr(s, 'use_n', True): comps.append('N')
-        if getattr(s, 'use_e', True): comps.append('E')
+        # use_n/use_e/use_z map to R/T/Z in the misfit (rotated by azimuth).
+        if getattr(s, 'use_n', True): comps.append('R')
+        if getattr(s, 'use_e', True): comps.append('T')
         if getattr(s, 'use_z', True): comps.append('Z')
         comp_str = f"({','.join(comps)})"
         ax.text(s.longitude, s.latitude, f"  {comp_str}", verticalalignment='top', 
@@ -622,13 +651,14 @@ def plot_parameter_convergence(
     iterations: np.ndarray,
     show: bool = True,
     save_path: Optional[str | Path] = None,
-    dpi: int = 300
+    dpi: int = 300,
+    fig: Optional[Any] = None,
 ) -> Tuple[Any, Any]:
     """
     Plot convergence for each parameter.
     """
     import matplotlib.pyplot as plt
-    
+
     if not param_names:
         return None, None
 
@@ -636,7 +666,10 @@ def plot_parameter_convergence(
     ncols = 4
     nrows = math.ceil(n_params / ncols)
 
-    fig, axes = plt.subplots(nrows, ncols, figsize=(ncols * 3.5, nrows * 3.0), squeeze=False)
+    own = fig is None
+    if own:
+        fig = plt.figure(figsize=(ncols * 3.5, nrows * 3.0))
+    axes = fig.subplots(nrows, ncols, squeeze=False)
 
     model_indices = np.arange(len(rows))
     best_idx = int(np.argmin(misfits))
@@ -669,19 +702,17 @@ def plot_parameter_convergence(
         row_i, col_i = divmod(k, ncols)
         axes[row_i][col_i].axis("off")
 
-    fig.subplots_adjust(right=0.88, hspace=0.55, wspace=0.4)
-    cbar_ax = fig.add_axes([0.91, 0.15, 0.02, 0.7])
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
-    cbar = fig.colorbar(sm, cax=cbar_ax, extend="max")
+    cbar = fig.colorbar(sm, ax=axes, extend="max", fraction=0.03, pad=0.02)
     cbar.set_label("Misfit", fontsize=9)
 
-    fig.suptitle("Parameter convergence — NA search", fontsize=11, y=1.01)
-
-    if save_path:
-        fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
-    if show:
-        plt.show()
+    if own:
+        fig.suptitle("Parameter convergence — NA search", fontsize=11, y=1.01)
+        if save_path:
+            fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
+        if show:
+            plt.show()
     return fig, axes
 
 

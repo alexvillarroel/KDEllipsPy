@@ -2,7 +2,12 @@ README.md
 pyproject.toml
 setup.py
 kdellipspy/__init__.py
+kdellipspy/__main__.py
 kdellipspy/cli.py
+kdellipspy/dashboard.py
+kdellipspy/map.py
+kdellipspy/plot_traces.py
+kdellipspy/prep_data.py
 kdellipspy/test_forward_simple.py
 kdellipspy/test_nb.py
 kdellipspy/test_parallel_na.py
@@ -41,3 +46,4 @@ kdellipspy/workflows/__init__.py
 kdellipspy/workflows/run_inversion.py
 tests/test_forward.py
 tests/test_inversion_na.py
+tests/test_mt_decomposition.py

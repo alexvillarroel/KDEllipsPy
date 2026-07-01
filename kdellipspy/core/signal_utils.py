@@ -238,11 +238,21 @@ def _preprocess_trace(
 	inventory,
 	starttime,
 	zerophase: bool = True,
+	integrate_n: int = 0,
 ):
 	tr = tr.copy()
 	tr.detrend("demean")
 	tr.detrend("linear")
 	tr.taper(max_percentage=0.05, type="cosine")
+
+	# Integra desde la magnitud cruda (acc) a la del ctl: acc->vel = 1 paso,
+	# acc->disp = 2 pasos. Se hace a la tasa original (antes de remuestrear) y se
+	# re-quita la tendencia que introduce la integracion. El orden del Butterworth
+	# de banda escala 2x por integracion (regla del grupo: vel=2, disp=4).
+	corners = 2 * integrate_n if integrate_n > 0 else 4
+	if integrate_n > 0:
+		tr.data = integrate_waveforms(tr.data, float(tr.stats.delta), steps=int(integrate_n))
+		tr.detrend("linear")
 
 	if inventory is not None:
 		pre_filt = (
@@ -259,7 +269,7 @@ def _preprocess_trace(
 			water_level=60,
 		)
 
-	tr.filter("bandpass", freqmin=float(freq1), freqmax=float(freq2), corners=4, zerophase=bool(zerophase))
+	tr.filter("bandpass", freqmin=float(freq1), freqmax=float(freq2), corners=int(corners), zerophase=bool(zerophase))
 
 	endtime = starttime + (int(npts) - 1) * float(delta)
 
@@ -280,7 +290,7 @@ def _preprocess_trace(
 	return data
 
 
-def _load_from_raw(raw_dir: Path, cfg: ConfigParser, freq1: float, freq2: float) -> Tuple[np.ndarray, np.ndarray]:
+def _load_from_raw(raw_dir: Path, cfg: ConfigParser, freq1: float, freq2: float, integrate_n: int = 0) -> Tuple[np.ndarray, np.ndarray]:
 	if read is None:
 		raise ImportError(
 			"ObsPy is required for RAW mode (.sac/.mseed). Install with: pip install obspy"
@@ -300,9 +310,17 @@ def _load_from_raw(raw_dir: Path, cfg: ConfigParser, freq1: float, freq2: float)
 	if inventory is None:
 		print("[signal_utils] WARNING: no instrument inventory found in DATA/RAW; response removal skipped.")
 
-	# Reference start from earliest available trace. Then apply t1 offset from input.ctl.
-	global_start = min(tr.stats.starttime for tr in stream)
-	starttime = global_start + float(cfg.observed_data.t1)
+	# Anclar la ventana al TIEMPO DE ORIGEN del evento (t=0 de los sintéticos de
+	# axitra), no al inicio de la traza más temprana: cada SAC empieza en un
+	# tiempo absoluto distinto y anclar al global_start descuadra el observado
+	# respecto al sintético → misfit > 1. t1 desplaza dentro de esa referencia.
+	origin = cfg.source_position.origin_time
+	if origin:
+		from obspy import UTCDateTime
+		starttime = UTCDateTime(origin) + float(cfg.observed_data.t1)
+	else:
+		print("[signal_utils] WARNING: sin Origin Time en input.ctl; uso la traza más temprana como referencia.")
+		starttime = min(tr.stats.starttime for tr in stream) + float(cfg.observed_data.t1)
 
 	npts = int(cfg.observed_data.npts)
 	delta = float(cfg.observed_data.delta)
@@ -336,6 +354,7 @@ def _load_from_raw(raw_dir: Path, cfg: ConfigParser, freq1: float, freq2: float)
 				inventory=inventory,
 				starttime=starttime,
 				zerophase=bool(getattr(cfg.ellipse, "zerophase", True)),
+				integrate_n=int(integrate_n),
 			)
 
 	if missing:

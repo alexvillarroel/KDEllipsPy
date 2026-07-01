@@ -216,6 +216,21 @@ def main():
     print("│  └──────────────────────────────────────────────┘")
     ok(f"misfit minimo = {best.misfit:.6g}")
 
+    # --- Stress drop (crack circular, Eshelby) ------------------------------ #
+    # r = promedio de los dos semiejes (a1, a2 ya son semiejes en km).
+    # M0 sale del propio modelo (mu = rho*Vs^2 del modelo de velocidades).
+    # Delta_sigma = (7/16) * M0 / r^3   [Pa]  (Eshelby 1957, crack circular).
+    try:
+        m0, mw = model.fm.estimate_total_moment_and_mw(best.model)
+        a1, a2 = float(best.model[0]), float(best.model[1])   # semiejes (km)
+        r = 0.5 * (a1 + a2) * 1000.0                          # radio equiv. (m)
+        dsigma = (7.0 / 16.0) * m0 / r**3                     # Pa
+        ok(f"M0 = {m0:.3e} N·m  (Mw {mw:.2f})")
+        ok(f"radio equiv. r = {r/1000:.2f} km  (semiejes {a1:.2f}, {a2:.2f} km)")
+        ok(f"stress drop Δσ = {dsigma/1e6:.3f} MPa")
+    except Exception as exc:  # noqa: BLE001
+        warn(f"no se pudo calcular el stress drop: {exc}")
+
     # --- Guardar resultados ------------------------------------------------- #
     section("Guardando resultados")
     joblib_path = args.output / "inversion_result.joblib"
@@ -228,6 +243,8 @@ def main():
             ("plot_convergence", "parameter_convergence.png"),
             ("plot_fit",        "waveform_fit.png"),
             ("plot_elipse",     "ellipse_fit.png"),
+            ("plot_ellipse_depth", "ellipse_depth.png"),
+            ("plot_ellipse_map",   "ellipse_map.png"),
         ]
         for method, fname in figs:
             try:

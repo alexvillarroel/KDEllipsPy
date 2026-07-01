@@ -468,12 +468,13 @@ class NAResult:
             
         return plot_na_results(rows, self.param_names, show=show, save_path=save_path)
 
-    def plot_convergence(self, show: bool = True, save_path: Optional[str] = None) -> Tuple[Any, Any]:
+    def plot_convergence(self, show: bool = True, save_path: Optional[str] = None,
+                         fig: Optional[Any] = None) -> Tuple[Any, Any]:
         """
         Grafica la convergencia detallada por cada parámetro.
         """
         from ..core.plotting import plot_parameter_convergence
-        
+
         rows = []
         misfits = []
         iterations = []
@@ -484,14 +485,15 @@ class NAResult:
             rows.append(row)
             misfits.append(model.misfit)
             iterations.append(model.iteration)
-            
+
         return plot_parameter_convergence(
             rows, self.param_names, np.array(misfits), np.array(iterations),
-            show=show, save_path=save_path
+            show=show, save_path=save_path, fig=fig
         )
 
     def plot_fit(self, show: bool = True, save_path: Optional[str] = None,
-                 rotate: bool = True, mark_windows: bool = True) -> Tuple[Any, Any]:
+                 rotate: bool = True, mark_windows: bool = True,
+                 fig: Optional[Any] = None) -> Tuple[Any, Any]:
         """
         Grafica el mejor ajuste de formas de onda encontrado.
         Requiere que best_synthetics, observed y time estén presentes en el objeto.
@@ -553,9 +555,11 @@ class NAResult:
             station_flags=station_flags,
             rotate=rotate and azimuths is not None,
             mark_windows=mark_windows and azimuths is not None,
+            fig=fig,
         )
 
-    def plot_ellipse(self, show: bool = True, save_path: Optional[str] = None, title: Optional[str] = None) -> Tuple[Any, Any]:
+    def plot_ellipse(self, show: bool = True, save_path: Optional[str] = None, title: Optional[str] = None,
+                     fig: Optional[Any] = None) -> Tuple[Any, Any]:
         """
         Grafica la distribución de slip de la elipse para el mejor misfit.
         Requiere que config y best_model estén presentes en el objeto.
@@ -575,15 +579,18 @@ class NAResult:
             title=plot_title,
             show=show,
             save_path=save_path,
+            fig=fig,
         )
 
     def plot_elipse(self, show: bool = True, save_path: Optional[str] = None, title: Optional[str] = None) -> Tuple[Any, Any]:
         """Alias por compatibilidad con el nombre en español."""
         return self.plot_ellipse(show=show, save_path=save_path, title=title)
 
-    def plot_azimuthal(self, show: bool = True, save_path: Optional[str] = None) -> Tuple[Any, Any]:
+    def plot_azimuthal(self, show: bool = True, save_path: Optional[str] = None,
+                       ax: Optional[Any] = None) -> Tuple[Any, Any]:
         """Diagrama polar (radar) de la cobertura azimutal de las estaciones
-        respecto al epicentro, con el mayor hueco azimutal sombreado."""
+        respecto al epicentro, con el mayor hueco azimutal sombreado.
+        ``ax`` (eje polar) permite componerlo dentro de ``plot_yolo``."""
         if self.config is None or getattr(self.config, "stations", None) is None:
             print("Sin config/estaciones: no se puede graficar la cobertura azimutal.")
             return None, None
@@ -593,11 +600,11 @@ class NAResult:
         return plot_azimuthal_coverage(
             [s.latitude for s in sts], [s.longitude for s in sts],
             [s.name for s in sts], sp.latitude, sp.longitude,
-            show=show, save_path=save_path,
+            show=show, save_path=save_path, ax=ax,
         )
 
     def plot_ellipse_map(self, show: bool = True, save_path: Optional[str] = None,
-                         pad: float = 0.25) -> Tuple[Any, Any]:
+                         pad: float = 0.25, fig: Optional[Any] = None) -> Tuple[Any, Any]:
         """Mapa cartopy de la elipse de slip proyectada a la superficie (footprint
         coloreado por slip + borde + hipocentro + estaciones)."""
         if self.config is None or self.best_model is None:
@@ -614,7 +621,44 @@ class NAResult:
         sts = self.config.stations.stations if self.config.stations else []
         return _pem(src[:, 1], src[:, 2], slip, sp_cfg.latitude, sp_cfg.longitude,
                     [s.latitude for s in sts], [s.longitude for s in sts],
-                    [s.name for s in sts], pad=pad, show=show, save_path=save_path)
+                    [s.name for s in sts], pad=pad, show=show, save_path=save_path, fig=fig)
+
+    def plot_ellipse_depth(self, show: bool = True, save_path: Optional[str] = None) -> Tuple[Any, Any]:
+        """Secciones transversales de la elipse de slip en profundidad (estilo legacy
+        plot_geometry): corte N–S y corte E–O, coloreados por slip, con hipocentro."""
+        if self.config is None or self.best_model is None:
+            print("Sin config/best_model: no se puede proyectar la elipse en profundidad.")
+            return None, None
+        import matplotlib.pyplot as plt
+        from ..core.forward_model import AxitraForwardModel
+        fm = AxitraForwardModel.from_config(self.config)
+        geom = fm.apply_ellipse_model_to_geometry(
+            fm.build_geometry(), self.best_model.model, keep_all_sources=True)
+        src = geom.to_axitra_sources(latlon=True)          # [idx, lat, lon, z(m)]
+        slip = np.array([sp.displacement for sp in geom.source_points], dtype=float)
+        sp_cfg = self.config.source_position
+        dN = (src[:, 1] - sp_cfg.latitude) * 111.0                              # km (S→N)
+        dE = (src[:, 2] - sp_cfg.longitude) * 111.0 * np.cos(np.radians(sp_cfg.latitude))  # km (W→E)
+        depth = src[:, 3] / 1000.0                                             # m -> km
+        m = slip > 0
+        fig, axes = plt.subplots(1, 2, figsize=(12, 5), sharey=True)
+        for ax, x, xlab, ttl in (
+            (axes[0], dN, "S <-- Distancia (km) --> N", "Corte N–S"),
+            (axes[1], dE, "W <-- Distancia (km) --> E", "Corte E–O"),
+        ):
+            sc = ax.scatter(x[m], depth[m], c=slip[m], cmap="hot_r", s=16)
+            ax.scatter([0], [sp_cfg.depth], marker="D", s=90, c="blue",
+                       edgecolor="k", zorder=5, label="hipocentro")
+            ax.set_xlabel(xlab); ax.set_title(ttl)
+            ax.legend(loc="best", fontsize=8)
+        axes[0].set_ylabel("Profundidad (km)")
+        axes[0].invert_yaxis()                                  # más profundo abajo
+        fig.colorbar(sc, ax=axes, label="slip (m)")
+        if save_path:
+            fig.savefig(save_path, dpi=150, bbox_inches="tight")
+        if show:
+            plt.show()
+        return fig, axes
 
     def _misfit_breakdown_arrays(self, window_s="auto"):
         """Devuelve (num, den, window_s) por estación×(R,T,Z) del mejor modelo,
@@ -669,7 +713,7 @@ class NAResult:
         return num, den, window_s
 
     def plot_misfit_breakdown(self, show: bool = True, save_path: Optional[str] = None,
-                              window_s="auto") -> Tuple[Any, Any]:
+                              window_s="auto", fig: Optional[Any] = None) -> Tuple[Any, Any]:
         """Visualiza la contribución al misfit por estación/componente (heatmaps)."""
         if self.best_synthetics is None or self.observed is None or self.config is None:
             print("Datos insuficientes para el desglose de misfit.")
@@ -680,7 +724,7 @@ class NAResult:
         mode = f"ventana {ws:.0f}s" if ws else "señal completa"
         from ..core.plotting import plot_misfit_contribution
         return plot_misfit_contribution(num, den, names, E, mode,
-                                        show=show, save_path=save_path)
+                                        show=show, save_path=save_path, fig=fig)
 
     def plot_yolo(self, save_path: str | Path = "dashboard.pdf",
                   show: bool = False, dpi: int = 200) -> Optional[Path]:
@@ -741,33 +785,43 @@ class NAResult:
                 print(f"  [plot_yolo] panel falló: {exc}")
                 return None
 
-        imgs = {
-            "map":  _render(lambda: self.plot_ellipse_map(show=False, pad=2.0)),
-            "fit":  _render(lambda: self.plot_fit(show=False)),
-            "azi":  _render(lambda: self.plot_azimuthal(show=False)),
-            "heat": _render(lambda: self.plot_misfit_breakdown(show=False)),
-            "conv": _render(lambda: self.plot_convergence(show=False)),
-            "appr": (_render(lambda: self.plot_appraisal(show=False))
-                     if getattr(self, "appraisal_samples", None) is not None else None),
-        }
+        # Appraisal: el corner crea su propia figura -> única excepción rasterizada.
+        appr_img = (_render(lambda: self.plot_appraisal(show=False))
+                    if getattr(self, "appraisal_samples", None) is not None else None)
 
-        # --- Componer el dashboard --------------------------------------------
+        # --- Componer el dashboard con ejes NATIVOS (subfiguras) --------------
         fig = plt.figure(figsize=(19, 16))
-        gs = GridSpec(3, 3, figure=fig, width_ratios=[1, 1, 1.7],
-                      height_ratios=[1.1, 1.0, 1.0], hspace=0.04, wspace=0.03,
-                      left=0.01, right=0.99, top=0.955, bottom=0.01)
-        axA = fig.add_subplot(gs[0, 0:2])   # mapa elipse
-        axC = fig.add_subplot(gs[1, 0])     # azimutal
-        axD = fig.add_subplot(gs[1, 1])     # heatmap misfit
-        axB = fig.add_subplot(gs[0:2, 2])   # ajuste R/T/Z (alto)
-        axE = fig.add_subplot(gs[2, 0:2])   # convergencia
-        axF = fig.add_subplot(gs[2, 2])     # appraisal
+        gs = fig.add_gridspec(3, 3, width_ratios=[1, 1, 1.7],
+                              height_ratios=[1.1, 1.0, 1.0], hspace=0.10, wspace=0.08,
+                              left=0.02, right=0.98, top=0.95, bottom=0.02)
 
-        for ax, key in [(axA, "map"), (axB, "fit"), (axC, "azi"),
-                        (axD, "heat"), (axE, "conv"), (axF, "appr")]:
-            ax.axis("off")
-            if imgs[key] is not None:
-                ax.imshow(imgs[key], aspect="auto")
+        def _panel(spec, maker):
+            sf = fig.add_subfigure(spec)
+            try:
+                maker(sf)
+            except Exception as exc:  # noqa: BLE001
+                print(f"  [plot_yolo] panel falló: {exc}")
+
+        _panel(gs[0, 0], lambda sf: self.plot_ellipse_map(show=False, pad=2.0, fig=sf))   # contexto (estaciones)
+        _panel(gs[0, 1], lambda sf: self.plot_ellipse_map(show=False, fig=sf))            # zoom al footprint (simple)
+        _panel(gs[0:2, 2], lambda sf: self.plot_fit(show=False, fig=sf))
+        _panel(gs[1, 1],   lambda sf: self.plot_misfit_breakdown(show=False, fig=sf))
+        _panel(gs[2, 0:2], lambda sf: self.plot_convergence(show=False, fig=sf))
+
+        # azimutal: eje polar nativo en su subfigura.
+        sfC = fig.add_subfigure(gs[1, 0])
+        axC = sfC.add_subplot(projection="polar")
+        try:
+            self.plot_azimuthal(show=False, ax=axC)
+        except Exception as exc:  # noqa: BLE001
+            print(f"  [plot_yolo] panel azimutal falló: {exc}")
+            axC.axis("off")
+
+        # appraisal: raster (corner) dentro de su subfigura.
+        sfF = fig.add_subfigure(gs[2, 2])
+        axF = sfF.add_subplot(); axF.axis("off")
+        if appr_img is not None:
+            axF.imshow(appr_img, aspect="auto")
 
         # Título: evento, misfit, Mw.
         title = "Resultados de la inversión"
@@ -778,7 +832,10 @@ class NAResult:
                 from ..core.forward_model import AxitraForwardModel
                 fm = AxitraForwardModel.from_config(self.config)
                 _m0, mw = fm.estimate_total_moment_and_mw(self.best_model.model)
-                mw_txt = f"  ·  Mw {mw:.2f}"
+                # Stress drop Eshelby: Δσ = (7/16)·M0/r³, r = (a1+a2)/2 (semiejes km→m).
+                r = 0.5 * (float(self.best_model.model[0]) + float(self.best_model.model[1])) * 1000.0
+                dsigma = (7.0 / 16.0) * _m0 / r**3
+                mw_txt = f"  ·  Mw {mw:.2f}  ·  Δσ {dsigma/1e6:.2f} MPa"
             except Exception:
                 pass
             mf = self.best_model.misfit if self.best_model else float("nan")
@@ -793,8 +850,7 @@ class NAResult:
         if show:
             plt.show()
         plt.close(fig)
-        n_ok = sum(1 for v in imgs.values() if v is not None)
-        print(f"🎲 plot_yolo dashboard: {n_ok} paneles → {save_path}")
+        print(f"🎲 plot_yolo dashboard (ejes nativos) → {save_path}")
         return save_path
 
     # ------------------------------------------------------------------
@@ -1266,11 +1322,16 @@ class BaseInversionModel:
             # Filter synthetics to the same frequency band as observed data
             from kdellipspy.core.signal_utils import bandpass_filter_waveforms
 
+            # Mismo Butterworth que recibio el dato en kde-prep: orden = 2 x nº de
+            # integraciones (units=1/disp -> 2 integ -> orden 4; units=2/vel -> 2).
+            # Asi obs y syn comparten la cadena de filtrado (sin sesgo asimetrico).
+            n_int = 3 - int(self.cfg.observed_data.units)
             synthetics = bandpass_filter_waveforms(
                 synthetics,
                 self.time_array,
                 freq1=float(self.cfg.ellipse.freq1),
                 freq2=float(self.cfg.ellipse.freq2),
+                corners=2 * n_int,
                 zerophase=bool(getattr(self.cfg.ellipse, "zerophase", True)),
             )
 
@@ -1325,7 +1386,8 @@ class BaseInversionModel:
 
         misfit, synthetics = self._evaluate_model(model)
 
-        if misfit < self._best_misfit_seen:
+        improved = misfit < self._best_misfit_seen
+        if improved:
             self._best_misfit_seen = misfit
             self._best_model_vec = np.asarray(model, dtype=float).copy()
             if synthetics is not None:
@@ -1333,13 +1395,31 @@ class BaseInversionModel:
             if self.checkpoint_path is not None:
                 self._write_checkpoint(iter_est)
 
+        # Al mejorar el misfit, muestra también los parámetros del mejor modelo.
+        tail = f"  best_params[{self._best_param_str()}]" if improved else ""
         print(
             f"[{log_tag}] iter={iter_est:05d} eval={self._eval_count:05d} "
-            f"misfit={misfit:.6e} best={self._best_misfit_seen:.6e}",
+            f"misfit={misfit:.6e} best={self._best_misfit_seen:.6e}{tail}",
             flush=True,
         )
 
         return misfit
+
+    def _best_param_str(self) -> str:
+        """Línea compacta con los parámetros del mejor modelo actual (para logging),
+        más Mw y stress drop (Eshelby, r=(a1+a2)/2) derivados de la geometría."""
+        if self._best_model_vec is None:
+            return ""
+        parts = [f"{name.split()[0]}={val:.3f}"
+                 for name, val in zip(self.param_names, self._best_model_vec)]
+        try:
+            m0, mw = self.fm.estimate_total_moment_and_mw(self._best_model_vec)
+            r = 0.5 * (float(self._best_model_vec[0]) + float(self._best_model_vec[1])) * 1000.0
+            dsigma = (7.0 / 16.0) * m0 / r**3 / 1e6   # MPa
+            parts += [f"Mw={mw:.2f}", f"dsig={dsigma:.2f}MPa"]
+        except Exception:
+            pass
+        return " ".join(parts)
 
     def _write_checkpoint(self, iter_est: int) -> None:
         """Vuelca el mejor modelo actual a ``self.checkpoint_path`` (escritura atómica)."""

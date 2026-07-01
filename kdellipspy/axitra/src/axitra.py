@@ -101,9 +101,13 @@ class Axitra:
 
         # estimate periodicity if not supplied
         if xl == 0.:
-            # vp = model[:,2]
-            # vs = model[:,3]
-            vmax = max(model[:,2].max(), model[:,3].max())
+            # model layout is [depth, Vp, Vs, rho, Qp, Qs]: cols 1,2 are Vp,Vs.
+            # Periodicity is set by the FASTEST wave (Vp), so use Vp (col 1).
+            # (Antes leia cols 2,3 = (Vs, rho) -> subestimaba xl ~1.77x y
+            #  sub-muestreaba la Green de estaciones lejanas; ver REPORTE.)
+            vp = model[:,1]
+            vs = model[:,2]
+            vmax = max(vp.max(), vs.max())
             self.xl = 1.1 * duration * vmax
         else:
             self.xl = xl

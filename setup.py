@@ -60,6 +60,10 @@ setup(
     entry_points={
         "console_scripts": [
             "kdellipspy=kdellipspy.cli:main",
+            "kde-prep=kdellipspy.prep_data:main",
+            "kde-traces=kdellipspy.plot_traces:main",
+            "kde-map=kdellipspy.map:main",
+            "kde-dashboard=kdellipspy.dashboard:main",
         ],
     },
     cmdclass={

@@ -219,6 +219,13 @@ class DataPreprocessor:
                     pts_to_copy = min(len(idx_in_raw), self.npts_cfg)
                     extracted[i, :pts_to_copy] = data_raw[i, idx_in_raw[:pts_to_copy]]
 
+            # Quitar media y tendencia antes de filtrar (igual que real_disp.py /
+            # _preprocess_trace). detrend 'linear' remueve promedio + tendencia.
+            # ponytail: detrend sobre la fila completa; si la ventana queda muy
+            # zero-padded, mejor detrend solo el tramo valido antes de padear.
+            from scipy.signal import detrend
+            extracted = detrend(extracted, type="linear", axis=-1)
+
             # Filter
             time_target = np.arange(self.npts_cfg) * self.delta_cfg
             data_filtered = bandpass_filter_waveforms(

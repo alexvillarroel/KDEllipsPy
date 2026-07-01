@@ -1,0 +1,813 @@
+from dataclasses import dataclass, field
+from math import cos, log10, pi as math_pi, radians, sin, sqrt
+from typing import Any, List, Optional, Tuple
+
+import numpy as np
+from pyproj import CRS, Transformer
+
+# Handle both relative imports (when used as package) and direct imports (from notebooks)
+try:
+    from .config_parser import ConfigParser
+except ImportError:
+    from config_parser import ConfigParser
+
+
+# ----------------------------------------------------------------------------
+# Moment-tensor decomposition into the 6 elementary mechanisms whose Green's
+# functions axitra computes (5 deviatoric double couples + 1 isotropic source,
+# flagged by width = -1).
+#
+# Convention bug this replaces: the previous implementation hard-coded the 6
+# basis tensors in a frame that did NOT match the GCMT/USE (RTP) convention of
+# the input moment tensor, so each MT component was routed to the wrong
+# mechanism (rt/rp/tp slots cyclically permuted and the dip-slip diagonal terms
+# with wrong signs), giving a scrambled, polarity-inverted radiation pattern.
+# We now build the basis from the *actual* moment tensor of each mechanism
+# (Aki & Richards -> RTP) and solve for the weights.
+_MT_BASIS_STR = [0.0, 270.0, 0.0, 90.0, 0.0, 0.0]
+_MT_BASIS_DIP = [90.0, 90.0, 90.0, 45.0, 45.0, 0.0]
+_MT_BASIS_RAK = [0.0, -90.0, 90.0, 90.0, 90.0, 0.0]
+_MT_BASIS_WD = [0.0, 0.0, 0.0, 0.0, 0.0, -1.0]
+_MT_BASIS_LEN = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+
+
+def _sdr_to_mt_rtp(strike: float, dip: float, rake: float) -> np.ndarray:
+    """Unit-M0 moment tensor of a (strike, dip, rake) double couple in the
+    GCMT/USE (RTP) layout vector ``[Mrr, Mtt, Mpp, Mrt, Mrp, Mtp]``.
+
+    Uses the Aki & Richards convention (x=N, y=E, z=Down) and the standard
+    NED->RTP transform: Mrr=Mzz, Mtt=Mxx, Mpp=Myy, Mrt=Mxz, Mrp=-Myz, Mtp=-Mxy.
+    """
+    f, d, l = radians(strike), radians(dip), radians(rake)
+    Mxx = -(sin(d) * cos(l) * sin(2 * f) + sin(2 * d) * sin(l) * sin(f) ** 2)
+    Myy = (sin(d) * cos(l) * sin(2 * f) - sin(2 * d) * sin(l) * cos(f) ** 2)
+    Mzz = sin(2 * d) * sin(l)
+    Mxy = (sin(d) * cos(l) * cos(2 * f) + 0.5 * sin(2 * d) * sin(l) * sin(2 * f))
+    Mxz = -(cos(d) * cos(l) * cos(f) + cos(2 * d) * sin(l) * sin(f))
+    Myz = -(cos(d) * cos(l) * sin(f) - cos(2 * d) * sin(l) * cos(f))
+    return np.array([Mzz, Mxx, Myy, Mxz, -Myz, -Mxy], dtype=float)
+
+
+def _elementary_mt_matrix_rtp() -> np.ndarray:
+    """6x6 matrix whose columns are the unit moment tensors (RTP layout
+    ``[rr, tt, pp, rt, rp, tp]``) of the 6 elementary mechanisms. The 6th column
+    is the isotropic (explosion) source, taken as the identity."""
+    cols = [
+        _sdr_to_mt_rtp(_MT_BASIS_STR[k], _MT_BASIS_DIP[k], _MT_BASIS_RAK[k])
+        for k in range(5)
+    ]
+    cols.append(np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0], dtype=float))  # isotropic
+    return np.array(cols).T
+
+
+def _mt_signed_coeffs(mt) -> np.ndarray:
+    """Signed weights of the 6 elementary mechanisms that reproduce moment tensor
+    ``mt`` (a config object with mrr..mtp and exponent), obtained by decomposing
+    it against the TRUE moment tensors of those mechanisms (correct RTP/USE
+    convention)."""
+    scale = 10.0 ** float(mt.exponent)
+    m_vec = np.array(
+        [mt.mrr, mt.mtt, mt.mpp, mt.mrt, mt.mrp, mt.mtp], dtype=float
+    ) * scale
+    return np.linalg.solve(_elementary_mt_matrix_rtp(), m_vec)
+
+
+class UTMProjection:
+    """
+    UTM (Universal Transverse Mercator) projection using pyproj.
+    
+    Automatically detects the UTM zone based on the center coordinates.
+    Uses WGS84 ellipsoid for accurate geodetic transformations.
+    This replaces the legacy Lambert conformal projection with a
+    faster (C-native) and more standard approach.
+    """
+
+    def __init__(self, lat0_deg: float, lon0_deg: float):
+        """Initialize UTM projection with automatic zone detection."""
+        # Validate coordinates
+        if abs(lon0_deg) > 180 or abs(lat0_deg) > 90:
+            raise ValueError(f"Coordinates out of range: lat={lat0_deg}, lon={lon0_deg}")
+        
+        self.lat0_deg = float(lat0_deg)
+        self.lon0_deg = float(lon0_deg)
+        
+        # Auto-detect UTM zone from central longitude
+        zone = self._calculate_utm_zone(lon0_deg)
+        hemisphere = "north" if lat0_deg >= 0 else "south"
+        
+        self.crs_wgs84 = CRS.from_epsg(4326)  # WGS84 (lat/lon)
+        self.crs_utm = CRS.from_proj4(f"+proj=utm +zone={zone} +{hemisphere}")
+        
+        # Create bidirectional transformers
+        self.to_utm = Transformer.from_crs(self.crs_wgs84, self.crs_utm, always_xy=True)
+        self.to_wgs84 = Transformer.from_crs(self.crs_utm, self.crs_wgs84, always_xy=True)
+
+    @staticmethod
+    def _calculate_utm_zone(lon_deg: float) -> int:
+        """Calculate UTM zone from longitude (1-60)."""
+        zone = int((lon_deg + 180) / 6) + 1
+        return max(1, min(60, zone))
+
+    def latlon_to_xy(self, lat_deg: float, lon_deg: float) -> Tuple[float, float]:
+        """Convert lat/lon (degrees) to UTM Easting/Northing (meters)."""
+        if abs(lon_deg) > 180 or abs(lat_deg) > 90:
+            raise ValueError(f"Coordinates out of range: lat={lat_deg}, lon={lon_deg}")
+        
+        easting_m, northing_m = self.to_utm.transform(lon_deg, lat_deg)
+        return float(easting_m), float(northing_m)
+
+    def xy_to_latlon(self, easting_m: float, northing_m: float) -> Tuple[float, float]:
+        """Convert UTM Easting/Northing (meters) to lat/lon (degrees)."""
+        lon_deg, lat_deg = self.to_wgs84.transform(easting_m, northing_m)
+        return float(lat_deg), float(lon_deg)
+
+
+@dataclass
+class Station:
+    index: int
+    name: str
+    x_m: float  # North
+    y_m: float  # East
+    z_m: float
+    lat: float
+    lon: float
+
+
+@dataclass
+class StationGeometry:
+    ref_lat: float
+    ref_lon: float
+    stations: List[Station]
+    _projection: UTMProjection = field(default=None, init=False, repr=False)
+
+    def __post_init__(self):
+        self._projection = UTMProjection(self.ref_lat, self.ref_lon)
+
+    @property
+    def nstations(self) -> int:
+        return len(self.stations)
+
+    def _latlon_to_local(self, lat: float, lon: float) -> Tuple[float, float]:
+        """Convert lat/lon to local (North, East) in meters."""
+        e_abs, n_abs = self._projection.latlon_to_xy(lat, lon)
+        e0, n0 = self._projection.latlon_to_xy(self.ref_lat, self.ref_lon)
+        return float(n_abs - n0), float(e_abs - e0)
+
+    def _local_to_latlon(self, x_m: float, y_m: float) -> Tuple[float, float]:
+        """Convert local (North, East) to absolute lat/lon."""
+        e0, n0 = self._projection.latlon_to_xy(self.ref_lat, self.ref_lon)
+        return self._projection.xy_to_latlon(e0 + y_m, n0 + x_m)
+
+    def to_axitra_stations(self, latlon: bool = False) -> np.ndarray:
+        rows = []
+        for st in self.stations:
+            if latlon:
+                rows.append([st.index, st.lat, st.lon, st.z_m])
+            else:
+                rows.append([st.index, st.x_m, st.y_m, st.z_m])
+        return np.array(rows, dtype="float64")
+
+
+@dataclass
+class Subfault:
+    index: int
+    x_m: float
+    y_m: float
+    z_m: float
+    rupture_time_s: float
+    mu_pa: float = 0.0
+    area_m2: float = 0.0
+    slip_m: float = 0.0
+    lat: float = 0.0
+    lon: float = 0.0
+
+
+@dataclass
+class SourcePoint:
+    index: int
+    subfault_index: int
+    x_m: float
+    y_m: float
+    z_m: float
+    rupture_time_s: float
+    moment: float = 0.0
+    displacement: float = 0.0
+    strike_deg: float = 0.0
+    dip_deg: float = 0.0
+    rake_deg: float = 0.0
+    width: float = 0.0
+    length: float = 0.0
+    mu_pa: float = 0.0
+    basis_slot: int = 0
+
+
+@dataclass
+class FaultGeometry:
+    length_strike_m: float
+    length_dip_m: float
+    hypo_strike_m: float
+    hypo_dip_m: float
+    nx: int
+    ny: int
+    strike_deg: float
+    dip_deg: float
+    rake_deg: float
+    source_depth_m: float
+    source_lat: float
+    source_lon: float
+    rupture_velocity_km_s: float
+    mt_enabled: bool
+    subfaults: List[Subfault]
+    source_points: List[SourcePoint]
+    _projection: UTMProjection = field(default=None, init=False, repr=False)
+
+    def __post_init__(self):
+        self._projection = UTMProjection(self.source_lat, self.source_lon)
+
+    @property
+    def nsubfaults(self) -> int:
+        return len(self.subfaults)
+
+    @property
+    def nsources(self) -> int:
+        return len(self.source_points)
+
+    def _local_to_latlon(self, x_m: float, y_m: float) -> Tuple[float, float]:
+        """Convert local (North, East) to absolute lat/lon."""
+        e0, n0 = self._projection.latlon_to_xy(self.source_lat, self.source_lon)
+        return self._projection.xy_to_latlon(e0 + y_m, n0 + x_m)
+
+    def _latlon_to_local(self, lat: float, lon: float) -> Tuple[float, float]:
+        """Convert lat/lon to local (North, East) in meters."""
+        e_abs, n_abs = self._projection.latlon_to_xy(lat, lon)
+        e0, n0 = self._projection.latlon_to_xy(self.source_lat, self.source_lon)
+        return float(n_abs - n0), float(e_abs - e0)
+
+    def to_axitra_sources(self, latlon: bool = True) -> np.ndarray:
+        rows = []
+        for sp in self.source_points:
+            if latlon:
+                lat, lon = self._local_to_latlon(sp.x_m, sp.y_m)
+                rows.append([sp.index, lat, lon, sp.z_m])
+            else:
+                rows.append([sp.index, sp.x_m, sp.y_m, sp.z_m])
+        return np.array(rows, dtype="float64")
+
+    def to_axitra_hist(self) -> np.ndarray:
+        rows = []
+        for sp in self.source_points:
+            # axitra's moment.conv wrapper expects absolute Moment (Nm) in the second column.
+            # If we pass Slip (meters) and Width/Length, the wrapper often fails to scale it correctly.
+            # We calculate the absolute moment here: M0 = mu * area * slip
+            
+            # If displacement is stored but moment is 0 (non-MT mode), calculate it.
+            m0_val = float(sp.moment)
+            if not self.mt_enabled or m0_val == 0.0:
+                m0_val = float(sp.mu_pa * sp.width * sp.length * sp.displacement)
+
+            rows.append(
+                [
+                    sp.index,
+                    m0_val,
+                    sp.strike_deg,
+                    sp.dip_deg,
+                    sp.rake_deg,
+                    0.0, # Width set to 0 to avoid double scaling in some axitra versions
+                    0.0, # Length set to 0
+                    sp.rupture_time_s,
+                ]
+            )
+        return np.array(rows, dtype="float64")
+
+    def total_moment_nm(self) -> float:
+        """Return total scalar seismic moment in N.m for current source set."""
+        if self.mt_enabled:
+            return float(sum(abs(float(sp.moment)) for sp in self.source_points))
+
+        sf_by_index = {int(sf.index): sf for sf in self.subfaults}
+        total = 0.0
+        for sp in self.source_points:
+            sf = sf_by_index.get(int(sp.subfault_index))
+            if sf is None:
+                continue
+            total += abs(float(sf.mu_pa) * float(sf.area_m2) * float(sp.displacement))
+        return float(total)
+
+    def moment_magnitude_mw(self) -> float:
+        """Return moment magnitude Mw from total moment (Hanks & Kanamori, M0 in N.m)."""
+        m0 = self.total_moment_nm()
+        if m0 <= 0.0:
+            return float("-inf")
+        return float((2.0 / 3.0) * (log10(m0) - 9.1))
+
+    def plot(self, title: str = "2D Slip Distribution", show: bool = True, save_path: Optional[str] = None) -> Tuple[Any, Any]:
+        """
+        Visualización 2D de la distribución de slip interpolada.
+        """
+        from .plotting import plot_slip_distribution
+        return plot_slip_distribution(self, title=title, show=show, save_path=save_path)
+
+
+class GeometryBuilder:
+    """Build fault geometry from input.ctl through ConfigParser."""
+
+    def __init__(self, config: ConfigParser):
+        self.config = config
+
+    @classmethod
+    def from_input_ctl(cls, input_ctl_path: str) -> "GeometryBuilder":
+        return cls(ConfigParser(input_ctl_path))
+
+    @classmethod
+    def from_config(cls, config: ConfigParser) -> "GeometryBuilder":
+        return cls(config)
+
+    @classmethod
+    def from_params(cls, params: dict) -> "GeometryBuilder":
+        return cls(ConfigParser.from_dict(params))
+
+    def _mt_basis_and_amplitudes(self, nsubfaults: int) -> Tuple[List[float], List[float], List[float], List[float], List[float], List[float]]:
+        # Correct convention: decompose against the true mechanism tensors
+        # (see module-level _mt_signed_coeffs / _elementary_mt_matrix_rtp).
+        coeffs = _mt_signed_coeffs(self.config.moment_tensor)
+        vals = [abs(float(c)) / float(nsubfaults) for c in coeffs]
+        return (
+            vals,
+            list(_MT_BASIS_STR),
+            list(_MT_BASIS_DIP),
+            list(_MT_BASIS_RAK),
+            list(_MT_BASIS_WD),
+            list(_MT_BASIS_LEN),
+        )
+
+    def _mt_mode(self) -> str:
+        mt = self.config.moment_tensor
+        mode = str(getattr(mt, "scaling_mode", "no_mt")).strip().lower()
+        if int(mt.flag) == 0:
+            return "no_mt"
+        if mode not in {"no_mt", "mt_strict", "mt_factored"}:
+            return "mt_factored"
+        return mode
+
+    def build(
+        self,
+        slip_geom: float = 1.0,
+    ) -> FaultGeometry:
+        fp = self.config.fault_plane
+        src = self.config.source_position
+        mt = self.config.moment_tensor
+
+        phi = radians(src.strike)
+        delta = radians(src.dip)
+
+        dstk = fp.lx / float(fp.nx)
+        ddip = fp.ly / float(fp.ny)
+        area_subfault_m2 = float(dstk * ddip)
+
+        dxs = dstk * cos(phi)
+        dxd = -ddip * cos(delta) * sin(phi)
+        dys = dstk * sin(phi)
+        dyd = ddip * cos(delta) * cos(phi)
+        dzd = ddip * sin(delta)
+
+        depth_m = float(src.depth) * 1000.0
+
+        layers = self.config.velocity_model.layers
+
+        # Support both conventions documented by axitra:
+        # - layer thickness per row
+        # - upper-interface depth per row (first row must be 0)
+        is_interface_depth = False
+        if len(layers) > 1:
+            vals = [float(l.thickness) for l in layers]
+            if abs(vals[0]) < 1e-9 and all(vals[i + 1] >= vals[i] for i in range(len(vals) - 1)):
+                is_interface_depth = True
+
+        def get_rigidity_at_depth(z_m: float) -> float:
+            z_local = max(float(z_m), 0.0)
+
+            if is_interface_depth:
+                current_layer = layers[-1]
+                for i, layer in enumerate(layers):
+                    z_top = float(layer.thickness)
+                    z_bot = float(layers[i + 1].thickness) if i + 1 < len(layers) else np.inf
+                    if z_local >= z_top and z_local < z_bot:
+                        current_layer = layer
+                        break
+            else:
+                cum_depth = 0.0
+                current_layer = layers[-1]
+                for layer in layers:
+                    cum_depth += float(layer.thickness)
+                    current_layer = layer
+                    if z_local <= cum_depth:
+                        break
+
+            vs = float(current_layer.vs)
+            rho = float(current_layer.rho)
+            # If vs is in km/s (small values), convert to m/s.
+            if abs(vs) < 100.0:
+                vs = vs * 1000.0
+            # If rho is in kg/km^3 (very large values), convert to kg/m^3.
+            if abs(rho) > 1e8:
+                rho = rho / 1e9
+            return float(rho * (vs ** 2))
+
+        x0 = (dxs + dxd) / 2.0 - fp.hx * cos(phi) + fp.hy * cos(delta) * sin(phi)
+        y0 = (dys + dyd) / 2.0 - fp.hx * sin(phi) - fp.hy * cos(delta) * cos(phi)
+        z0 = dzd / 2.0 - fp.hy * sin(delta) + depth_m
+
+        # Create projection to compute lat/lon for each subfault
+        projection = UTMProjection(float(src.latitude), float(src.longitude))
+        # Get event UTM coordinates (absolute): Easting, Northing
+        event_easting, event_northing = projection.latlon_to_xy(float(src.latitude), float(src.longitude))
+
+        subfaults: List[Subfault] = []
+        for idip in range(1, fp.ny + 1):
+            for istk in range(1, fp.nx + 1):
+                idx = (idip - 1) * fp.nx + istk
+                # Local coords (relative to hypocenter): x=North, y=East
+                x = x0 + (istk - 1) * dxs + (idip - 1) * dxd
+                y = y0 + (istk - 1) * dys + (idip - 1) * dyd
+                z = z0 + (idip - 1) * dzd
+                mu_pa = get_rigidity_at_depth(z)
+                # Convert local cartesian (x, y) to UTM absolute, then to lat/lon
+                # x=north, y=east (local convention)
+                subfault_easting = event_easting + y
+                subfault_northing = event_northing + x
+                lat_deg, lon_deg = projection.xy_to_latlon(subfault_easting, subfault_northing)
+                subfaults.append(
+                    Subfault(
+                        index=idx,
+                        x_m=x,
+                        y_m=y,
+                        z_m=z,
+                        rupture_time_s=0.0,
+                        mu_pa=mu_pa,
+                        area_m2=area_subfault_m2,
+                        lat=lat_deg,
+                        lon=lon_deg,
+                    )
+                )
+
+        source_points: List[SourcePoint] = []
+        mt_enabled = self._mt_mode() != "no_mt"
+
+        if mt_enabled:
+            _, b_str, b_dip, b_rak, b_wd, b_len = self._mt_basis_and_amplitudes(len(subfaults))
+            sid = 1
+            for sf in subfaults:
+                for k in range(6):
+                    source_points.append(
+                        SourcePoint(
+                            index=sid,
+                            subfault_index=sf.index,
+                            x_m=sf.x_m,
+                            y_m=sf.y_m,
+                            z_m=sf.z_m,
+                            rupture_time_s=0.0,
+                            moment=0.0,
+                            displacement=0.0,
+                            strike_deg=b_str[k],
+                            dip_deg=b_dip[k],
+                            rake_deg=b_rak[k],
+                            width=b_wd[k],
+                            length=b_len[k],
+                            mu_pa=sf.mu_pa,
+                            basis_slot=k,
+                        )
+                    )
+                    sid += 1
+        else:
+            sid = 1
+            for sf in subfaults:
+                source_points.append(
+                    SourcePoint(
+                        index=sid,
+                        subfault_index=sf.index,
+                        x_m=sf.x_m,
+                        y_m=sf.y_m,
+                        z_m=sf.z_m,
+                        rupture_time_s=0.0,
+                        moment=0.0,
+                        displacement=0.0,
+                        strike_deg=float(src.strike),
+                        dip_deg=float(src.dip),
+                        rake_deg=float(src.rake),
+                        width=float(ddip),
+                        length=float(dstk),
+                        mu_pa=sf.mu_pa,
+                        basis_slot=0,
+                    )
+                )
+                sid += 1
+
+        return FaultGeometry(
+            length_strike_m=fp.lx,
+            length_dip_m=fp.ly,
+            hypo_strike_m=fp.hx,
+            hypo_dip_m=fp.hy,
+            nx=fp.nx,
+            ny=fp.ny,
+            strike_deg=src.strike,
+            dip_deg=src.dip,
+            rake_deg=src.rake,
+            source_depth_m=depth_m,
+            source_lat=src.latitude,
+            source_lon=src.longitude,
+            rupture_velocity_km_s=0.0,
+            mt_enabled=mt_enabled,
+            subfaults=subfaults,
+            source_points=source_points,
+        )
+
+
+class EllipticalSlipMapper:
+    """Apply ellipse-based slip factors to fault geometry source points."""
+
+    def __init__(self, config: ConfigParser):
+        self.config = config
+
+    def _prepare(self, model: np.ndarray) -> dict:
+        if len(model) < 7:
+            raise ValueError("Model must include 7 parameters: a1,a2,theta,np,tp,dmax,vr")
+
+        nx = int(self.config.fault_plane.nx)
+        ny = int(self.config.fault_plane.ny)
+        dstk = float(self.config.fault_plane.lx) / float(nx)
+        ddip = float(self.config.fault_plane.ly) / float(ny)
+
+        a1_m = float(model[0]) * 1000.0
+        a2_m = float(model[1]) * 1000.0
+        alpha = float(model[2]) * math_pi
+        np_frac_val = float(model[3])
+        tp_angle = float(model[4]) * 2.0 * math_pi
+        dmax_val = float(model[5])
+        vr_km_s = float(model[6])
+        vr_m_s = max(vr_km_s * 1000.0, 1.0)
+
+        estk = float(self.config.fault_plane.hx)
+        edip = float(self.config.fault_plane.hy)
+        slip_shape = int(self.config.ellipse.slip_shape)
+
+        x01 = a1_m * np_frac_val * cos(tp_angle)
+        y01 = a2_m * np_frac_val * sin(tp_angle)
+        xe = x01 * cos(alpha) + y01 * sin(alpha) + estk
+        ye = -x01 * sin(alpha) + y01 * cos(alpha) + edip
+
+        return {
+            "nx": nx,
+            "dstk": dstk,
+            "ddip": ddip,
+            "a1_m": a1_m,
+            "a2_m": a2_m,
+            "alpha": alpha,
+            "dmax": dmax_val,
+            "vr_km_s": vr_km_s,
+            "vr_m_s": vr_m_s,
+            "xe": xe,
+            "ye": ye,
+            "slip_shape": slip_shape,
+        }
+
+    @staticmethod
+    def _subfault_fault_plane_xy(sf_idx: int, nx: int, dstk: float, ddip: float) -> Tuple[float, float]:
+        istk = ((sf_idx - 1) % nx) + 1
+        idip = ((sf_idx - 1) // nx) + 1
+        xpos = (float(istk) - 0.5) * dstk
+        ypos = (float(idip) - 0.5) * ddip
+        return xpos, ypos
+
+    def _slip_factor_for_subfault(self, sf_idx: int, prepared: dict) -> float:
+        xpos, ypos = self._subfault_fault_plane_xy(
+            sf_idx=sf_idx,
+            nx=int(prepared["nx"]),
+            dstk=float(prepared["dstk"]),
+            ddip=float(prepared["ddip"]),
+        )
+
+        alpha = float(prepared["alpha"])
+        xe = float(prepared["xe"])
+        ye = float(prepared["ye"])
+        a1_m = float(prepared["a1_m"])
+        a2_m = float(prepared["a2_m"])
+
+        xx = (xpos - xe) * cos(alpha) - (ypos - ye) * sin(alpha)
+        yy = (xpos - xe) * sin(alpha) + (ypos - ye) * cos(alpha)
+
+        if a1_m > 0 and a2_m > 0:
+            d = (xx / a1_m) ** 2 + (yy / a2_m) ** 2
+        else:
+            d = np.inf
+
+        if d > 1.0:
+            return 0.0
+
+        slip_shape = int(prepared["slip_shape"])
+        if slip_shape == 0:
+            return 1.0
+        if slip_shape == 1:
+            return float(np.exp(-d))
+        return float(np.sqrt(max(0.0, 1.0 - d)))
+
+    def _mt_mode(self) -> str:
+        mt = self.config.moment_tensor
+        mode = str(getattr(mt, "scaling_mode", "no_mt")).strip().lower()
+        if int(mt.flag) == 0:
+            return "no_mt"
+        if mode not in {"no_mt", "mt_strict", "mt_factored"}:
+            return "mt_factored"
+        return mode
+
+    def _mt_component_weights_signed(self) -> List[float]:
+        """Signed, sum-of-abs-normalised weights of the 6 elementary mechanisms.
+
+        See module-level ``_mt_signed_coeffs`` for the (corrected) decomposition;
+        here we only normalise so the absolute scale is carried by the slip term.
+        """
+        coeffs = _mt_signed_coeffs(self.config.moment_tensor)
+        total = float(np.sum(np.abs(coeffs)))
+        if total <= 0.0:
+            return [1.0 / 6.0] * 6
+        return [float(c / total) for c in coeffs]
+
+    def _mt_target_m0_nm(self) -> float:
+        mt = self.config.moment_tensor
+        scale = 10.0 ** float(mt.exponent)
+        mrr = float(mt.mrr) * scale
+        mtt = float(mt.mtt) * scale
+        mpp = float(mt.mpp) * scale
+        mrt = float(mt.mrt) * scale
+        mrp = float(mt.mrp) * scale
+        mtp = float(mt.mtp) * scale
+        # Scalar moment from second invariant of symmetric moment tensor.
+        return float(
+            sqrt(
+                0.5
+                * (
+                    mrr * mrr
+                    + mtt * mtt
+                    + mpp * mpp
+                    + 2.0 * (mrt * mrt + mrp * mrp + mtp * mtp)
+                )
+            )
+        )
+
+    def apply_to_geometry(
+        self,
+        geom: FaultGeometry,
+        model: np.ndarray,
+        keep_all_sources: bool = False,
+    ) -> FaultGeometry:
+        """Apply the ellipse slip model to ``geom``.
+
+        When ``keep_all_sources`` is True the source-point set is NOT pruned to
+        the subfaults inside the ellipse: every source point is kept with zero
+        moment/slip outside the ellipse. This keeps the source set (positions
+        and indices) constant across models, which lets the caller compute the
+        Green's functions once for the full mesh and reuse them via ``conv``.
+        """
+        prepared = self._prepare(model)
+        dmax = float(prepared["dmax"])
+        vr_m_s = float(prepared["vr_m_s"])
+        source_depth_m = float(self.config.source_position.depth) * 1000.0
+
+        sf_by_index = {int(sf.index): sf for sf in geom.subfaults}
+
+        # Calculate slip factors first
+        slip_factor_by_subfault = {}
+        for sf_idx in sf_by_index.keys():
+            slip_factor_by_subfault[sf_idx] = self._slip_factor_for_subfault(sf_idx, prepared)
+
+        mt_mode = self._mt_mode()
+        dmax_effective = dmax
+        target_m0_nm: Optional[float] = None
+        denom_mu_a_slipfactor: Optional[float] = None
+        strict_scale_ok = True
+        if geom.mt_enabled and mt_mode == "mt_strict":
+            target_m0_nm = self._mt_target_m0_nm()
+            denom = 0.0
+            for sf_idx, slip_factor in slip_factor_by_subfault.items():
+                sf = sf_by_index.get(sf_idx)
+                if sf is None:
+                    continue
+                denom += float(sf.mu_pa) * float(sf.area_m2) * float(slip_factor)
+            denom_mu_a_slipfactor = float(denom)
+            if denom > 0.0 and target_m0_nm > 0.0:
+                dmax_effective = float(target_m0_nm / denom)
+            else:
+                strict_scale_ok = False
+
+        # Assign slip and rupture time only to subfaults inside the ellipse (slip_factor > 0)
+        for sf_idx, slip_factor in slip_factor_by_subfault.items():
+            sf = sf_by_index.get(sf_idx)
+            if sf is not None:
+                sf.slip_m = float(dmax_effective * slip_factor)
+                
+                # Only calculate rupture time for points inside the ellipse
+                if slip_factor > 0.0:
+                    tr = sqrt(
+                        sf.x_m * sf.x_m
+                        + sf.y_m * sf.y_m
+                        + (sf.z_m - source_depth_m) * (sf.z_m - source_depth_m)
+                    ) / vr_m_s
+                    sf.rupture_time_s = float(tr)
+                else:
+                    sf.rupture_time_s = 0.0
+
+        mt_weights = self._mt_component_weights_signed() if geom.mt_enabled else None
+        for sp in geom.source_points:
+            sf_idx = int(sp.subfault_index)
+            sf = sf_by_index.get(sf_idx)
+            if sf is None:
+                continue
+
+            sp.rupture_time_s = float(sf.rupture_time_s)
+            slip_factor = slip_factor_by_subfault[sf_idx]
+            slip_real = float(dmax_effective * slip_factor)
+
+            if geom.mt_enabled and mt_weights is not None:
+                moment_total = float(sf.mu_pa * sf.area_m2 * slip_real)
+                k = int(sp.basis_slot) % 6
+                sp.moment = float(moment_total * mt_weights[k])
+                sp.displacement = slip_real  # Store slip even in MT mode for analysis
+            else:
+                sp.moment = 0.0
+                sp.displacement = slip_real
+
+        # Filter source points with near-zero source terms that do not contribute to synthetics.
+        # Skipped when keep_all_sources=True so the source set stays constant across models
+        # (required for caching the Green's functions of the full fixed mesh).
+        if not keep_all_sources:
+            if geom.mt_enabled:
+                threshold_moment = 1e-20
+                geom.source_points = [sp for sp in geom.source_points if abs(sp.moment) > threshold_moment]
+            else:
+                threshold_disp = 1e-14
+                geom.source_points = [sp for sp in geom.source_points if abs(sp.displacement) > threshold_disp]
+
+        # axitra expects sequential source indices 1..N.
+        for i, sp in enumerate(geom.source_points, start=1):
+            sp.index = i
+
+        geom.rupture_velocity_km_s = float(prepared["vr_km_s"])
+
+        # Diagnostics for logging (set after moments/slip and filtering).
+        mode_label = mt_mode if geom.mt_enabled else "no_mt"
+        m0_tensor_nm = float(self._mt_target_m0_nm()) if geom.mt_enabled else None
+        geom.slip_scale_diagnostics = {
+            "mt_scaling_mode": mode_label,
+            "dmax_requested_m": float(dmax),
+            "dmax_effective_m": float(dmax_effective),
+            "m0_target_nm": m0_tensor_nm,
+            "mu_a_slipfactor_sum": denom_mu_a_slipfactor,
+            "m0_L1_sum_abs_moments_nm": float(geom.total_moment_nm()),
+            "mt_strict_scale_applied": bool(
+                geom.mt_enabled and mt_mode == "mt_strict" and strict_scale_ok
+            ),
+        }
+        if geom.mt_enabled and mt_mode == "mt_strict" and not strict_scale_ok:
+            geom.slip_scale_diagnostics["strict_scale_warning"] = (
+                "mt_strict: sum(mu*A*slip_factor)<=0 or M0_target<=0; "
+                "dmax_effective equals requested dmax"
+            )
+
+        return geom
+
+
+def build_geometry_from_input_ctl(
+    input_ctl_path: str,
+    slip_geom: float = 1.0,
+) -> FaultGeometry:
+    builder = GeometryBuilder.from_input_ctl(input_ctl_path)
+    return builder.build(
+        slip_geom=slip_geom,
+    )
+
+
+def build_station_geometry(
+    ref_lat: float,
+    ref_lon: float,
+    station_data: List[Tuple[str, float, float, float]],
+) -> StationGeometry:
+    stations: List[Station] = []
+    ref_geometry = StationGeometry(ref_lat=ref_lat, ref_lon=ref_lon, stations=[])
+
+    for idx, (name, lat, lon, elev_m) in enumerate(station_data, start=1):
+        # x_local -> North, y_local -> East (relative to event location).
+        x_local, y_local = ref_geometry._latlon_to_local(lat, lon)
+
+        stations.append(
+            Station(
+                index=idx,
+                name=name,
+                x_m=float(x_local),
+                y_m=float(y_local),
+                z_m=elev_m,
+                lat=lat,
+                lon=lon,
+            )
+        )
+
+    return StationGeometry(ref_lat=ref_lat, ref_lon=ref_lon, stations=stations)
+

@@ -19,9 +19,9 @@ class ObservedDataParams:
         return cls(
             t1=float(get('Time window start (t1)', 0.0)),
             t2=float(get('Time window end (t2)', 128.0)),
-            npts=int(get('Number of points (Npts)', 512)),
+            npts=int(float(get('Number of points (Npts)', 512))),  # ctl puede escribir "128.000000"
             delta=float(get('Delta / Time step', 0.25)),
-            units=int(get('Units', 1)) # Precise prefix
+            units=int(float(get('Units', 1)))
         )
 
 
@@ -665,7 +665,7 @@ def _split_line_by_separator(line: str) -> Tuple[str, str]:
 def _normalize_mt_scaling_mode(flag: int, raw_mode: str) -> str:
     if int(flag) == 0: return "no_mt"
     m = str(raw_mode).strip().lower().replace("-", "_").replace(" ", "_")
-    aliases = {"":"mt_factored", "mt":"mt_factored", "full_mt":"mt_factored", "factored":"mt_factored", "strict":"mt_strict", "fixed_m0":"mt_strict", "no_mt":"no_mt"}
+    aliases = {"":"mt_factored", "mt":"mt_factored", "full_mt":"mt_factored", "factored":"mt_factored", "mt_factored":"mt_factored", "strict":"mt_strict", "fixed_m0":"mt_strict", "mt_strict":"mt_strict", "no_mt":"no_mt"}
     return aliases.get(m, "mt_factored")
 
 def read_input_ctl(filepath: str) -> Dict[str, Any]:

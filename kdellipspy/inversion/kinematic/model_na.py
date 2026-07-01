@@ -113,24 +113,33 @@ try:
                 )
                 
                 for i, (misfit, synthetics) in enumerate(results):
-                    self.inversion_model._eval_count += 1
-                    if misfit < self.inversion_model._best_misfit_seen:
-                        self.inversion_model._best_misfit_seen = misfit
+                    im = self.inversion_model
+                    im._eval_count += 1
+
+                    # Logging in parallel mode (iter label needed for checkpoint)
+                    iter_est = 0
+                    if im._na_cfg_runtime is not None:
+                        n0 = int(im._na_cfg_runtime.n_samples_initial)
+                        ns = max(1, int(im._na_cfg_runtime.n_samples_iteration))
+                        if im._eval_count > n0:
+                            iter_est = 1 + ((im._eval_count - n0 - 1) // ns)
+
+                    improved = misfit < im._best_misfit_seen
+                    if improved:
+                        im._best_misfit_seen = misfit
+                        im._best_model_vec = np.asarray(new_samples[i], dtype=float).copy()
                         if synthetics is not None:
-                            self.inversion_model.best_synthetics = synthetics.copy()
-                    
+                            im.best_synthetics = synthetics.copy()
+                        if im.checkpoint_path is not None:
+                            im._write_checkpoint(iter_est)
+
                     self.objectives[self.np + i] = misfit
 
-                    # Logging in parallel mode
-                    iter_est = 0
-                    if self.inversion_model._na_cfg_runtime is not None:
-                        n0 = int(self.inversion_model._na_cfg_runtime.n_samples_initial)
-                        ns = max(1, int(self.inversion_model._na_cfg_runtime.n_samples_iteration))
-                        if self.inversion_model._eval_count > n0:
-                            iter_est = 1 + ((self.inversion_model._eval_count - n0 - 1) // ns)
+                    # Al mejorar el misfit, muestra los parámetros del mejor modelo.
+                    tail = f"  best_params[{im._best_param_str()}]" if improved else ""
                     print(
-                        f"[NA-Parallel] iter={iter_est:05d} eval={self.inversion_model._eval_count:05d} "
-                        f"misfit={misfit:.6e} best={self.inversion_model._best_misfit_seen:.6e}",
+                        f"[NA-Parallel] iter={iter_est:05d} eval={im._eval_count:05d} "
+                        f"misfit={misfit:.6e} best={im._best_misfit_seen:.6e}{tail}",
                         flush=True,
                     )
 

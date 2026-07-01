@@ -17,7 +17,7 @@
 # 2. Source & Focal Mechanism          :     Values                   |
 #===============================================:===============================
  Event Name                                     :   Calama 2020 Intraplate
- Origin Time (UTC)                              : 2020-06-03T07:35:28.000Z
+ Origin Time (UTC)                              : 2020-06-03T07:35:34.000Z
  Latitude                                       :               -23.247000
  Longitude                                      :               -68.530000
  Depth                                     (km) :               123.400000
@@ -44,7 +44,7 @@
  Frequency 1 (Freq1)                      (Hz)  :                 0.020000
  Frequency 2 (Freq2)                      (Hz)  :                 0.100000
  Time shift (T0)                           (s)  :                 3.000000
- Source type (axitra)                           :                        5
+ Source type (axitra)                           :                        4
  Zerophase filter (0:causal, 1:acausal)         :                        0
 
 #===============================================:===============================

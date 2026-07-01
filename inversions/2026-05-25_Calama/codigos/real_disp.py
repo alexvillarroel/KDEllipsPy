@@ -241,7 +241,7 @@ def escribir_input_ctl(ev, estaciones):
  Exponent (iexp)                                :     18.0
 
 #===============================================:===============================
-# 8. Station Parameters (Lat, Lon, Elev, Name, N, E, Z) (0:no, 1:yes)          |
+# 8. Station Parameters (Lat, Lon, Elev, Name, R, T, Z) (0:no, 1:yes)          |
 #===============================================:===============================
  Number of stations                             :     {len(estaciones)}
 {sta_lines}
