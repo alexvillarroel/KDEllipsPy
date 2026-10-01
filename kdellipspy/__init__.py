@@ -4,7 +4,7 @@
 from .core.config_parser import (
     ConfigParser, ObservedDataParams, SourcePosition, FaultPlaneParams,
     EllipseParams, InversionParam, InversionParams, InversionProcessParams,
-    MomentTensor, StationParams, VelocityLayer, VelocityModel,
+    MomentTensor, StationParams, VelocityLayer, VelocityModel, TSNSolverParams,
     read_input_ctl, parse_velocity_model, validate_input_ctl
 )
 # Renombramos Station para evitar colisión con geometry.py
@@ -80,7 +80,7 @@ __all__ = [
     # Config
     "ConfigParser", "ObservedDataParams", "SourcePosition", "FaultPlaneParams",
     "EllipseParams", "InversionParam", "InversionParams", "InversionProcessParams",
-    "MomentTensor", "StationParams", "VelocityLayer", "VelocityModel",
+    "MomentTensor", "StationParams", "VelocityLayer", "VelocityModel", "TSNSolverParams",
     "ConfigStation", "read_input_ctl", "parse_velocity_model", "validate_input_ctl",
     
     # Forward Model

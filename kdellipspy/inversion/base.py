@@ -1168,6 +1168,13 @@ class BaseInversionModel:
         # mechanism (which ``conv`` applies from the per-model source history).
         self.use_green_cache: bool = False
         self._green_cache_ap: Optional[Any] = None
+        # Fast conv (with the Green cache): per-source impulse basis computed
+        # once, then each model is a numpy sum instead of an axitra conv call
+        # (see kdellipspy/inversion/fast_axitra.py). Falls back to conv for
+        # source types without an analytic STF or if a mechanism changes.
+        self.use_fast_conv: bool = True
+        self._fast_basis: Optional[np.ndarray] = None
+        self._fast_mech: Optional[np.ndarray] = None
 
         # Best synthetic seismograms (nsta, 3, npts) — updated inside objective_function
         self.best_synthetics: Optional[np.ndarray] = None
@@ -1275,6 +1282,34 @@ class BaseInversionModel:
             except Exception:
                 pass
             self._green_cache_ap = None
+        self._fast_basis = None
+        self._fast_mech = None
+
+    # ------------------------------------------------------------------
+    def _fast_synthetics(self, ap, geom, source_type: int) -> Optional[np.ndarray]:
+        """Synthetics (nsta, 3, npts) via fast_axitra, or None to use conv."""
+        from .fast_axitra import SUPPORTED_SOURCE_TYPES, impulse_basis, kinematic_synthetics
+        from .dynamic.dynamic_convolution import axitra_aw
+
+        if not (self.use_fast_conv and self.use_green_cache) or source_type not in SUPPORTED_SOURCE_TYPES:
+            return None
+        if geom.mt_enabled:
+            # ponytail: MT mode has 6 elementary sources per subfault -> the basis
+            # needs 6*nsub conv calls (hours); conv stays faster there. Upgrade path:
+            # build the basis from the Green's functions directly, not via conv.
+            return None
+        hist = geom.to_axitra_hist()
+        unit = int(self.cfg.observed_data.units)
+        if self._fast_basis is None:
+            self._fast_basis = impulse_basis(ap, hist, unit)
+            self._fast_mech = hist[:, 2:5].copy()
+        if hist.shape[0] != self._fast_mech.shape[0] or not np.allclose(hist[:, 2:5], self._fast_mech):
+            return None  # mechanism changed: basis no longer valid
+        t0 = float(self.cfg.ellipse.t0)
+        if t0 <= 0.0:  # same fallback as AxitraForwardModel.conv
+            t0 = max(float(self.cfg.observed_data.delta), 0.1)
+        return kinematic_synthetics(self._fast_basis, hist[:, 1], hist[:, 7], source_type, t0,
+                                    axitra_aw(ap), float(ap.duration))
 
     # ------------------------------------------------------------------
     def _evaluate_model(self, model: np.ndarray) -> Tuple[float, Optional[np.ndarray]]:
@@ -1311,13 +1346,14 @@ class BaseInversionModel:
                 ap = self.fm.green(ap, quiet=True)
 
             source_type = int(getattr(self.cfg.ellipse, "source_type", 4))
-            _, sx, sy, sz = self.fm.conv(
-                ap, geom, source_type=source_type, t0=float(self.cfg.ellipse.t0), quiet=True
-            )
-
-            synthetics = np.array([sx, sy, sz])
-            synthetics = np.transpose(synthetics, (1, 2, 0))
-            synthetics = np.transpose(synthetics, (0, 2, 1))
+            synthetics = self._fast_synthetics(ap, geom, source_type)
+            if synthetics is None:
+                _, sx, sy, sz = self.fm.conv(
+                    ap, geom, source_type=source_type, t0=float(self.cfg.ellipse.t0), quiet=True
+                )
+                synthetics = np.array([sx, sy, sz])
+                synthetics = np.transpose(synthetics, (1, 2, 0))
+                synthetics = np.transpose(synthetics, (0, 2, 1))
 
             # Filter synthetics to the same frequency band as observed data
             from kdellipspy.core.signal_utils import bandpass_filter_waveforms

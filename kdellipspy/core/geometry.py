@@ -785,6 +785,226 @@ def build_geometry_from_input_ctl(
     )
 
 
+class EllipticalStressMapper:
+    """Build the dynamic-rupture prestress and peak-stress fields from the
+    10-parameter elliptical model.
+    (Construye los campos de prestress y peak-stress de la ruptura dinámica
+    a partir del modelo elíptico de 10 parámetros.)
+
+    NumPy port of the legacy Fortran pair
+    ``legacy/Dynamic_inversion/Source/fd3d_subs/{mkstress.f,mkpeak.f}`` plus
+    the parameter mapping done by their caller ``forward_modelling.f``.
+    Sister of :class:`EllipticalSlipMapper` (kinematic side), but it works in
+    FD grid points on the fault plane, not in metres, and needs no config.
+
+    Model vector (inversion units, same order as legacy ``rmodel``):
+      model[0] : a    - ellipse semi-axis 1 (grid points)
+      model[1] : b    - ellipse semi-axis 2 (grid points)
+      model[2] : xo   - ellipse centre, strike index (grid points)
+      model[3] : yo   - ellipse centre, dip index (grid points)
+      model[4] : phi  - ellipse rotation (radians)
+      model[5] : Te   - asperity prestress (MPa) -> strbin = Te*1e6 Pa
+      model[6] : cte1 - peak stress factor       -> strin  = cte1*strbin
+      model[7] : cte2 - nucleation stress factor -> strain = cte2*strin
+      model[8] : r    - nucleation radius (grid points)
+      model[9] : dmax - Dc, full slip-weakening critical distance (m); NOT
+                 used here (consumed by the FD solver). Verified against
+                 ``legacy/.../indyna3d.f:180-181`` (``dd=1-gliss/dmax``): the
+                 legacy weakening law divides by this value directly, so it
+                 is Dc itself, not Dc/2.
+
+    All arithmetic is done in float32 to reproduce the legacy REAL*4
+    computation bit-for-bit, including the inside/outside boundary decisions
+    (``rr < 1``) for points razor-close to the ellipse edge.
+    """
+
+    # Fixed background values hard-coded in forward_modelling.f
+    STRBOUT = np.float32(-1.0e8)  # prestress outside the asperity (Pa)
+    STRAOUT = np.float32(0.0)     # nucleation add outside the circle (Pa)
+
+    def __init__(self, nxt: int, nyt: int):
+        self.nxt = int(nxt)
+        self.nyt = int(nyt)
+        # Nucleation centre fixed at the grid midpoint (Fortran integer division)
+        self.xa = np.float32(self.nxt // 2)
+        self.ya = np.float32(self.nyt // 2)
+
+    def fields(self, model: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        """Return ``(prestress, peak)`` float32 arrays of shape (nxt, nyt).
+
+        Axis 0 is the Fortran ``i`` (strike) index, axis 1 the ``j`` (dip)
+        index; element [i-1, j-1] equals legacy ``strinix(i,j)`` /
+        ``peak_xz(i,j)``.
+        """
+        if len(model) < 10:
+            raise ValueError(
+                "Model must include 10 parameters: a,b,xo,yo,phi,Te,cte1,cte2,r,dmax"
+            )
+
+        a = np.float32(model[0])
+        b = np.float32(model[1])
+        xo = np.float32(model[2])
+        yo = np.float32(model[3])
+        phi = np.float32(model[4])
+        # Chained float32 products, exactly as forward_modelling.f does them
+        strbin = np.float32(np.float32(model[5]) * np.float32(1.0e6))
+        strin = np.float32(np.float32(model[6]) * strbin)
+        strain = np.float32(np.float32(model[7]) * strin)
+        r = np.float32(model[8])
+
+        ii = np.arange(1, self.nxt + 1, dtype=np.float32)[:, None]
+        jj = np.arange(1, self.nyt + 1, dtype=np.float32)[None, :]
+        cphi = np.cos(phi)
+        sphi = np.sin(phi)
+
+        # Elliptical asperity (mkstress.f)
+        dx = ii - xo
+        dy = jj - yo
+        x = dx * cphi + dy * sphi
+        y = -dx * sphi + dy * cphi
+        rr = np.sqrt((x / a) ** 2 + (y / b) ** 2)
+        prestress = np.where(rr < np.float32(1.0), strbin, self.STRBOUT).astype(
+            np.float32
+        )
+
+        # Nucleation circle add — only if the (fixed) hypocentre lies inside
+        # the ellipse shrunk by r; the check does not depend on (i,j).
+        xh = (self.xa - xo) * cphi + (self.ya - yo) * sphi
+        yh = -(self.xa - xo) * sphi + (self.ya - yo) * cphi
+        rhypo = np.sqrt((xh / (a - r)) ** 2 + (yh / (b - r)) ** 2)
+        if rhypo < np.float32(1.0):
+            dr2 = (ii - self.xa) ** 2 + (jj - self.ya) ** 2 - r**2
+            prestress = prestress + np.where(
+                dr2 <= np.float32(0.0), strain, self.STRAOUT
+            )
+
+        # Peak stress (mkpeak.f): the legacy inside/outside branch is vacuous
+        # (both branches add strin), so the field is uniform by construction.
+        peak = np.full((self.nxt, self.nyt), strin, dtype=np.float32)
+
+        return prestress, peak
+
+
+def write_fd3d_tsn_forwardmodel(
+    path: str,
+    t0: np.ndarray,
+    ts: np.ndarray,
+    dc: np.ndarray,
+    header: Tuple[float, float] = (0.0, 0.0),
+) -> None:
+    """Write a ``forwardmodel.dat`` for fd3d_TSN (``readinversionresult()``).
+
+    fd3d_TSN reads ``dum, dum, T0I(:,:), TsI(:,:), DcI(:,:)`` in free format
+    and bilinearly interpolates the (NLI, NWI) inversion grid onto the FD
+    fault grid. Arrays here are (NLI, NWI) with axis 0 = strike, axis 1 = dip;
+    they are flattened column-major to match Fortran array element order.
+
+    NOTE: fd3d_TSN's TsI is a *friction coefficient* (it gets multiplied by
+    the depth-dependent ``normstress(k)`` inside fd3d_init.f90), while the
+    legacy peak field is an absolute stress in Pa. Converting one into the
+    other is the caller's responsibility.
+    """
+    if not (t0.shape == ts.shape == dc.shape):
+        raise ValueError(
+            f"t0/ts/dc shapes must match, got {t0.shape}, {ts.shape}, {dc.shape}"
+        )
+    values = np.concatenate(
+        [
+            np.asarray(header, dtype=np.float64),
+            np.asarray(t0, dtype=np.float64).flatten(order="F"),
+            np.asarray(ts, dtype=np.float64).flatten(order="F"),
+            np.asarray(dc, dtype=np.float64).flatten(order="F"),
+        ]
+    )
+    with open(path, "w", encoding="ascii") as f:
+        f.write("  " + "  ".join(f"{v:.5E}" for v in values) + "\n")
+
+
+@dataclass
+class TSNFaultGridSpec:
+    """Physical FD grid geometry needed to convert an absolute peak-stress
+    field (Pa) into fd3d_TSN's friction-coefficient ``TsI``.
+    (Geometría física de la grilla FD necesaria para convertir un campo de
+    peak-stress absoluto (Pa) al coeficiente de fricción ``TsI`` de fd3d_TSN.)
+
+    Mirrors the on-fault subset of ``inputfd3d.dat`` (``nxtT,nytT,nztT``,
+    ``dh``, ``dip``, ``nabc``). Only the DIPSLIP branch of
+    ``normstress()`` (fd3d_init.f90) is implemented — this repo's dynamic
+    events are all dip-slip.
+    """
+
+    dh: float
+    dip_deg: float
+    nztT: int
+    nabc: int
+    nfs: int = 2  # fd3d_init.f90: nfs=nabc if FSPACE else 2 (default build)
+
+    @property
+    def nzt(self) -> int:
+        return self.nztT + self.nabc + self.nfs
+
+    def normstress_at_depth_m(self, zs_m: np.ndarray) -> np.ndarray:
+        """``normstress()`` (fd3d_init.f90:77-86, DIPSLIP branch) re-expressed
+        in terms of along-dip distance ``zs_m`` from the top of the on-fault
+        region (metres), instead of the fine-grid index ``k``.
+
+        Derivation: ``ZS = dh*(k-1-nabc)`` (fd3d_init.f90:816/820 pattern)
+        ``=>  k = ZS/dh + 1 + nabc``, substituted into
+        ``normstress(k) = max(1e5, 8520*dh*(nzt-nfs-k)*sin(dip))``.
+        """
+        dip_rad = np.radians(self.dip_deg)
+        depth_term = self.dh * (self.nzt - self.nfs - self.nabc - 1) - zs_m
+        return np.maximum(1.0e5, 8520.0 * np.sin(dip_rad) * depth_term)
+
+    def coarse_normstress_profile(self, nwi: int) -> np.ndarray:
+        """``normstress`` sampled at the ``NWI`` coarse-grid depth nodes used
+        by ``forwardmodel.dat`` (same physical span as the fine on-fault
+        grid — see ``inversion_modeltofd3d``'s ``DW`` in fd3d_init.f90:814).
+        """
+        dw = self.dh * (self.nzt - self.nfs - self.nabc) / float(nwi - 1)
+        zs = dw * np.arange(nwi, dtype=np.float64)
+        return self.normstress_at_depth_m(zs)
+
+
+TSN_BARRIER_PEAK_PA = 1.0e10  # strength outside the asperity: never reached
+
+
+def build_tsn_dynamic_fields(
+    model: np.ndarray,
+    nli: int,
+    nwi: int,
+    grid: TSNFaultGridSpec,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Map the 10-parameter elliptical model directly onto fd3d_TSN's
+    coarse inversion grid, producing ``(T0I, TsI, DcI)`` ready for
+    :func:`write_fd3d_tsn_forwardmodel`.
+    (Mapea el modelo elíptico de 10 params directo a la grilla gruesa de
+    fd3d_TSN, listo para escribir en ``forwardmodel.dat``.)
+
+    Generates the ellipse fields at (nli, nwi) resolution instead of the
+    fine FD grid — physically equivalent, since fd3d_TSN bilinearly
+    interpolates ``forwardmodel.dat`` back up to the fine grid anyway
+    (``inversion_modeltofd3d``), and far cheaper per NA evaluation.
+
+    ``model`` uses (a,b,xo,yo,r) already expressed in **coarse** (nli, nwi)
+    grid-point units — the caller is responsible for that scaling, since
+    ``nli``/``nwi`` are a modelling choice independent of the legacy fine
+    grid the 10 params were originally defined on.
+    """
+    t0, peak_pa = EllipticalStressMapper(nli, nwi).fields(model)
+    # Legacy barrier (STRBOUT=-1e8 outside the ellipse) relies on indyna3d's
+    # SIGNED check (tau > peak never true). fd3d_TSN compares the traction
+    # MAGNITUDE (fd3d_theo.f90:319), so |-1e8| would rupture the whole
+    # barrier at t=0. Same intent in TSN terms: zero prestress, unbreakable.
+    barrier = t0 < 0
+    t0 = np.where(barrier, np.float32(0.0), t0)
+    peak_pa = np.where(barrier, np.float32(TSN_BARRIER_PEAK_PA), peak_pa)
+    normstress = grid.coarse_normstress_profile(nwi).astype(np.float32)
+    ts = peak_pa / normstress[None, :]
+    dc = np.full((nli, nwi), np.float32(model[9]), dtype=np.float32)
+    return t0, ts, dc
+
+
 def build_station_geometry(
     ref_lat: float,
     ref_lon: float,

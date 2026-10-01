@@ -296,6 +296,34 @@ class VelocityModel:
         ])
 
 
+@dataclass
+class TSNSolverParams:
+    """Section 10 (optional): fd3d_TSN dynamic-rupture solver config.
+
+    Only needed by DynamicNAInversionModel; absent for kinematic inversions.
+    """
+    work_dir: str
+    nxtT: int
+    nztT: int
+    dh: float = 100.0
+    nabc: int = 20
+    dt_s: float = 0.01
+    binary: str = "fd3d_gnu_TSN"
+
+    @classmethod
+    def from_dict(cls, params: Dict) -> 'TSNSolverParams':
+        get = lambda key, default: _get_param_value(params, key, default)
+        return cls(
+            work_dir=str(get('Solver work directory', '.')),
+            nxtT=int(float(get('FD grid points along strike (NXT)', 0))),
+            nztT=int(float(get('FD grid points along dip (NZT)', 0))),
+            dh=float(get('FD grid spacing (dh)', 100.0)),
+            nabc=int(float(get('Absorbing boundary cells (nabc)', 20))),
+            dt_s=float(get('FD time step (dt)', 0.01)),
+            binary=str(get('Solver binary name', 'fd3d_gnu_TSN')),
+        )
+
+
 class ConfigParser:
     """Parses and stores the inversion configuration from the 'input.ctl' file."""
 
@@ -316,7 +344,8 @@ class ConfigParser:
         self.moment_tensor = None
         self.stations = None
         self.velocity_model = None
-        
+        self.dynamic_solver = None
+
         if self.filepath not in ("<manual>", "<from_dict>"):
             self.parse()
 
@@ -392,7 +421,11 @@ class ConfigParser:
                 elif isinstance(l, VelocityLayer):
                     layers.append(l)
             instance.velocity_model = VelocityModel(layers=layers)
-            
+
+        # Section 10 (optional)
+        if 'dynamic_solver' in params:
+            instance.dynamic_solver = TSNSolverParams.from_dict(params['dynamic_solver'])
+
         return instance
 
     def update_stations(self, keep_station_names: list[str]) -> None:
@@ -583,6 +616,7 @@ class ConfigParser:
         if 7 in sections: self.moment_tensor = MomentTensor.from_dict(self._extract_params(sections[7]))
         if 8 in sections: self.stations = StationParams.from_lines(self._extract_data_lines(sections[8]))
         if 9 in sections: self.velocity_model = VelocityModel.from_lines(self._extract_data_lines(sections[9]))
+        if 10 in sections: self.dynamic_solver = TSNSolverParams.from_dict(self._extract_params(sections[10]))
 
     def _split_sections(self, content: str) -> Dict[int, str]:
         sections = {}; cur = None; chunk = []

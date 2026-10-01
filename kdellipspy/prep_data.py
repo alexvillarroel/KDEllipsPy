@@ -71,12 +71,45 @@ def main(argv=None):
 
     section("Procesando SAC (demean+detrend, taper, integra, filtro, recorte)")
     import numpy as np
-    from kdellipspy.core.signal_utils import _load_from_raw
 
     # Lee los .sac de acc, quita media+tendencia, taper, INTEGRA (integrate_n),
     # filtra en banda (orden 2*integrate_n) una sola vez, recorta a la ventana y
     # apila SOLO las estaciones del input.ctl, en orden. Devuelve (nsta,3,npts) NEZ.
-    observed, _ = _load_from_raw(raw_dir, cfg, el.freq1, el.freq2, integrate_n=integrate_n)
+# Cadena de ISOLA leyendo SAC/ACC: pssa3 (acc->vel) + filter_play
+    # (banda + integracion a desplazamiento). Sustituye a _load_from_raw,
+    # que integraba dos veces en el tiempo y filtraba solo al final: eso
+    # dejaba hasta un 367% de energia ANTES de la llegada P (PB19 N, 2022)
+    # frente al 0-1% de ISOLA. Ver kdellipspy/core/isola_disp.py.
+    import sys
+    from obspy import UTCDateTime
+    from kdellipspy.core.isola_disp import (sac_a_disp, KEYDIS_DISP,
+                                            KEYDIS_VEL)
+    # resolve() primero: Path(".").parent es Path("."), asi que sin esto el
+    # respaldo a ../codigos nunca se aplicaba al invocar "kde-prep ."
+    base = args.project_dir.resolve()
+    cod = base / "codigos"
+    if not (cod / "integracion.py").is_file():
+        cod = base.parent / "codigos"                  # np1/np2 cuelgan del evento
+    if not (cod / "integracion.py").is_file():
+        err(f"No encuentro integracion.py bajo {base} ni {base.parent}")
+        return 1
+    sys.path.insert(0, str(cod))
+    from integracion import pssa3                       # noqa: E402
+    origen = UTCDateTime(cfg.source_position.origin_time)
+    nom = [st.name.strip().upper() for st in cfg.stations.stations]
+    observed = np.zeros((len(nom), 3, od.npts))
+    faltan = []
+    for i, sta in enumerate(nom):
+        for j, comp in enumerate("NEZ"):
+            cand = sorted(raw_dir.glob(f"{sta}.??{comp}.acc.sac"))
+            if not cand:
+                faltan.append(f"{sta}:{comp}"); continue
+            observed[i, j] = sac_a_disp(
+                cand[0], origen, el.freq1, el.freq2, od.npts, od.delta,
+                pssa3, keydis=KEYDIS_DISP if units == 1 else KEYDIS_VEL,
+                    zerophase=bool(el.zerophase))
+    if faltan:
+        print(f"  [!] sin SAC: {', '.join(faltan)}")
     out.mkdir(parents=True, exist_ok=True)
     comps = {"x": 0, "y": 1, "z": 2}   # x=N, y=E, z=Z
     for c, idx in comps.items():
