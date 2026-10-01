@@ -215,6 +215,14 @@ dialog::backdrop { background: rgba(5, 10, 12, 0.78); }
       <div class="panel"><h3>Momento que cruza la intersección</h3><div class="tbl"><table id="pichTbl"></table></div>
         <p class="note">Sin datos, la mitad de los modelos posibles cruza más del 10 %; con los datos, ninguno de los 500 mejores lo hace. Los datos empujan la ruptura al lado NE. Es consistente con una barrera, pero no la prueba: la línea depende del manteo supuesto en profundidad (±10° la mueve ~7 km) y la ubicación del slip tiene incertidumbre de algunos km. La prueba decisiva es una inversión dinámica con la barrera impuesta en esa línea contra una ruptura libre.</p></div>
     </div>
+    <figure><img id="pichProf" alt="Mapa y perfiles de Navidad y la falla de Pichilemu"><figcaption>(a) Réplicas de Navidad (0–30 d, Riedel-Hornig et al., por tipo), secuencia de Pichilemu 2010 (CSN relocalizado), fallas CHAF y slip. (b) Corte A–A′ perpendicular a Pichilemu por el hipocentro. (c) Sismicidad a menos de 6 km del plano de Pichilemu, a lo largo de su rumbo.</figcaption></figure>
+    <div class="panel"><h3>¿Se extiende Pichilemu mar adentro?</h3><div class="tbl"><table>
+      <tr><th>Sismicidad cortical (&lt;20 km) a &lt;6 km del plano</th><th>n</th><th>por el rumbo (p5–p95)</th><th>al NW de la traza (mar)</th><th>al SE</th></tr>
+      <tr><td class="txt">Traza mapeada en CHAF</td><td>—</td><td>−15 a +12 km</td><td>—</td><td>—</td></tr>
+      <tr><td class="txt">Secuencia Pichilemu 2010 (11-mar a 30-jun)</td><td>164</td><td>−69 a +21 km</td><td>51 %</td><td>14 %</td></tr>
+      <tr class="pick"><td class="txt">Réplicas corticales de Navidad 2019 (0–30 d)</td><td>109</td><td>−47 a +29 km</td><td>72 %</td><td>14 %</td></tr>
+    </table></div>
+      <p class="note">Las réplicas de 2010 marcan un plano de 53° hacia 232° (CHAF: 55° hacia 228°). En el mismo volumen, el fondo previo tiene solo 14 eventos en 5 años; las réplicas de Maule pueden contaminar 2010 (25 en los 12 días previos), por eso el dato más limpio es el de 2019.</p></div>
   </section>
 
   <section id="figuras">
@@ -389,6 +397,10 @@ dialog::backdrop { background: rgba(5, 10, 12, 0.78); }
   if (D.pichilemu) {
     const E = D.pichilemu.ensemble, Sp = D.pichilemu.split, pc = (v) => (100 * v).toFixed(1) + " %";
     document.getElementById("pichImg").src = D.figs.pichilemu_map;
+    if (D.figs.pichilemu_profiles) {
+      const pp = document.getElementById("pichProf"); pp.src = D.figs.pichilemu_profiles;
+      pp.addEventListener("click", () => { document.getElementById("zoomImg").src = pp.src; document.getElementById("zoom").showModal(); });
+    }
     document.getElementById("pichImg").addEventListener("click", (ev) => { document.getElementById("zoomImg").src = ev.target.src; document.getElementById("zoom").showModal(); });
     document.getElementById("pichTbl").innerHTML = `<tr><th>Conjunto de modelos</th><th>cruza (mediana)</th><th>modelos con &lt;10 %</th></tr>
       <tr><td class="txt">Sin datos: 2000 uniformes en los rangos</td><td>${pc(E.prior_uniform.median)}</td><td>${pc(E.prior_uniform.share_lt_10pct)}</td></tr>

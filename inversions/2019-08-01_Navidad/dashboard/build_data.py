@@ -141,6 +141,9 @@ def main():
             "intersection": json.loads((fa / "pichilemu_intersection.json").read_text()),
         }
         data["figs"]["pichilemu_map"] = png(fa / "pichilemu_map.png")
+        prof = Path("/home/alex/Projects/Paper_Calama_2026/Source_code/figures/navidad_2019/pichilemu_profiles_navidad2019.png")
+        if prof.exists():
+            data["figs"]["pichilemu_profiles"] = png(prof)
     (OUT / "data.json").write_text(json.dumps(data, ensure_ascii=False))
     print("ok", round((OUT / "data.json").stat().st_size / 1e6, 2), "MB")
 
