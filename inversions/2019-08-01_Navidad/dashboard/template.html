@@ -127,7 +127,7 @@ dialog::backdrop { background: rgba(5, 10, 12, 0.78); }
   <nav class="tabs" aria-label="Secciones">
     <a href="#resumen">Resumen</a><a href="#evolucion">Evolución del NA</a><a href="#parametros">Parámetros</a>
     <a href="#hipocentros">Hipocentros y velocidades</a><a href="#bandas">Bandas y estaciones</a>
-    <a href="#dinamico">Dinámico vs cinemático</a><a href="#okada">Deformación (Okada)</a><a href="#pichilemu">Falla de Pichilemu</a><a href="#figuras">Figuras</a>
+    <a href="#dinamico">Dinámico vs cinemático</a><a href="#okada">Deformación (Okada)</a><a href="#momento">Liberación de momento</a><a href="#pichilemu">Falla de Pichilemu</a><a href="#figuras">Figuras</a>
   </nav>
 
   <section id="resumen">
@@ -205,6 +205,14 @@ dialog::backdrop { background: rgba(5, 10, 12, 0.78); }
     <div class="panel"><h3>Resumen por modelo</h3><div class="tbl"><table id="okTbl"></table></div>
       <p class="note">E, N, Up en mm; Up positivo = alzamiento. Los tres modelos dan el patrón de una falla inversa de bajo ángulo: alzamiento mar adentro, subsidencia en la costa (B05O, BO03) y movimiento horizontal hacia la fosa (oeste). Con desplazamientos GNSS del evento se podría validar cada modelo directamente.</p></div>
     <div class="figs" id="okFigs" style="grid-template-columns:1fr"></div>
+  </section>
+
+  <section id="momento">
+    <div class="lede"><span class="eyebrow">Ruptura en el espacio y el tiempo</span><h2>Cómo se liberó el momento</h2>
+      <p>Tasa de momento μ·v·ΔA: en el dinámico B, a partir del slip-rate de fd3d_TSN (celdas de 500 m); en el cinemático, cada subfalla libera su momento con un triángulo de 2 s desde su tiempo de ruptura.</p></div>
+    <figure><img class="zoomable" data-fig="moment_release" alt="Función fuente, diagramas espacio-tiempo e isócronas"><figcaption>(a) Función fuente temporal. (b–e) Diagramas rumbo–tiempo y manteo–tiempo; líneas de referencia a 1.7 km/s (discontinua) y 3.9 km/s ≈ Vs (punteada). (f–g) Momento liberado e isócronas (instante en que cada celda alcanza la mitad de su momento), con la intersección con Pichilemu.</figcaption></figure>
+    <figure><img class="zoomable" data-fig="snapshots_B" alt="Instantáneas de la tasa de momento del dinámico B"><figcaption>Dinámico B: tasa de momento en el plano de falla cada 2 s. El frente es una medialuna que se aleja de la intersección con Pichilemu (roja) hacia el NNE y en profundidad.</figcaption></figure>
+    <div class="panel"><p class="note">Los primeros ~2 s del dinámico los domina el parche de nucleación forzada (sobreesfuerzo artificial de ~3 km), así que el pico temprano de su función fuente no es interpretable. Desde ~3 s, el frente avanza a ~1.7 km/s y termina a los ~13 s; el cinemático tiene una duración similar (~11 s) con su máximo a ~3 s. El cinemático propaga casi solo en profundidad, por su elipse alargada en el manteo; el dinámico se expande también a lo largo del rumbo hacia el NNE.</p></div>
   </section>
 
   <section id="pichilemu">
@@ -418,6 +426,12 @@ dialog::backdrop { background: rgba(5, 10, 12, 0.78); }
       <tr><td class="txt">Dinámico B (M0 CSN)</td><td>${pc(Sp.B.frac_other_side)}</td><td>—</td></tr>
       <tr><td class="txt">Dinámico A (M0 libre)</td><td>${pc(Sp.A.frac_other_side)}</td><td>—</td></tr>`;
   }
+
+  // ---------- Figuras con data-fig ----------
+  document.querySelectorAll("img.zoomable[data-fig]").forEach((im) => {
+    if (D.figs[im.dataset.fig]) im.src = D.figs[im.dataset.fig];
+    im.addEventListener("click", () => { document.getElementById("zoomImg").src = im.src; document.getElementById("zoom").showModal(); });
+  });
 
   // ---------- Figuras ----------
   const F = D.figs;

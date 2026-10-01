@@ -144,6 +144,11 @@ def main():
         prof = Path("/home/alex/Projects/Paper_Calama_2026/Source_code/figures/navidad_2019/pichilemu_profiles_navidad2019.png")
         if prof.exists():
             data["figs"]["pichilemu_profiles"] = png(prof)
+    # 10. Liberación de momento en el tiempo
+    ru = NAV / "rupture"
+    if (ru / "moment_release.png").exists():
+        data["figs"]["moment_release"] = png(ru / "moment_release.png")
+        data["figs"]["snapshots_B"] = png(ru / "snapshots_B.png")
     (OUT / "data.json").write_text(json.dumps(data, ensure_ascii=False))
     print("ok", round((OUT / "data.json").stat().st_size / 1e6, 2), "MB")
 
