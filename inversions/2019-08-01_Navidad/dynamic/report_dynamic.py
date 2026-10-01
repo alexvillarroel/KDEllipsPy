@@ -24,7 +24,7 @@ import na_dynamic as nd  # noqa: E402
 from kdellipspy.core.geometry import TSNFaultGridSpec  # noqa: E402
 from kdellipspy.inversion.dynamic import TSNRunConfig  # noqa: E402
 
-OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else fd.HERE / f"na_output_{fd.CASE}"
+OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else fd.HERE / f"na_output_{fd.CASE_TAG}"
 
 
 def best_free_model():

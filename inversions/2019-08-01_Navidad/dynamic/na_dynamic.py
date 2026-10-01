@@ -26,7 +26,7 @@ from kdellipspy.core.geometry import tsn_hypocentre_coarse
 from kdellipspy.inversion.dynamic import DynamicNAInversionModel
 from kdellipspy.inversion.kinematic.model_na import NAConfig
 
-from forward_dynamic import _FP, CASE, CASE_DIR, DEFAULT_MODEL, HERE, setup_work_dir, tsn_grid, tsn_run_cfg
+from forward_dynamic import _FP, CASE_TAG, CASE_DIR, DEFAULT_MODEL, HERE, setup_work_dir, tsn_grid, tsn_run_cfg
 
 M0_TARGET = float(os.environ["DYN_M0"]) if os.environ.get("DYN_M0") else None
 TE_REF = 3.0  # MPa, Te de referencia en modo M0 impuesto
@@ -119,8 +119,8 @@ def main():
     inv.param_ranges = RANGES
     inv.param_names = list(NAMES)
     inv.dynamic_fm.m0_target = M0_TARGET
-    out = HERE / (f"na_output_{CASE}" + ("_M0" if M0_TARGET else ""))
-    out.mkdir(exist_ok=True)
+    out = HERE / (f"na_output_{CASE_TAG}" + ("_M0" if M0_TARGET else ""))
+    out.mkdir(parents=True, exist_ok=True)
     inv.checkpoint_path = out / "best_model_live.txt"
 
     # Operador de axitra por subfalla: una vez (~7 min), antes del NA.

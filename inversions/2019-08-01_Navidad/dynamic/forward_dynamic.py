@@ -28,6 +28,7 @@ from kdellipspy.inversion.dynamic import DynamicNAInversionModel, TSNRunConfig
 HERE = Path(__file__).resolve().parent
 CASE = os.environ.get("DYN_CASE", "np1")  # carpeta hermana con input.ctl y DATA/
 CASE_DIR = HERE.parent / CASE
+CASE_TAG = CASE.replace("/", "__")  # nombre plano para directorios de salida
 WORK = HERE / os.environ.get("DYN_WORK", "tsn_work")  # un directorio por corrida simultánea
 FD3D_SRC = Path("/home/alex/fd3d_TSN/src")
 
