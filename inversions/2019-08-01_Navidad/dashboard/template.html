@@ -1,0 +1,380 @@
+<title>Navidad 2019 · Inversiones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #f3f6f5; --surface: #fcfdfc; --ink: #102020; --ink-2: #485856; --muted: #7a8886;
+  --line: #dbe3e1; --grid: #e8eeec; --accent: #1d5c75; --accent-soft: #e2eef2;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4;
+  --good: #1a7f4b; --warn: #b26b00; --bad: #c0392b;
+  --seq0: #eef4fb; --seq1: #c7dcf3; --seq2: #8fb9e6; --seq3: #4e8fd6; --seq4: #2160ad; --seq5: #143f75;
+  --font: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --display: "IBM Plex Sans Condensed", "IBM Plex Sans", "Arial Narrow", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0e1415; --surface: #151c1d; --ink: #ecf2f1; --ink-2: #b3c0be; --muted: #82908e;
+    --line: #283436; --grid: #1f292a; --accent: #74b6d1; --accent-soft: #1b2c32;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181;
+    --good: #4cc489; --warn: #e0a43a; --bad: #ef6b5e;
+    --seq0: #172330; --seq1: #1d3a5c; --seq2: #23528a; --seq3: #3474c0; --seq4: #6aa2e2; --seq5: #b4d2f4;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0e1415; --surface: #151c1d; --ink: #ecf2f1; --ink-2: #b3c0be; --muted: #82908e;
+  --line: #283436; --grid: #1f292a; --accent: #74b6d1; --accent-soft: #1b2c32;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181;
+  --good: #4cc489; --warn: #e0a43a; --bad: #ef6b5e;
+  --seq0: #172330; --seq1: #1d3a5c; --seq2: #23528a; --seq3: #3474c0; --seq4: #6aa2e2; --seq5: #b4d2f4;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--font); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 0 64px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: 0.005em; }
+h1 { font-size: clamp(28px, 4vw, 40px); font-weight: 600; line-height: 1.1; }
+h2 { font-size: 24px; font-weight: 600; }
+h3 { font-size: 16px; font-weight: 600; }
+p { margin: 0; max-width: 68ch; color: var(--ink-2); }
+.mono, .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.eyebrow { font: 500 11px/1.2 var(--mono); text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+
+header.top { padding-block: 32px 20px; display: grid; gap: 14px; border-bottom: 1px solid var(--line); }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 24px; font: 13px/1.4 var(--mono); color: var(--ink-2); }
+.facts b { color: var(--ink); font-weight: 500; }
+
+nav.tabs { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg);
+  display: flex; gap: 4px; overflow-x: auto; padding-block: 10px; border-bottom: 1px solid var(--line); }
+nav.tabs a { font: 500 13px/1 var(--font); color: var(--ink-2); text-decoration: none; padding: 8px 12px; border-radius: 6px; white-space: nowrap; }
+nav.tabs a:hover, nav.tabs a:focus-visible { background: var(--accent-soft); color: var(--accent); outline: none; }
+
+section { padding-block: 36px 8px; display: grid; gap: 18px; scroll-margin-top: 60px; }
+.lede { display: grid; gap: 6px; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 4px; align-content: start; }
+.tile .v { font: 500 26px/1.1 var(--mono); font-variant-numeric: tabular-nums; }
+.tile .v small { font-size: 14px; color: var(--ink-2); }
+.tile .k { font-size: 13px; color: var(--ink-2); }
+.tile .s { font: 12px/1.35 var(--font); color: var(--muted); }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px 16px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 16px; }
+.chart { position: relative; height: 320px; }
+.chart.tall { height: 380px; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; flex-wrap: wrap; }
+.seg button { font: 500 12px/1 var(--font); background: transparent; color: var(--ink-2); border: 0; padding: 8px 11px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+.seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font: 500 11px/1.2 var(--mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+td { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+td.txt { font-family: var(--font); }
+tr.pick td { background: var(--accent-soft); }
+.pill { display: inline-block; font: 500 11px/1 var(--font); padding: 4px 7px; border-radius: 99px; border: 1px solid currentColor; }
+.pill.good { color: var(--good); } .pill.warn { color: var(--warn); } .pill.bad { color: var(--bad); }
+
+.bars { display: grid; gap: 10px; }
+.bar-row { display: grid; grid-template-columns: minmax(110px, 190px) 1fr 74px; align-items: center; gap: 10px; font-size: 13px; }
+.bar-row .lab { color: var(--ink); }
+.bar-track { position: relative; height: 18px; }
+.bar-track .bar { position: absolute; top: 3px; height: 12px; border-radius: 0 4px 4px 0; left: 0; }
+.bar-track .whisk { position: absolute; top: 8px; height: 2px; background: var(--ink-2); }
+.bar-track .whisk::before, .bar-track .whisk::after { content: ""; position: absolute; top: -4px; width: 2px; height: 10px; background: var(--ink-2); }
+.bar-track .whisk::before { left: 0; } .bar-track .whisk::after { right: 0; }
+.bar-row .val { font-family: var(--mono); text-align: right; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.axis-note { font: 12px var(--mono); color: var(--muted); }
+
+.heat td.h { text-align: center; color: var(--ink); }
+.figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 16px; }
+figure { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px; display: grid; gap: 8px; }
+figure img { width: 100%; border-radius: 6px; background: #fff; cursor: zoom-in; }
+figcaption { font-size: 13px; color: var(--ink-2); }
+dialog { border: 0; padding: 0; background: transparent; max-width: 96vw; max-height: 96vh; }
+dialog img { max-width: 96vw; max-height: 92vh; background: #fff; border-radius: 8px; }
+dialog::backdrop { background: rgba(5, 10, 12, 0.78); }
+.note { font-size: 13px; color: var(--muted); max-width: 80ch; }
+.callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; color: var(--ink-2); max-width: 80ch; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">KDEllipsPy · fd3d_TSN · AXITRA</span>
+    <h1>Terremoto de Navidad, 1 de agosto de 2019</h1>
+    <p>Inversiones cinemáticas (elipse) y dinámicas (ruptura espontánea con fd3d_TSN) con 8 acelerómetros regionales. Todo lo corrido hasta ahora, en una página.</p>
+    <div class="facts">
+      <span>18:28:03 UTC (CSN)</span>
+      <span>Hipocentro ISC <b>−34.267°, −72.294°, 23.4 km</b></span>
+      <span>Mecanismo NP1 <b>17° / 13° / 102°</b> (NEIC Mww)</span>
+      <span>Mw <b>6.6</b> CSN · <b>6.8</b> NEIC/GCMT</span>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Secciones">
+    <a href="#resumen">Resumen</a><a href="#evolucion">Evolución del NA</a><a href="#parametros">Parámetros</a>
+    <a href="#hipocentros">Hipocentros y velocidades</a><a href="#bandas">Bandas y estaciones</a>
+    <a href="#dinamico">Dinámico vs cinemático</a><a href="#figuras">Figuras</a>
+  </nav>
+
+  <section id="resumen">
+    <div class="lede"><span class="eyebrow">Resumen</span><h2>Lo que se mantiene en todas las pruebas</h2>
+      <p>Valores robustos: aparecen en todas las bandas, con y sin M14L, y entre las 5 semillas del cinemático en la configuración elegida (ISC, 1D regional, 0.05–0.30 Hz, sin M14L).</p></div>
+    <div class="tiles">
+      <div class="tile"><span class="k">Centroide de momento</span><span class="v">25.0 <small>km</small></span><span class="s">−34.28°, −72.23°; a 4–5 km del centroide de GCMT</span></div>
+      <div class="tile"><span class="k">Magnitud</span><span class="v">Mw 6.6</span><span class="s">6.56–6.62 en todos los casos; coincide con el CSN, y el dinámico ajusta mejor con Mw 6.6 impuesto</span></div>
+      <div class="tile"><span class="k">Velocidad de ruptura</span><span class="v">1.4–1.6 <small>km/s</small></span><span class="s">Cinemático, todas las bandas; ~0.4 Vs</span></div>
+      <div class="tile"><span class="k">Corrección hora de origen</span><span class="v">+3.9 <small>s</small></span><span class="s">± 0.1 s; consistente con la hora del ISC (~+4 s respecto a CSN)</span></div>
+      <div class="tile"><span class="k">Caída de esfuerzo (dinámico)</span><span class="v">4–5 <small>MPa</small></span><span class="s">B: Te 5.1 MPa, Eshelby 4.1 MPa; 1 semilla</span></div>
+    </div>
+    <p class="callout">Configuración elegida: hipocentro ISC, modelo 1D regional (tomografía CSN 2019), malla de 32 × 40 km con el hipocentro a 10 km del borde superior, banda 0.05–0.30 Hz, sin M14L. Es la banda más alta en la que la solución se mantiene estable entre semillas.</p>
+  </section>
+
+  <section id="evolucion">
+    <div class="lede"><span class="eyebrow">Evolución del Neighbourhood Algorithm</span><h2>Cómo bajó el misfit en cada búsqueda</h2>
+      <p>Mejor misfit encontrado hasta cada evaluación. Elige una corrida para ver también todas sus evaluaciones (puntos).</p></div>
+    <div class="panel">
+      <div class="panel-head"><h3>Inversiones dinámicas</h3><div class="seg" id="evoSel" role="group" aria-label="Mostrar evaluaciones de"></div></div>
+      <div class="legend" id="evoLegend"></div>
+      <div class="chart tall"><canvas id="evoChart" aria-label="Mejor misfit acumulado por evaluación, inversiones dinámicas"></canvas></div>
+      <p class="note">El eje vertical se corta en 1.6: valores mayores (modelos con demasiada amplitud) quedan en el borde superior. La corrida sin dt0 nunca baja de 1.02, que es peor que no predecir nada (misfit = 1).</p>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Cinemático, configuración elegida: 5 semillas × 3400 evaluaciones</h3></div>
+      <div class="legend" id="kinLegend"></div>
+      <div class="chart"><canvas id="kinChart" aria-label="Mejor misfit acumulado por semilla, cinemático"></canvas></div>
+    </div>
+  </section>
+
+  <section id="parametros">
+    <div class="lede"><span class="eyebrow">Exploración del espacio de parámetros</span><h2>Dónde buscó el NA en el dinámico</h2>
+      <p>Cada punto es un modelo evaluado. Los colores marcan el 10 % con mejor misfit; el mejor modelo, en anillo. Un parámetro bien determinado concentra los puntos buenos en una franja estrecha.</p></div>
+    <div class="panel">
+      <div class="panel-head"><h3 id="parTitle">Dinámico B (M0 del CSN)</h3><div class="seg" id="parSel" role="group" aria-label="Corrida"><button aria-pressed="true" data-k="B">B · M0 CSN</button><button aria-pressed="false" data-k="A">A · M0 libre</button></div></div>
+      <div class="legend"><span><i style="background:var(--s1)"></i>10 % mejor</span><span><i style="background:var(--muted)"></i>resto</span></div>
+      <div class="grid2" id="parGrid"></div>
+    </div>
+  </section>
+
+  <section id="hipocentros">
+    <div class="lede"><span class="eyebrow">Comparaciones</span><h2>Hipocentros y modelos de velocidad</h2>
+      <p>Cinemático con dt0 libre, malla de 50 × 50 km. Barras: misfit medio de 5 semillas; bigotes: ± 1 desviación.</p></div>
+    <div class="grid2">
+      <div class="panel"><h3>Hipocentro (1D original, 5 semillas)</h3><div class="bars" id="hypBars"></div><div class="tbl"><table id="hypTbl"></table></div></div>
+      <div class="panel"><h3>Modelo de velocidades (1 semilla, primera batería)</h3><div class="bars" id="velBars"></div>
+        <p class="note">Primera batería con 1 semilla y malla vieja: el regional salía peor. Con el hipocentro ISC, la malla nueva y 5 semillas ajusta 0.215 en 0.06–0.15 Hz (ver bandas), casi igual que el original.</p></div>
+    </div>
+  </section>
+
+  <section id="bandas">
+    <div class="lede"><span class="eyebrow">Bandas de frecuencia y estación M14L</span><h2>Más frecuencia, más misfit, pero la solución se sostiene</h2>
+      <p>ISC + 1D regional + malla nueva, 5 semillas por caso. Se eligió la banda más alta cuya solución es estable (baja dispersión en dt0 y Vr).</p></div>
+    <div class="grid2">
+      <div class="panel"><h3>Misfit por banda</h3><div class="legend"><span><i style="background:var(--s1)"></i>todas las estaciones</span><span><i style="background:var(--s2)"></i>sin M14L</span></div><div class="bars" id="bandBars"></div></div>
+      <div class="panel"><h3>Dispersión de Vr entre semillas (± km/s)</h3><div class="legend"><span><i style="background:var(--s1)"></i>todas las estaciones</span><span><i style="background:var(--s2)"></i>sin M14L</span></div><div class="bars" id="vrBars"></div>
+        <p class="note">Menos es mejor. Con M14L, 0.05–0.30 Hz oscila ±0.67 km/s; sin ella, ±0.06.</p></div>
+    </div>
+    <div class="panel"><h3>Tabla completa</h3><div class="tbl"><table id="bandTbl"></table></div></div>
+    <div class="panel"><h3>Misfit por estación del mejor modelo</h3><div class="tbl"><table class="heat" id="heatTbl"></table></div>
+      <p class="note">0 = ajuste perfecto, 1 = igual que no predecir nada. M14L queda en ~1 en todas las bandas: el modelo no la explica.</p></div>
+  </section>
+
+  <section id="dinamico">
+    <div class="lede"><span class="eyebrow">Ruptura dinámica</span><h2>Dinámico contra cinemático</h2>
+      <p>Las dos corridas de la noche usan el código corregido: orientación del dip entre fd3d y AXITRA, falla enterrada con el medio a su profundidad real y nucleación en el hipocentro.</p></div>
+    <div class="panel"><div class="tbl"><table id="dynTbl"></table></div>
+      <p class="note">El dinámico de loc_mid es anterior a las correcciones (dip invertido, medio desde la superficie, malla 50 × 50, 0.06–0.15 Hz): su ubicación y su stress drop no son comparables. Cada dinámico es 1 semilla.</p></div>
+  </section>
+
+  <section id="figuras">
+    <div class="lede"><span class="eyebrow">Figuras</span><h2>Mapas, trazas y slip</h2><p>Toca una figura para ampliarla.</p></div>
+    <div class="figs" id="figs"></div>
+  </section>
+</div>
+<dialog id="zoom"><img alt="" id="zoomImg"></dialog>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+(function () {
+  const D = JSON.parse(document.getElementById("data").textContent);
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const S = () => [css("--s1"), css("--s2"), css("--s3"), css("--s4"), css("--s5")];
+  const charts = {};
+
+  function baseOpts(ymin, ymax, xlabel) {
+    const ink2 = css("--ink-2"), grid = css("--grid"), muted = css("--muted");
+    return {
+      responsive: true, maintainAspectRatio: false, animation: false, parsing: false, normalized: true,
+      interaction: { mode: "nearest", intersect: false, axis: "x" },
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: css("--surface"), titleColor: css("--ink"), bodyColor: ink2,
+        borderColor: css("--line"), borderWidth: 1, bodyFont: { family: "IBM Plex Mono" }, titleFont: { family: "IBM Plex Sans" },
+        callbacks: { label: (c) => `${c.dataset.label}: ${c.parsed.y.toFixed(3)}` } } },
+      scales: {
+        x: { type: "linear", title: { display: true, text: xlabel, color: muted, font: { family: "IBM Plex Mono", size: 11 } },
+             grid: { color: grid }, ticks: { color: ink2, font: { family: "IBM Plex Mono", size: 11 } }, border: { color: css("--line") } },
+        y: { min: ymin, max: ymax, title: { display: true, text: "misfit", color: muted, font: { family: "IBM Plex Mono", size: 11 } },
+             grid: { color: grid }, ticks: { color: ink2, font: { family: "IBM Plex Mono", size: 11 } }, border: { color: css("--line") } },
+      },
+    };
+  }
+  const clip = (v, hi) => (v == null || !isFinite(v) ? null : Math.min(v, hi));
+
+  // ---------- Evolución dinámica ----------
+  let evoPick = 4;
+  function drawEvo() {
+    const cols = S(), hi = 1.6;
+    const ds = D.evolution.map((e, i) => ({
+      label: e.label, data: e.best.map((y, x) => ({ x: x + 1, y: clip(y, hi) })), borderColor: cols[i], backgroundColor: cols[i],
+      borderWidth: 2, pointRadius: 0, stepped: true, order: 1,
+    }));
+    const p = D.evolution[evoPick];
+    ds.push({ label: p.label + " (evaluaciones)", type: "scatter",
+      data: p.misfit.map((y, x) => ({ x: x + 1, y: clip(y, hi) })).filter((d) => d.y != null),
+      backgroundColor: cols[evoPick] + "55", borderColor: "transparent", pointRadius: 2.2, order: 2 });
+    const o = baseOpts(0.3, hi, "evaluación");
+    charts.evo && charts.evo.destroy();
+    charts.evo = new Chart(document.getElementById("evoChart"), { type: "line", data: { datasets: ds }, options: o });
+    document.getElementById("evoLegend").innerHTML = D.evolution.map((e, i) =>
+      `<span><i style="background:${cols[i]}"></i>${e.label} · <b class="mono">${e.final.toFixed(3)}</b></span>`).join("");
+  }
+  const evoSel = document.getElementById("evoSel");
+  evoSel.innerHTML = D.evolution.map((e, i) => `<button data-i="${i}" aria-pressed="${i === evoPick}">${["NP1", "sin dt0", "loc_mid", "A", "B"][i]}</button>`).join("");
+  evoSel.addEventListener("click", (ev) => {
+    const b = ev.target.closest("button"); if (!b) return;
+    evoPick = +b.dataset.i; evoSel.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b)); drawEvo();
+  });
+
+  // ---------- Evolución cinemática ----------
+  function drawKin() {
+    const cols = S();
+    const ds = D.kin_seeds.map((e, i) => ({ label: e.label, data: e.best.map((y, x) => ({ x: x + 1, y: clip(y, 0.7) })),
+      borderColor: cols[i], backgroundColor: cols[i], borderWidth: 2, pointRadius: 0, stepped: true }));
+    charts.kin && charts.kin.destroy();
+    charts.kin = new Chart(document.getElementById("kinChart"), { type: "line", data: { datasets: ds }, options: baseOpts(0.25, 0.7, "evaluación") });
+    document.getElementById("kinLegend").innerHTML = D.kin_seeds.map((e, i) =>
+      `<span><i style="background:${cols[i]}"></i>${e.label} · <b class="mono">${e.final.toFixed(3)}</b></span>`).join("");
+  }
+
+  // ---------- Parámetros ----------
+  let parKey = "B";
+  function drawPar() {
+    const P = D["params_" + parKey];
+    const grid = document.getElementById("parGrid");
+    Object.keys(charts).filter((k) => k.startsWith("par")).forEach((k) => { charts[k].destroy(); delete charts[k]; });
+    grid.innerHTML = P.names.map((n, j) => `<div class="panel" style="padding:10px"><span class="eyebrow">${n}</span><div class="chart" style="height:200px"><canvas id="par${j}" aria-label="${n} por evaluación"></canvas></div></div>`).join("");
+    const mis = P.misfit.map((m) => (m > 1e5 ? Infinity : m));
+    const thr = [...mis].sort((a, b) => a - b)[Math.floor(mis.length * 0.1)];
+    const ibest = mis.indexOf(Math.min(...mis));
+    const s1 = css("--s1"), mu = css("--muted");
+    P.names.forEach((n, j) => {
+      const pts = P.models.map((m, i) => ({ x: i + 1, y: m[j], good: mis[i] <= thr }));
+      const o = baseOpts(undefined, undefined, "evaluación");
+      o.scales.y.title.text = n; o.interaction = { mode: "nearest", intersect: true };
+      o.plugins.tooltip.callbacks.label = (c) => `${n}: ${c.parsed.y.toFixed(3)} · misfit ${mis[c.parsed.x - 1].toFixed(3)}`;
+      charts["par" + j] = new Chart(document.getElementById("par" + j), { type: "scatter", data: { datasets: [
+        { label: "resto", data: pts.filter((p) => !p.good), backgroundColor: mu + "66", pointRadius: 1.8, borderWidth: 0 },
+        { label: "10 % mejor", data: pts.filter((p) => p.good), backgroundColor: s1, pointRadius: 2.6, borderWidth: 0 },
+        { label: "mejor", data: [{ x: ibest + 1, y: P.models[ibest][j] }], backgroundColor: "transparent", borderColor: css("--ink"), borderWidth: 2, pointRadius: 6 },
+      ] }, options: o });
+    });
+    document.getElementById("parTitle").textContent = parKey === "B" ? "Dinámico B (M0 del CSN)" : "Dinámico A (M0 libre)";
+  }
+  document.getElementById("parSel").addEventListener("click", (ev) => {
+    const b = ev.target.closest("button"); if (!b) return;
+    parKey = b.dataset.k; document.querySelectorAll("#parSel button").forEach((x) => x.setAttribute("aria-pressed", x === b)); drawPar();
+  });
+
+  // ---------- Barras con bigotes ----------
+  function bars(el, rows, vmax, fmt) {
+    el.innerHTML = rows.map((r) => {
+      const w = (100 * r.v) / vmax, lo = r.e != null ? (100 * (r.v - r.e)) / vmax : null, hi = r.e != null ? (100 * (r.v + r.e)) / vmax : null;
+      return `<div class="bar-row" title="${r.label}: ${fmt(r.v)}${r.e != null ? " ± " + fmt(r.e) : ""}">
+        <span class="lab">${r.label}</span>
+        <span class="bar-track"><span class="bar" style="width:${Math.min(w, 100)}%;background:${r.c}"></span>
+        ${lo != null ? `<span class="whisk" style="left:${Math.max(lo, 0)}%;width:${Math.min(hi, 100) - Math.max(lo, 0)}%"></span>` : ""}</span>
+        <span class="val">${fmt(r.v)}${r.e != null ? `<br><small>±${fmt(r.e)}</small>` : ""}</span></div>`;
+    }).join("");
+  }
+  function drawBars() {
+    const c = S(), f3 = (v) => v.toFixed(3), f2 = (v) => v.toFixed(2);
+    bars(document.getElementById("hypBars"), D.hypocentres.map((h) => ({ label: h.label, v: h.misfit, e: h.misfit_std, c: c[0] })), 0.4, f3);
+    document.getElementById("hypTbl").innerHTML = `<tr><th>Hipocentro</th><th>mejor</th><th>dt0 (s)</th><th>Vr (km/s)</th><th>a GCMT</th></tr>` +
+      D.hypocentres.map((h, i) => `<tr class="${i === 0 ? "pick" : ""}"><td class="txt">${h.label}</td><td>${f3(h.best)}</td><td>${h.dt0 >= 0 ? "+" : ""}${f2(h.dt0)} ± ${f2(h.dt0_std)}</td><td>${f2(h.vr)} ± ${f2(h.vr_std)}</td><td>${h.d_gcmt.toFixed(1)} km</td></tr>`).join("");
+    const vc = { "Original": c[0], "Híbrido": c[2], "Regional (tomografía)": c[1] };
+    bars(document.getElementById("velBars"), D.velocity.map((v) => ({ label: `${v.hypo} · ${v.model}`, v: v.misfit, c: vc[v.model] })), 0.6, f3);
+    const bandOrder = [...new Set(D.bands.map((b) => b.band))].sort((a, b) => parseFloat(a.split("–")[1]) - parseFloat(b.split("–")[1]));
+    const rows = [], vr = [];
+    bandOrder.forEach((band) => ["todas", "sin M14L"].forEach((st, k) => {
+      const b = D.bands.find((x) => x.band === band && x.stations === st); if (!b) return;
+      rows.push({ label: `${band}${k ? " · sin M14L" : ""}`, v: b.misfit, e: b.misfit_std, c: c[k] });
+      vr.push({ label: `${band}${k ? " · sin M14L" : ""}`, v: b.vr_std, c: c[k] });
+    }));
+    bars(document.getElementById("bandBars"), rows, 0.4, f3);
+    bars(document.getElementById("vrBars"), vr, 1.0, f2);
+    document.getElementById("bandTbl").innerHTML = `<tr><th>Banda</th><th>Estaciones</th><th>misfit</th><th>dt0 (s)</th><th>Vr (km/s)</th><th>Mw</th><th>a GCMT</th></tr>` +
+      bandOrder.flatMap((band) => D.bands.filter((b) => b.band === band)).map((b) => {
+        const pick = b.band.startsWith("0.05–0.30") && b.stations === "sin M14L";
+        return `<tr class="${pick ? "pick" : ""}"><td class="txt">${b.band}${pick ? ' <span class="pill good">elegida</span>' : ""}</td><td class="txt">${b.stations}</td><td>${f3(b.misfit)} ± ${f3(b.misfit_std)}</td><td>+${f2(b.dt0)} ± ${f2(b.dt0_std)}</td><td>${f2(b.vr)} ± ${f2(b.vr_std)}</td><td>${f2(b.mw)}</td><td>${b.d_gcmt.toFixed(1)} km</td></tr>`;
+      }).join("");
+    const stas = ["B05O", "BO03", "B06O", "M17L", "B09O", "VA05", "MT01", "M14L"];
+    const seq = ["--seq0", "--seq1", "--seq2", "--seq3", "--seq4", "--seq5"].map(css);
+    const shade = (v) => seq[Math.min(5, Math.floor(v / 0.2))];
+    const inkOn = (v) => (v >= 0.6 ? css("--surface") : css("--ink"));
+    document.getElementById("heatTbl").innerHTML = `<tr><th>Caso</th>${stas.map((s) => `<th>${s}</th>`).join("")}</tr>` +
+      bandOrder.flatMap((band) => D.bands.filter((b) => b.band === band)).map((b) => `<tr><td class="txt">${b.band} · ${b.stations}</td>${stas.map((s) => {
+        const v = b.per_station[s]; return v == null ? `<td class="h" style="color:var(--muted)">—</td>` : `<td class="h" style="background:${shade(v)};color:${inkOn(v)}">${v.toFixed(2)}</td>`;
+      }).join("")}</tr>`).join("");
+  }
+
+  // ---------- Tabla dinámica ----------
+  document.getElementById("dynTbl").innerHTML = `
+    <tr><th></th><th>Dinámico B · M0 CSN</th><th>Dinámico A · M0 libre</th><th>Cinemático (5 semillas)</th><th>Dinámico loc_mid (antes de corregir)</th></tr>
+    <tr><td class="txt">Configuración</td><td class="txt">ISC · 1D regional · 0.05–0.30 Hz</td><td class="txt">igual que B</td><td class="txt">igual que B</td><td class="txt">punto medio · 1D original · 0.06–0.15 Hz</td></tr>
+    <tr class="pick"><td class="txt">misfit</td><td>0.427</td><td>0.443</td><td>0.292 ± 0.014</td><td>0.372</td></tr>
+    <tr><td class="txt">Mw</td><td>6.60 (impuesto)</td><td>6.37</td><td>6.56</td><td>6.51</td></tr>
+    <tr><td class="txt">Caída de esfuerzo Te</td><td>5.1 MPa</td><td>7.2 MPa</td><td>—</td><td>3.0 MPa</td></tr>
+    <tr><td class="txt">Δσ Eshelby</td><td>4.1 MPa</td><td>5.7 MPa</td><td>—</td><td>4.1 MPa</td></tr>
+    <tr><td class="txt">Exceso de resistencia</td><td>1.4 MPa</td><td>0.8 MPa</td><td>—</td><td>1.0 MPa</td></tr>
+    <tr><td class="txt">Dc</td><td>1.0 m</td><td>1.6 m</td><td>—</td><td>1.1 m</td></tr>
+    <tr><td class="txt">Área rota</td><td>326 km²</td><td>156 km²</td><td>—</td><td>268 km²</td></tr>
+    <tr><td class="txt">Slip máximo</td><td>1.7 m</td><td>1.7 m</td><td>—</td><td>1.6 m</td></tr>
+    <tr><td class="txt">dt0</td><td>+5.8 s</td><td>+6.3 s</td><td>+3.9 s</td><td>+2.7 s</td></tr>`;
+
+  // ---------- Figuras ----------
+  const F = D.figs;
+  const figs = [
+    ["map_B", "Mapa · dinámico B (M0 CSN) con el cinemático y los centroides de GCMT, NEIC y GFZ"],
+    ["traces_B", "Trazas · dinámico B, 0.05–0.30 Hz (negro observado, rojo sintético)"],
+    ["slip_B", "Slip · dinámico B, malla de 32 × 40 km"],
+    ["map_A", "Mapa · dinámico A (M0 libre)"],
+    ["traces_A", "Trazas · dinámico A"],
+    ["map_old", "Mapa · dinámico loc_mid, antes de corregir la orientación del dip y el medio"],
+  ];
+  document.getElementById("figs").innerHTML = figs.map(([k, cap]) => `<figure><img src="${F[k]}" alt="${cap}" data-k="${k}"><figcaption>${cap}</figcaption></figure>`).join("");
+  const dlg = document.getElementById("zoom");
+  document.getElementById("figs").addEventListener("click", (ev) => {
+    const img = ev.target.closest("img"); if (!img) return;
+    document.getElementById("zoomImg").src = img.src; dlg.showModal();
+  });
+  dlg.addEventListener("click", () => dlg.close());
+
+  function drawAll() { drawEvo(); drawKin(); drawPar(); drawBars(); }
+  drawAll();
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  mq.addEventListener && mq.addEventListener("change", drawAll);
+  new MutationObserver(drawAll).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+})();
+</script>
