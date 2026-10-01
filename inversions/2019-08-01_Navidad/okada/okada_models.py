@@ -60,7 +60,7 @@ def kinematic_slip(cfg, fm):
 def dynamic_slip(cfg, geom, which):
     """(strike-slip, dip-slip) por subfalla en el orden de la malla de AXITRA."""
     r = joblib.load(DYN_OUT[which] / "na_result.joblib")
-    full = nd.to_full_model(np.asarray(r.best_model.model))
+    full = nd.to_full_model_named(r.param_names, np.asarray(r.best_model.model))  # A: 9 params, B: 8 (sin Te)
     fp = cfg.fault_plane
     rate = run_tsn_forward(full, fp.nx, fp.ny, fd.tsn_grid(cfg), fd.tsn_run_cfg(), hypo=tsn_hypocentre_coarse(fp))
     fx, fz = fd.NXTT // fp.nx, fd.NZTT // fp.ny

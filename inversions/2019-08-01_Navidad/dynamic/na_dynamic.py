@@ -63,6 +63,21 @@ def _as_dict(m_free):
     return d
 
 
+def to_full_model_named(names, values):
+    """Como to_full_model, pero con los nombres guardados en el resultado (r.param_names):
+    no depende de DYN_M0 al importar. Un resultado en modo M0 no trae Te (vale TE_REF)."""
+    d = dict(zip((n.split()[0] for n in names), values))
+    d.setdefault("Te", TE_REF)
+    a, b, u, v, phi, te, cte1, dc = (d[k] for k in ("a", "b", "u", "v", "phi", "Te", "cte1", "Dc"))
+    r = DEFAULT_MODEL[8]
+    xh, yh = u * (a - r), v * (b - r)
+    dx = xh * np.cos(phi) - yh * np.sin(phi)
+    dy = xh * np.sin(phi) + yh * np.cos(phi)
+    full = np.array(DEFAULT_MODEL, dtype=np.float32)
+    full[[0, 1, 2, 3, 4, 5, 6, 9]] = [a, b, HYPO_X - dx, HYPO_Y - dy, phi, te, cte1, dc]
+    return full
+
+
 def to_full_model(m_free):
     """Libres -> vector de 10 del solver, con el centro (xo, yo) tal que el
     hipocentro cae en (u*(a-r), v*(b-r)) del marco de la elipse."""
