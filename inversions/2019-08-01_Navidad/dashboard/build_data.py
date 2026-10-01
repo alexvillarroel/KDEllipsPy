@@ -126,6 +126,12 @@ def main():
         "slip_B": png(dyn_B / "report/slip.png"), "slip_A": png(dyn_A / "report/slip.png"),
         "map_old": png(DYN / "na_output_loc_mid/report/map.png"),
     }
+    # 8. Deformación estática (Okada)
+    ok = NAV / "okada"
+    if (ok / "okada_results.json").exists():
+        data["okada"] = json.loads((ok / "okada_results.json").read_text())
+        for k in ("kin", "A", "B"):
+            data["figs"][f"okada_{k}"] = png(ok / f"okada_{k}.png")
     (OUT / "data.json").write_text(json.dumps(data, ensure_ascii=False))
     print("ok", round((OUT / "data.json").stat().st_size / 1e6, 2), "MB")
 

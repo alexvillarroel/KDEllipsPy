@@ -127,7 +127,7 @@ dialog::backdrop { background: rgba(5, 10, 12, 0.78); }
   <nav class="tabs" aria-label="Secciones">
     <a href="#resumen">Resumen</a><a href="#evolucion">Evolución del NA</a><a href="#parametros">Parámetros</a>
     <a href="#hipocentros">Hipocentros y velocidades</a><a href="#bandas">Bandas y estaciones</a>
-    <a href="#dinamico">Dinámico vs cinemático</a><a href="#figuras">Figuras</a>
+    <a href="#dinamico">Dinámico vs cinemático</a><a href="#okada">Deformación (Okada)</a><a href="#figuras">Figuras</a>
   </nav>
 
   <section id="resumen">
@@ -197,6 +197,14 @@ dialog::backdrop { background: rgba(5, 10, 12, 0.78); }
       <p>Las dos corridas de la noche usan el código corregido: orientación del dip entre fd3d y AXITRA, falla enterrada con el medio a su profundidad real y nucleación en el hipocentro.</p></div>
     <div class="panel"><div class="tbl"><table id="dynTbl"></table></div>
       <p class="note">El dinámico de loc_mid es anterior a las correcciones (dip invertido, medio desde la superficie, malla 50 × 50, 0.06–0.15 Hz): su ubicación y su stress drop no son comparables. Cada dinámico es 1 semilla.</p></div>
+  </section>
+
+  <section id="okada">
+    <div class="lede"><span class="eyebrow">Deformación estática · Okada (1992)</span><h2>Qué deformación predice cada modelo en superficie</h2>
+      <p>Desplazamiento cosísmico permanente calculado con Okada en un semiespacio elástico homogéneo (coeficiente de Poisson 0.25), sumando cada subfalla como un rectángulo con su slip. Son predicciones: los acelerómetros, filtrados en banda, no registran el desplazamiento permanente.</p></div>
+    <div class="panel"><h3>Resumen por modelo</h3><div class="tbl"><table id="okTbl"></table></div>
+      <p class="note">E, N, Up en mm; Up positivo = alzamiento. Los tres modelos dan el patrón de una falla inversa de bajo ángulo: alzamiento mar adentro, subsidencia en la costa (B05O, BO03) y movimiento horizontal hacia la fosa (oeste). Con desplazamientos GNSS del evento se podría validar cada modelo directamente.</p></div>
+    <div class="figs" id="okFigs"></div>
   </section>
 
   <section id="figuras">
@@ -352,6 +360,20 @@ dialog::backdrop { background: rgba(5, 10, 12, 0.78); }
     <tr><td class="txt">Área rota</td><td>326 km²</td><td>156 km²</td><td>—</td><td>268 km²</td></tr>
     <tr><td class="txt">Slip máximo</td><td>1.7 m</td><td>1.7 m</td><td>—</td><td>1.6 m</td></tr>
     <tr><td class="txt">dt0</td><td>+5.8 s</td><td>+6.3 s</td><td>+3.9 s</td><td>+2.7 s</td></tr>`;
+
+  // ---------- Okada ----------
+  if (D.okada) {
+    const O = D.okada, keys = ["kin", "A", "B"], sta = ["B05O", "BO03", "B06O", "B09O"];
+    const f = (v) => (v > 0 ? "+" : "") + v.toFixed(0);
+    document.getElementById("okTbl").innerHTML =
+      `<tr><th>Modelo</th><th>Mw</th><th>Alzamiento máx.</th><th>Subsidencia máx.</th><th>Horizontal máx.</th>${sta.map((s) => `<th>${s} (E / N / Up)</th>`).join("")}</tr>` +
+      keys.map((k) => { const m = O[k]; return `<tr class="${k === "B" ? "pick" : ""}"><td class="txt">${m.title}</td><td>${m.mw.toFixed(2)}</td><td>${f(m.uplift_max_mm)} mm</td><td>${f(m.subsidence_max_mm)} mm</td><td>${m.horiz_max_mm.toFixed(0)} mm</td>${sta.map((s) => `<td>${m.stations[s].map((v) => f(v)).join(" / ")}</td>`).join("")}</tr>`; }).join("");
+    document.getElementById("okFigs").innerHTML = keys.map((k) =>
+      `<figure><img src="${D.figs["okada_" + k]}" alt="Okada ${O[k].title}"><figcaption>${O[k].title}: vertical en color, horizontal en flechas</figcaption></figure>`).join("");
+    document.getElementById("okFigs").addEventListener("click", (ev) => {
+      const img = ev.target.closest("img"); if (!img) return; document.getElementById("zoomImg").src = img.src; document.getElementById("zoom").showModal();
+    });
+  }
 
   // ---------- Figuras ----------
   const F = D.figs;
