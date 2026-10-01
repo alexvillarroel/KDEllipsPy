@@ -1,15 +1,15 @@
 {
  "kin": {
-  "frac_hypocentre_side": 0.9756386800682453,
-  "frac_other_side": 0.02436131993175472
+  "frac_hypocentre_side": 0.8510420080470177,
+  "frac_other_side": 0.14895799195298232
  },
  "A": {
-  "frac_hypocentre_side": 0.836207348635233,
-  "frac_other_side": 0.16379265136476695
+  "frac_hypocentre_side": 0.5058461746879673,
+  "frac_other_side": 0.49415382531203267
  },
  "B": {
-  "frac_hypocentre_side": 0.970530466867654,
-  "frac_other_side": 0.029469533132346015
+  "frac_hypocentre_side": 0.8626282768279262,
+  "frac_other_side": 0.1373717231720738
  },
  "hypocentre_side_is": "NE (bloque bajo el plano de Pichilemu)"
 }

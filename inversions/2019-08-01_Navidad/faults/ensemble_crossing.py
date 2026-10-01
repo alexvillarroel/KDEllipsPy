@@ -13,7 +13,7 @@ HERE = Path(__file__).resolve().parent
 NAV = HERE.parent
 CASE = NAV / "isc_tomo" / "b0.05-0.30_noM14L"
 sys.path.insert(0, str(HERE))
-from intersection import K, frame  # noqa: E402
+from intersection import K, frame, pichilemu_plane  # noqa: E402
 
 cfg = kde.ConfigParser(str(CASE / "input.ctl"))
 fm = kde.AxitraForwardModel.from_config(cfg)
@@ -23,7 +23,7 @@ en = lambda lo, la: np.array([(lo - sp.longitude) * K * np.cos(np.radians(sp.lat
 gj = json.loads((HERE / "chaf_navidad.geojson").read_text())
 pich = next(f for f in gj["features"] if f["properties"].get("F_name") == "Pichilemu" and f["properties"].get("FT_name") == "Principal")
 q = np.mean([en(lo, la) for lo, la in pich["geometry"]["coordinates"]], axis=0)
-_, _, n2 = frame(float(pich["properties"]["strike"]), float(pich["properties"]["dip"]))
+_, _, n2 = frame(*pichilemu_plane(pich))
 P = np.array([en(sf.lon, sf.lat) + np.array([0, 0, -sf.z_m / 1e3]) for sf in base.subfaults])
 hyp = np.sign((np.array([0, 0, -sp.depth]) - q) @ n2)
 cross = np.sign((P - q) @ n2) != hyp

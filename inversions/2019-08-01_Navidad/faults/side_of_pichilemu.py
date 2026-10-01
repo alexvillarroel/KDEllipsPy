@@ -16,7 +16,7 @@ sys.path.insert(0, str(NAV / "dynamic"))
 import numpy as np  # noqa: E402
 
 import okada_models as om  # noqa: E402
-from intersection import K, frame  # noqa: E402
+from intersection import K, frame, pichilemu_plane  # noqa: E402
 
 
 def main():
@@ -29,7 +29,7 @@ def main():
     pich = next(f for f in gj["features"] if f["properties"].get("F_name") == "Pichilemu" and f["properties"].get("FT_name") == "Principal")
     en = lambda lo, la: np.array([(lo - lon0) * K * np.cos(np.radians(lat0)), (la - lat0) * K, 0.0])
     q = np.mean([en(lo, la) for lo, la in pich["geometry"]["coordinates"]], axis=0)
-    _, _, n2 = frame(float(pich["properties"]["strike"]), float(pich["properties"]["dip"]))
+    _, _, n2 = frame(*pichilemu_plane(pich))
     P = np.array([en(sf.lon, sf.lat) + np.array([0, 0, -sf.z_m / 1e3]) for sf in geom.subfaults])
     side = np.sign((P - q) @ n2)  # mismo signo que el hipocentro = lado del hipocentro
     hyp_side = np.sign((np.array([0, 0, -sp.depth]) - q) @ n2)

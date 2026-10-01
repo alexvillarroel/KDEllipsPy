@@ -27,6 +27,26 @@ def frame(strike, dip):
     return along, down, np.cross(along, down)
 
 
+def trace_strike(coords, dipdir_hint):
+    """Rumbo de la traza DIBUJADA (ajuste lineal de los vértices), no el del atributo:
+    en CHAF Pichilemu tiene atributo 138° pero su polilínea va a 143°, y prolongarla
+    30-40 km con el rumbo equivocado mueve el plano varios km. Se orienta para que el
+    manteo (rumbo + 90°, regla de la mano derecha) apunte al lado de dipdir_hint."""
+    lon, lat = np.asarray(coords, float).T
+    E = (lon - lon.mean()) * K * np.cos(np.radians(lat.mean()))
+    N = (lat - lat.mean()) * K
+    _, v = np.linalg.eigh(np.c_[E, N].T @ np.c_[E, N])
+    az = np.degrees(np.arctan2(v[0, 1], v[1, 1])) % 180.0
+    want = {"SW": 225.0, "NE": 45.0, "W": 270.0, "E": 90.0, "S": 180.0, "N": 0.0, "SE": 135.0, "NW": 315.0}[dipdir_hint]
+    return az if abs(((az + 90 - want + 180) % 360) - 180) < 90 else az + 180.0
+
+
+def pichilemu_plane(feature):
+    """(rumbo de la traza dibujada, manteo del atributo) del tramo de CHAF."""
+    pr = feature["properties"]
+    return trace_strike(feature["geometry"]["coordinates"], pr["dipdir"]), float(pr["dip"])
+
+
 def main():
     cfg = kde.ConfigParser(str(NAV / CASE / "input.ctl"))
     sp, fp = cfg.source_position, cfg.fault_plane
@@ -38,7 +58,8 @@ def main():
     pich = next(f for f in gj["features"] if f["properties"].get("F_name") == "Pichilemu" and f["properties"].get("FT_name") == "Principal")
     pr = pich["properties"]
     q = np.mean([to_en(lo, la) for lo, la in pich["geometry"]["coordinates"]], axis=0)  # punto de la traza (z=0)
-    _, _, n2 = frame(float(pr["strike"]), float(pr["dip"]))
+    strike_p, dip_p = pichilemu_plane(pich)
+    _, _, n2 = frame(strike_p, dip_p)
 
     a1, d1, _ = frame(sp.strike, sp.dip)
     p0 = np.array([0.0, 0.0, -sp.depth])  # hipocentro (km)
@@ -53,7 +74,8 @@ def main():
             p = p0 + L * a1 + W * d1
             lo, la = to_ll(p[0], p[1])
             pts.append({"strike_km": L + hx, "dip_km": W + hy, "lon": lo, "lat": la, "depth_km": -p[2]})
-    out = {"case": CASE, "pichilemu": {k: pr.get(k) for k in ("strike", "dip", "dipdir", "sense", "activity", "max_z_km")},
+    out = {"case": CASE, "pichilemu": {**{k: pr.get(k) for k in ("strike", "dip", "dipdir", "sense", "activity", "max_z_km")},
+                                       "strike_used": round(strike_p, 1)},
            "line_in_mesh": pts}
     (HERE / "pichilemu_intersection.json").write_text(json.dumps(out, indent=1))
     if pts:
