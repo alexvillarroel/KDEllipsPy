@@ -212,6 +212,7 @@ dialog::backdrop { background: rgba(5, 10, 12, 0.78); }
       <p>Tasa de momento μ·v·ΔA: en el dinámico B, a partir del slip-rate de fd3d_TSN (celdas de 500 m); en el cinemático, cada subfalla libera su momento con un triángulo de 2 s desde su tiempo de ruptura.</p></div>
     <figure><img class="zoomable" data-fig="moment_release" alt="Función fuente, diagramas espacio-tiempo e isócronas"><figcaption>(a) Función fuente temporal. (b–e) Diagramas rumbo–tiempo y manteo–tiempo; líneas de referencia a 1.7 km/s (discontinua) y 3.9 km/s ≈ Vs (punteada). (f–g) Momento liberado e isócronas (instante en que cada celda alcanza la mitad de su momento), con la intersección con Pichilemu.</figcaption></figure>
     <figure><img class="zoomable" data-fig="snapshots_B" alt="Instantáneas de la tasa de momento del dinámico B"><figcaption>Dinámico B: tasa de momento en el plano de falla cada 2 s. El frente es una medialuna que se aleja de la intersección con Pichilemu (roja) hacia el NNE y en profundidad.</figcaption></figure>
+    <figure><video id="movieB" controls loop muted playsinline preload="metadata" style="width:100%;height:auto;border-radius:6px;background:#000"></video><figcaption>Película del dinámico B (0.1 s de ruptura por cuadro, ~1.5 veces más lenta que el tiempo real): cambio de esfuerzo, slip-rate y slip acumulado, con la función fuente y el cursor de tiempo abajo. Escalas saturadas en t &lt; 2 s por la nucleación forzada.</figcaption></figure>
     <figure><img class="zoomable" data-fig="traction_snapshots_B" alt="Cambio de esfuerzo y slip-rate del dinámico B"><figcaption>Dinámico B (equivalente en Python de PrintSnapshot.m de fd3d_TSN): cambio de esfuerzo de cizalle Δτ = τ(t) − τ₀ (arriba) y slip-rate (abajo). La caída de esfuerzo avanza detrás del frente; el anillo rojo es la concentración en el borde de la aspereza.</figcaption></figure>
     <figure><img class="zoomable" data-fig="traction_timeseries_B" alt="Tracción y slip-rate en tres puntos"><figcaption>Equivalente de PrintTimeSeries.m: tracción frente a la resistencia de pico y slip-rate en el hipocentro (parche de nucleación forzada, τ₀ sobre el pico), al NE y al SW de la intersección con Pichilemu. Al NE la carga llega a los ~2 s y el deslizamiento dura ~12 s; al SW rompe antes (~0.8 s), pero con un pulso corto.</figcaption></figure>
     <figure><img class="zoomable" data-fig="stress_change_final_B" alt="Cambio estático de esfuerzo final"><figcaption>Cambio estático de esfuerzo al final de la ruptura: caída media de ~3 MPa donde desliza, máxima en la nucleación.</figcaption></figure>
@@ -430,6 +431,7 @@ dialog::backdrop { background: rgba(5, 10, 12, 0.78); }
       <tr><td class="txt">Dinámico A (M0 libre)</td><td>${pc(Sp.A.frac_other_side)}</td><td>—</td></tr>`;
   }
 
+  if (D.figs.movie_B) document.getElementById("movieB").src = D.figs.movie_B;
   // ---------- Figuras con data-fig ----------
   document.querySelectorAll("img.zoomable[data-fig]").forEach((im) => {
     if (D.figs[im.dataset.fig]) im.src = D.figs[im.dataset.fig];

@@ -149,6 +149,8 @@ def main():
     if (ru / "moment_release.png").exists():
         data["figs"]["moment_release"] = png(ru / "moment_release.png")
         data["figs"]["snapshots_B"] = png(ru / "snapshots_B.png")
+        if (ru / "rupture_B.mp4").exists():
+            data["figs"]["movie_B"] = "data:video/mp4;base64," + base64.b64encode((ru / "rupture_B.mp4").read_bytes()).decode()
         for n in ("traction_snapshots_B", "traction_timeseries_B", "stress_change_final_B"):
             data["figs"][n] = png(ru / f"{n}.png")
     (OUT / "data.json").write_text(json.dumps(data, ensure_ascii=False))
