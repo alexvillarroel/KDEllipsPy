@@ -33,33 +33,33 @@ def main():
     gs = fig.add_gridspec(2, 3, height_ratios=[3, 1])
     axs = [fig.add_subplot(gs[0, j]) for j in range(3)]
     fields = [(dtau, "RdBu_r", -lim, lim, "Δτ = τ(t) − τ₀ (MPa)"),
-              (v, "Oranges", 0, vmax, "slip-rate (m/s)"),
-              (slip, "viridis", 0, smax, "slip acumulado (m)")]
+              (v, "Oranges", 0, vmax, "slip rate (m/s)"),
+              (slip, "viridis", 0, smax, "cumulative slip (m)")]
     ims = []
     for a, (f, cm, lo, hi, lab) in zip(axs, fields):
         im = a.pcolormesh(x, w, np.clip(f[0].T, lo, hi), cmap=cm, vmin=lo, vmax=hi, shading="auto")
         fig.colorbar(im, ax=a, orientation="horizontal", shrink=0.85, pad=0.02, label=lab)
         decorate(a, fp, ix, iw)
-        a.set_xlabel("rumbo (km)")
+        a.set_xlabel("along strike (km)")
         ims.append(im)
-    axs[0].set_ylabel("manteo desde el borde superior (km)")
+    axs[0].set_ylabel("along dip from top edge (km)")
     ax = fig.add_subplot(gs[1, :])
     ax.plot(t, stf / stf.max(), color="k", lw=1.5)
     ax.fill_between(t, stf / stf.max(), color="k", alpha=0.08)
     cur = ax.axvline(0, color="#c4161c", lw=1.5)
     ax.set_xlim(0, T_MAX); ax.set_ylim(0, 1.05); ax.set_yticks([])
-    ax.set_xlabel("tiempo (s)"); ax.set_ylabel("tasa de momento")
+    ax.set_xlabel("time (s)"); ax.set_ylabel("moment rate")
     title = fig.suptitle("")
 
     step = int(round(DT_FRAME / dt))
-    writer = FFMpegWriter(fps=FPS, bitrate=4000, metadata={"title": "Navidad 2019 dinámico B"})
+    writer = FFMpegWriter(fps=FPS, bitrate=4000, metadata={"title": "Navidad 2019 dynamic B"})
     with writer.saving(fig, str(HERE / "rupture_B.mp4"), dpi=110):
         for i in range(0, int(T_MAX / dt), step):
             for im, (f, _, lo, hi, _) in zip(ims, fields):
                 im.set_array(np.clip(f[i].T, lo, hi).ravel())
             cur.set_xdata([t[i]])
-            title.set_text(f"Navidad 2019 – ruptura dinámica B   t = {t[i]:5.1f} s   "
-                           "(rojo discontinuo: intersección con Pichilemu; escalas saturadas en t < 2 s)")
+            title.set_text(f"Navidad 2019 – dynamic rupture B   t = {t[i]:5.1f} s   "
+                           "(dashed red: Pichilemu fault intersection; scales saturated for t < 2 s)")
             writer.grab_frame()
     print("ok", HERE / "rupture_B.mp4")
 

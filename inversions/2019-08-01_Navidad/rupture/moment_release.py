@@ -93,7 +93,7 @@ def main():
 
     dB, xB, wB, tB, k = dynamic_B(cfg, geom)
     dK, xK, wK, tK, vrK = kinematic(cfg, fm)
-    models = [("Dinámico B (M0 CSN)", dB, xB, wB, tB), ("Cinemático (mejor de 5 semillas)", dK, xK, wK, tK)]
+    models = [("Dynamic B (CSN M0)", dB, xB, wB, tB), ("Kinematic (best of 5 seeds)", dK, xK, wK, tK)]
 
     fig = plt.figure(figsize=(12.5, 13.5), constrained_layout=True)
     gs = fig.add_gridspec(4, 2, height_ratios=[0.8, 1, 1, 1.25])
@@ -104,9 +104,9 @@ def main():
         ax.plot(t, stf / 1e18, color=col, lw=2, label=f"{name}: M0 {m0:.2e} N·m, Mw {(np.log10(m0) - 9.1) / 1.5:.2f}")
         ax.fill_between(t, stf / 1e18, color=col, alpha=0.08)
     ax.set_xlim(0, T_MAX)
-    ax.set_xlabel("Tiempo desde el inicio de la ruptura (s)")
-    ax.set_ylabel("Tasa de momento (10¹⁸ N·m/s)")
-    ax.set_title("(a) Función fuente temporal")
+    ax.set_xlabel("Time since rupture onset (s)")
+    ax.set_ylabel("Moment rate (10¹⁸ N·m/s)")
+    ax.set_title("(a) Source time function")
     ax.legend(frameon=False, loc="upper right")
     ax.grid(alpha=0.25)
 
@@ -122,8 +122,8 @@ def main():
             a.plot(vref * tt, tt, color="0.25", lw=0.8, ls=ls)
             a.plot(-vref * tt, tt, color="0.25", lw=0.8, ls=ls)
         a.set_xlim((x - hx).min(), (x - hx).max()); a.set_ylim(T_MAX, 0)
-        a.set_xlabel("A lo largo del rumbo desde el hipocentro (km, + NNE)"); a.set_ylabel("Tiempo (s)")
-        a.set_title(f"({'bc'[col]}) {name}: rumbo–tiempo")
+        a.set_xlabel("Along strike from hypocentre (km, + NNE)"); a.set_ylabel("Time (s)")
+        a.set_title(f"({'bc'[col]}) {name}: strike–time")
         a.text(0.02, 0.04, "-- 1.7 km/s   ··· 3.9 km/s (≈Vs)", transform=a.transAxes, fontsize=7.5, color="0.25")
         # (d) a lo largo del manteo
         a = fig.add_subplot(gs[2, col])
@@ -136,23 +136,23 @@ def main():
             a.plot(vref * tt, tt, color="0.25", lw=0.8, ls=ls)
             a.plot(-vref * tt, tt, color="0.25", lw=0.8, ls=ls)
         a.set_xlim((w - hy).min(), (w - hy).max()); a.set_ylim(T_MAX, 0)
-        a.set_xlabel("A lo largo del manteo desde el hipocentro (km, + más profundo)"); a.set_ylabel("Tiempo (s)")
-        a.set_title(f"({'de'[col]}) {name}: manteo–tiempo")
+        a.set_xlabel("Along dip from hypocentre (km, + downdip)"); a.set_ylabel("Time (s)")
+        a.set_title(f"({'de'[col]}) {name}: dip–time")
         # (f) tiempo de ruptura en el plano
         a = fig.add_subplot(gs[3, col])
         trp = rupture_time(d, t)
         slip_m0 = d.sum(axis=0) * DT_PLOT
         im = a.pcolormesh(x, w, (slip_m0 / slip_m0.max()).T, cmap=CMAP, shading="auto", vmin=0, vmax=1)
-        fig.colorbar(im, ax=a, label="momento liberado (normalizado)")
+        fig.colorbar(im, ax=a, label="released moment (normalized)")
         cs = a.contour(x, w, trp.T, levels=np.arange(1, 20, 2), colors="k", linewidths=0.7)
         a.clabel(cs, fmt="%d s", fontsize=7)
-        a.plot(ix, iw, color="#c4161c", lw=2, ls="--", label="intersección con Pichilemu")
-        a.plot(hx, hy, "*", color="lime", mec="k", ms=14, label="hipocentro ISC")
+        a.plot(ix, iw, color="#c4161c", lw=2, ls="--", label="Pichilemu fault intersection")
+        a.plot(hx, hy, "*", color="lime", mec="k", ms=14, label="ISC hypocentre")
         a.set_xlim(0, fp.lx / 1e3); a.set_ylim(fp.ly / 1e3, 0); a.set_aspect("equal")
-        a.set_xlabel("A lo largo del rumbo (km)"); a.set_ylabel("A lo largo del manteo desde el borde superior (km)")
-        a.set_title(f"({'fg'[col]}) {name.split(' (')[0]}: momento e isócronas")
+        a.set_xlabel("Along strike (km)"); a.set_ylabel("Along dip from top edge (km)")
+        a.set_title(f"({'fg'[col]}) {name.split(' (')[0]}: moment and isochrones")
         a.legend(loc="lower right", fontsize=7.5, framealpha=0.85)
-    fig.suptitle(f"Navidad 2019: liberación de momento (dinámico escalado k={k:.2f}; Vr cinemática {vrK:.2f} km/s)", fontsize=11)
+    fig.suptitle(f"Navidad 2019: moment release (dynamic scaled by k={k:.2f}; kinematic Vr {vrK:.2f} km/s)", fontsize=11)
     fig.savefig(HERE / "moment_release.png", dpi=130)
     plt.close(fig)
 
@@ -170,10 +170,10 @@ def main():
         a.set_xlim(0, fp.lx / 1e3); a.set_ylim(fp.ly / 1e3, 0); a.set_aspect("equal")
         a.set_title(f"t = {tt} s", fontsize=9)
         a.tick_params(labelsize=7)
-    fig.colorbar(im, ax=axes, shrink=0.7, label="tasa de momento por celda (10¹⁵ N·m/s)")
-    fig.supxlabel("A lo largo del rumbo (km)"); fig.supylabel("A lo largo del manteo desde el borde superior (km)")
-    fig.suptitle("Dinámico B: tasa de momento en el plano de falla (rojo: intersección con Pichilemu; "
-                 "escala saturada en t < 2 s por la nucleación forzada)", fontsize=10.5)
+    fig.colorbar(im, ax=axes, shrink=0.7, label="moment rate per cell (10¹⁵ N·m/s)")
+    fig.supxlabel("Along strike (km)"); fig.supylabel("Along dip from top edge (km)")
+    fig.suptitle("Dynamic B: moment rate on the fault plane (red: Pichilemu fault intersection; "
+                 "colour scale saturated for t < 2 s by forced nucleation)", fontsize=10.5)
     fig.savefig(HERE / "snapshots_B.png", dpi=120)
     print("ok")
 

@@ -88,35 +88,35 @@ def main():
             decorate(a, fp, ix, iw)
         axes[0, j].set_title(f"t = {tt} s")
     fig.colorbar(im1, ax=axes[0], shrink=0.85, label="Δτ = τ(t) − τ₀ (MPa)")
-    fig.colorbar(im2, ax=axes[1], shrink=0.85, label="slip-rate (m/s)")
-    fig.supxlabel("A lo largo del rumbo (km)"); fig.supylabel("A lo largo del manteo desde el borde superior (km)")
-    fig.suptitle("Dinámico B: cambio de esfuerzo de cizalle (arriba; rojo = carga, azul = caída) y slip-rate (abajo). "
-                 "Rojo discontinuo: intersección con Pichilemu", fontsize=10)
+    fig.colorbar(im2, ax=axes[1], shrink=0.85, label="slip rate (m/s)")
+    fig.supxlabel("Along strike (km)"); fig.supylabel("Along dip from top edge (km)")
+    fig.suptitle("Dynamic B: shear stress change (top; red = loading, blue = drop) and slip rate (bottom). "
+                 "Dashed red: Pichilemu fault intersection", fontsize=10)
     fig.savefig(HERE / "traction_snapshots_B.png", dpi=120)
     plt.close(fig)
 
     # ---------------- series de tiempo en 3 puntos
     hx, hy = fp.hx / 1e3, fp.hy / 1e3
-    pts = {"hipocentro": (hx, hy), "NE del hipocentro (+6 km rumbo, +6 manteo)": (hx + 6, hy + 6),
-           "SW, al otro lado de Pichilemu (−3.5 km rumbo, +1 manteo)": (hx - 3.5, hy + 1)}
+    pts = {"hypocentre": (hx, hy), "NE of hypocentre (+6 km strike, +6 km dip)": (hx + 6, hy + 6),
+           "SW, across Pichilemu (−3.5 km strike, +1 km dip)": (hx - 3.5, hy + 1)}
     t = np.arange(B["tau"].shape[0]) * dt
     fig, axes = plt.subplots(2, 3, figsize=(13, 6), sharex=True, constrained_layout=True)
     for j, (name, (px, pw)) in enumerate(pts.items()):
         i, kk = int(np.argmin(np.abs(x - px))), int(np.argmin(np.abs(w - pw)))
         a = axes[0, j]
         a.plot(t, B["tau"][:, i, kk] / 1e6, color="k", lw=1.4, label="τ(t)")
-        a.axhline(B["peak"][i, kk] / 1e6, color=PICH, ls="--", lw=1, label=f"resistencia de pico {B['peak'][i, kk] / 1e6:.1f} MPa")
+        a.axhline(B["peak"][i, kk] / 1e6, color=PICH, ls="--", lw=1, label=f"peak strength {B['peak'][i, kk] / 1e6:.1f} MPa")
         a.axhline(B["t0"][i, kk] / 1e6, color="0.5", ls=":", lw=1, label=f"τ₀ {B['t0'][i, kk] / 1e6:.1f} MPa")
-        a.set_title(name); a.set_ylabel("tracción (MPa)"); a.legend(fontsize=7, frameon=False)
+        a.set_title(name); a.set_ylabel("traction (MPa)"); a.legend(fontsize=7, frameon=False)
         a.set_ylim(bottom=min(-0.5, a.get_ylim()[0]))
         b = axes[1, j]
         b.plot(t, B["v"][:, i, kk], color="#d94801", lw=1.4)
-        b.set_ylabel("slip-rate (m/s)"); b.set_xlabel("tiempo (s)")
+        b.set_ylabel("slip rate (m/s)"); b.set_xlabel("time (s)")
         slip = B["v"][:, i, kk].sum() * dt
-        b.text(0.97, 0.9, f"slip final {slip:.2f} m", transform=b.transAxes, ha="right", fontsize=8)
+        b.text(0.97, 0.9, f"final slip {slip:.2f} m", transform=b.transAxes, ha="right", fontsize=8)
     for a in axes.ravel():
         a.set_xlim(0, 20); a.grid(alpha=0.25)
-    fig.suptitle("Dinámico B: tracción y slip-rate en tres puntos de la falla", fontsize=11)
+    fig.suptitle("Dynamic B: traction and slip rate at three fault points", fontsize=11)
     fig.savefig(HERE / "traction_timeseries_B.png", dpi=120)
     plt.close(fig)
 
@@ -127,11 +127,11 @@ def main():
     im = a.pcolormesh(x, w, fin.T, cmap="RdBu_r", vmin=-lim, vmax=lim, shading="auto")
     a.contour(x, w, asp.T.astype(float), levels=[0.5], colors="k", linewidths=0.8)
     decorate(a, fp, ix, iw)
-    fig.colorbar(im, ax=a, shrink=0.8, label="Δτ final (MPa): azul = caída, rojo = carga")
-    a.set_xlabel("A lo largo del rumbo (km)"); a.set_ylabel("A lo largo del manteo desde el borde superior (km)")
+    fig.colorbar(im, ax=a, shrink=0.8, label="final Δτ (MPa): blue = drop, red = loading")
+    a.set_xlabel("Along strike (km)"); a.set_ylabel("Along dip from top edge (km)")
     drop = -fin[asp & (B["v"].sum(0) * dt > 0.05 * (B["v"].sum(0) * dt).max())].mean()
-    a.set_title(f"Dinámico B: cambio estático de esfuerzo (caída media donde desliza {drop:.1f} MPa)\n"
-                "anillo rojo: concentración en el borde de la barrera impuesta (negro); su amplitud depende de la malla", fontsize=9)
+    a.set_title(f"Dynamic B: static stress change (mean drop where slipping {drop:.1f} MPa)\n"
+                "red ring: concentration at the imposed barrier edge (black); amplitude is mesh-dependent", fontsize=9)
     fig.savefig(HERE / "stress_change_final_B.png", dpi=130)
     print(f"ok: k={B['k']:.2f}, caída media {drop:.2f} MPa")
 
