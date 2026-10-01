@@ -132,6 +132,15 @@ def main():
         data["okada"] = json.loads((ok / "okada_results.json").read_text())
         for k in ("kin", "A", "B"):
             data["figs"][f"okada_{k}"] = png(ok / f"okada_{k}.png")
+    # 9. Falla de Pichilemu (CHAF)
+    fa = NAV / "faults"
+    if (fa / "pichilemu_map.png").exists():
+        data["pichilemu"] = {
+            "split": json.loads((fa / "pichilemu_moment_split.json").read_text()),
+            "ensemble": json.loads((fa / "pichilemu_ensemble_crossing.json").read_text()),
+            "intersection": json.loads((fa / "pichilemu_intersection.json").read_text()),
+        }
+        data["figs"]["pichilemu_map"] = png(fa / "pichilemu_map.png")
     (OUT / "data.json").write_text(json.dumps(data, ensure_ascii=False))
     print("ok", round((OUT / "data.json").stat().st_size / 1e6, 2), "MB")
 

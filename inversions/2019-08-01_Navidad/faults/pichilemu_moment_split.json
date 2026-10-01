@@ -1,0 +1,15 @@
+{
+ "kin": {
+  "frac_hypocentre_side": 0.9756386800682453,
+  "frac_other_side": 0.02436131993175472
+ },
+ "A": {
+  "frac_hypocentre_side": 0.836207348635233,
+  "frac_other_side": 0.16379265136476695
+ },
+ "B": {
+  "frac_hypocentre_side": 0.970530466867654,
+  "frac_other_side": 0.029469533132346015
+ },
+ "hypocentre_side_is": "NE (bloque bajo el plano de Pichilemu)"
+}
