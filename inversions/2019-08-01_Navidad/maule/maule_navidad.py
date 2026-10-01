@@ -21,8 +21,8 @@ import matplotlib  # noqa: E402
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
-from matplotlib.collections import PolyCollection  # noqa: E402
 from matplotlib.path import Path as MPath  # noqa: E402
+from scipy.interpolate import griddata  # noqa: E402
 
 import okada_models as om  # noqa: E402
 
@@ -87,17 +87,20 @@ def main():
     gs = fig.add_gridspec(1, 2, width_ratios=[1.35, 1])
     ax = fig.add_subplot(gs[0], projection=ccrs.PlateCarree())
     ax.set_extent([-74.0, -71.2, -35.4, -33.55])
-    ax.add_feature(cfeature.LAND, facecolor="#efece4"); ax.add_feature(cfeature.OCEAN, facecolor="#e6eef4")
-    pc = PolyCollection(polys, array=m["slip"], cmap="YlOrRd", edgecolors="0.4", linewidths=0.4, alpha=0.85,
-                        transform=ccrs.PlateCarree(), clim=(0, 18))
-    ax.add_collection(pc)
-    for p, s, d in zip(polys, m["slip"], m["depth"]):
-        c = np.mean(p, axis=0)
-        if -74 < c[0] < -71.2 and -35.4 < c[1] < -33.55:
-            ax.text(c[0], c[1], f"{s:.1f} m\n{d:.0f} km", fontsize=6.5, ha="center", va="center", color="0.15",
-                    transform=ccrs.PlateCarree())
-    fig.colorbar(pc, ax=ax, shrink=0.6, pad=0.02, label="Maule 2010 slip, Yue et al. (2014) (m)")
-    ax.coastlines("10m", lw=0.9)
+    ax.add_feature(cfeature.LAND, facecolor="#efece4", zorder=0); ax.add_feature(cfeature.OCEAN, facecolor="#e6eef4", zorder=0)
+    # Slip de Maule interpolado (nodos al centro de cada subfalla) en una grilla regular
+    glon, glat = np.meshgrid(np.linspace(-74.6, -70.6, 400), np.linspace(-36.0, -33.3, 300))
+    gs_ = griddata(np.c_[m["lon"], m["lat"]], m["slip"], (glon, glat), method="cubic")
+    gs_ = np.clip(gs_, 0, None)  # ponytail: el cúbico sobreoscila bajo 0; se recorta
+    pc = ax.pcolormesh(glon, glat, gs_, cmap="YlOrRd", vmin=0, vmax=18, alpha=0.6, shading="auto",
+                       transform=ccrs.PlateCarree(), zorder=1)
+    cs = ax.contour(glon, glat, gs_, levels=np.arange(2, 18, 2), colors="#7f0000", linewidths=0.5, alpha=0.7,
+                    transform=ccrs.PlateCarree(), zorder=2)
+    ax.clabel(cs, fmt="%d m", fontsize=6.5)
+    ax.plot(m["lon"], m["lat"], "+", color="0.35", ms=5, mew=0.7, transform=ccrs.PlateCarree(), zorder=2)
+    ax.plot([], [], "+", color="0.35", label="Maule subfault nodes (Yue et al. 2014)")
+    fig.colorbar(pc, ax=ax, shrink=0.6, pad=0.02, label="Maule 2010 slip, Yue et al. (2014), interpolated (m)")
+    ax.coastlines("10m", lw=0.9, zorder=3)
     gl = ax.gridlines(draw_labels=True, lw=0.3, alpha=0.5); gl.top_labels = gl.right_labels = False
     ax.contour(lo, la, skin, levels=[0.2 * skin.max(), 0.6 * skin.max()], colors="#1f4fbf", linewidths=[1.0, 2.0])
     ax.contour(lo, la, sdyn, levels=[0.2 * sdyn.max(), 0.6 * sdyn.max()], colors="k", linewidths=[0.8, 1.6], linestyles="--")
