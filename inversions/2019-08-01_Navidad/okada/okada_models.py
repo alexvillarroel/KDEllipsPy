@@ -27,6 +27,7 @@ import matplotlib  # noqa: E402
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
+import matplotlib.ticker as mticker  # noqa: E402
 import numpy as np  # noqa: E402
 from okada_wrapper import dc3dwrapper  # noqa: E402
 
@@ -103,33 +104,44 @@ def okada(geom, cfg, ss, ds, lat, lon):
 
 
 def plot(name, title, lon, lat, u, cfg, geom, path):
+    """Dos paneles: uh (magnitud horizontal + flechas de dirección) y uz (vertical)."""
     fp = cfg.fault_plane
     la = np.array([sf.lat for sf in geom.subfaults]).reshape(fp.ny, fp.nx)
     lo = np.array([sf.lon for sf in geom.subfaults]).reshape(fp.ny, fp.nx)
-    fig = plt.figure(figsize=(7.2, 7.6))
-    ax = fig.add_subplot(projection=ccrs.PlateCarree())
-    ax.set_extent([lon.min(), lon.max(), lat.min(), lat.max()])
-    vmax = np.abs(u[2]).max() * 1e3
-    cf = ax.pcolormesh(lon, lat, u[2] * 1e3, cmap="RdBu_r", vmin=-vmax, vmax=vmax, shading="auto", alpha=0.9)
-    fig.colorbar(cf, ax=ax, shrink=0.65, label="desplazamiento vertical (mm)")
-    ax.add_feature(cfeature.LAND, facecolor="none", edgecolor="none")
-    ax.coastlines("10m", lw=0.9)
-    gl = ax.gridlines(draw_labels=True, lw=0.3, alpha=0.5)
-    gl.top_labels = gl.right_labels = False
-    step = 4
-    q = ax.quiver(lon[::step, ::step], lat[::step, ::step], u[0][::step, ::step] * 1e3, u[1][::step, ::step] * 1e3,
-                  scale=np.hypot(u[0], u[1]).max() * 1e3 * 12, width=0.003, color="k")
-    hmax = round(np.hypot(u[0], u[1]).max() * 1e3, -1) or 10
-    ax.quiverkey(q, 0.82, 0.04, hmax, f"{hmax:.0f} mm", labelpos="E", coordinates="axes")
+    uh = np.hypot(u[0], u[1]) * 1e3
+    uz = u[2] * 1e3
+    fig, axes = plt.subplots(1, 2, figsize=(13.5, 5.0), subplot_kw={"projection": ccrs.PlateCarree()})
+    vz = np.abs(uz).max()
+    panels = [
+        (axes[0], uh, "viridis", 0.0, uh.max(), "desplazamiento horizontal uh (mm)"),
+        (axes[1], uz, "RdBu_r", -vz, vz, "desplazamiento vertical uz (mm)"),
+    ]
     c = [(0, 0), (0, fp.nx - 1), (fp.ny - 1, fp.nx - 1), (fp.ny - 1, 0), (0, 0)]
-    ax.plot([lo[r, s] for r, s in c], [la[r, s] for r, s in c], "k--", lw=0.8)
-    ax.plot(lo[0, :], la[0, :], "k-", lw=2.2)
-    ax.plot(cfg.source_position.longitude, cfg.source_position.latitude, "*", color="lime", mec="k", ms=16)
-    for s in cfg.stations.stations:
-        ax.plot(s.longitude, s.latitude, "^", color="k", ms=7)
-        ax.text(s.longitude + 0.02, s.latitude + 0.02, s.name, fontsize=8)
-    ax.set_title(title, fontsize=10)
-    fig.savefig(path, dpi=120, bbox_inches="tight")
+    for ax, field, cmap, vmin, vmax, label in panels:
+        ax.set_extent([lon.min(), lon.max(), lat.min(), lat.max()])
+        cf = ax.pcolormesh(lon, lat, field, cmap=cmap, vmin=vmin, vmax=vmax, shading="auto")
+        fig.colorbar(cf, ax=ax, shrink=0.72, label=label, pad=0.02)
+        ax.contour(lon, lat, field, levels=8, colors="k", linewidths=0.35, alpha=0.5)
+        ax.coastlines("10m", lw=0.9)
+        gl = ax.gridlines(draw_labels=True, lw=0.3, alpha=0.5)
+        gl.top_labels = gl.right_labels = False
+        gl.xlocator = mticker.FixedLocator([-73.0, -72.5, -72.0, -71.5, -71.0])
+        ax.plot([lo[r, s_] for r, s_ in c], [la[r, s_] for r, s_ in c], "w--" if cmap == "viridis" else "k--", lw=0.8)
+        ax.plot(lo[0, :], la[0, :], "w-" if cmap == "viridis" else "k-", lw=2.2)
+        ax.plot(cfg.source_position.longitude, cfg.source_position.latitude, "*", color="lime", mec="k", ms=15)
+        for st_ in cfg.stations.stations:
+            ax.plot(st_.longitude, st_.latitude, "^", color="w" if cmap == "viridis" else "k", mec="k", ms=7)
+            ax.text(st_.longitude + 0.02, st_.latitude + 0.02, st_.name, fontsize=8,
+                    color="w" if cmap == "viridis" else "k")
+    step = 4
+    q = axes[0].quiver(lon[::step, ::step], lat[::step, ::step], u[0][::step, ::step] * 1e3, u[1][::step, ::step] * 1e3,
+                       scale=uh.max() * 12, width=0.003, color="w")
+    hmax = round(uh.max(), -1) or 10
+    axes[0].quiverkey(q, 0.78, 0.04, hmax, f"{hmax:.0f} mm", labelpos="E", coordinates="axes", color="w",
+                      labelcolor="w")
+    axes[0].set_title(f"{title}\nuh · horizontal", fontsize=10)
+    axes[1].set_title(f"{title}\nuz · vertical (+ alzamiento)", fontsize=10)
+    fig.savefig(path, dpi=115, bbox_inches="tight")
     plt.close(fig)
 
 
