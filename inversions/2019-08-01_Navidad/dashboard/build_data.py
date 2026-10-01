@@ -153,6 +153,8 @@ def main():
             data["figs"]["movie_B"] = "data:video/mp4;base64," + base64.b64encode((ru / "rupture_B.mp4").read_bytes()).decode()
         for n in ("traction_snapshots_B", "traction_timeseries_B", "stress_change_final_B"):
             data["figs"][n] = png(ru / f"{n}.png")
+    if (NAV / "maule" / "maule_navidad.png").exists():
+        data["figs"]["maule_navidad"] = png(NAV / "maule" / "maule_navidad.png")
     (OUT / "data.json").write_text(json.dumps(data, ensure_ascii=False))
     print("ok", round((OUT / "data.json").stat().st_size / 1e6, 2), "MB")
 

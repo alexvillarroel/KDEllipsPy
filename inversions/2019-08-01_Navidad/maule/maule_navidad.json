@@ -1,0 +1,33 @@
+{
+ "hypocentre_ISC": {
+  "sub": 81,
+  "slip_m": 8.841,
+  "depth_km": 26.0,
+  "lat": -34.308,
+  "lon": -72.144
+ },
+ "centroid_kin": {
+  "sub": 81,
+  "slip_m": 8.841,
+  "depth_km": 26.0,
+  "lat": -34.308,
+  "lon": -72.144
+ },
+ "centroid_GCMT": {
+  "sub": 81,
+  "slip_m": 8.841,
+  "depth_km": 26.0,
+  "lat": -34.308,
+  "lon": -72.144
+ },
+ "navidad_peak_slip_kin": {
+  "sub": 81,
+  "slip_m": 8.841,
+  "depth_km": 26.0,
+  "lat": -34.308,
+  "lon": -72.144
+ },
+ "maule_max_slip_m": 17.212,
+ "maule_slip_under_navidad_kin": 8.841000000000001,
+ "maule_slip_under_navidad_dynB": 8.653152465820312
+}
