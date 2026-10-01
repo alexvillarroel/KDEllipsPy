@@ -155,6 +155,8 @@ def main():
             data["figs"][n] = png(ru / f"{n}.png")
     if (NAV / "maule" / "maule_navidad.png").exists():
         data["figs"]["maule_navidad"] = png(NAV / "maule" / "maule_navidad.png")
+        if (NAV / "maule" / "maule_navidad_gmt.png").exists():
+            data["figs"]["maule_navidad_gmt"] = png(NAV / "maule" / "maule_navidad_gmt.png")
     (OUT / "data.json").write_text(json.dumps(data, ensure_ascii=False))
     print("ok", round((OUT / "data.json").stat().st_size / 1e6, 2), "MB")
 
