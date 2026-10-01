@@ -269,3 +269,15 @@ def test_resample_to_axitra_grid_delay_shifts_in_time():
     assert out[0] == pytest.approx([0, 0, 0, 1, 2, 3, 3, 3])
     early = resample_to_axitra_grid(moment_fn, dt_fine_s=1.0, npt_axitra=4, dt_axitra_s=1.0, right=None, delay_s=-1.0)
     assert early[0] == pytest.approx([1, 2, 3, 3])
+
+
+def test_bin_slip_rate_flips_dip_to_axitra_order():
+    """fd3d_TSN column 0 is the DEEPEST dip row; axitra's first subfault row
+    (idip=1) is the SHALLOWEST. Slip only in fd3d's deepest fine rows must land
+    in axitra's last (deepest) subfault row."""
+    nt, nxt, nzt, nx_sub, nz_sub = 3, 4, 6, 2, 3
+    slip_z = np.zeros((nt, nxt, nzt))
+    slip_z[:, :, :2] = 1.0  # deepest fine rows -> deepest subfault row
+    _, mz = bin_slip_rate_to_subfaults(np.zeros_like(slip_z), slip_z, nx_sub, nz_sub, dh_fine_m=1.0, mu_pa=1.0)
+    per_row = mz.sum(axis=1).reshape(nz_sub, nx_sub).sum(axis=1)  # index = idip-1
+    assert per_row[-1] > 0 and np.allclose(per_row[:-1], 0.0)

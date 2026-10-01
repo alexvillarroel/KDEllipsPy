@@ -81,8 +81,11 @@ def bin_slip_rate_to_subfaults(
         reshaped = field.reshape(nt, nx_sub, fx, nz_sub, fz)
         return reshaped.sum(axis=(2, 4)) * scale
 
-    mrate_x = _bin(slip_x)  # (nt, nx_sub, nz_sub)
-    mrate_z = _bin(slip_z)
+    # fd3d_TSN writes dip rows from the DEEP edge up (k=nabc+1 .. nzt-nfs), the
+    # axitra mesh numbers them from the SHALLOW edge (idip=1 on top): flip the
+    # dip axis so each fd3d row lands on the subfault at its own depth.
+    mrate_x = _bin(slip_x)[:, :, ::-1]  # (nt, nx_sub, nz_sub), nz_sub 0 = shallow
+    mrate_z = _bin(slip_z)[:, :, ::-1]
 
     nsub = nx_sub * nz_sub
     # Flatten (nx_sub, nz_sub) -> subfault index, strike-fastest (istk varies first).

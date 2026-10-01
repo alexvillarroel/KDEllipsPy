@@ -68,6 +68,7 @@ def run_tsn_forward(
     grid: TSNFaultGridSpec,
     run_cfg: TSNRunConfig,
     timeout_s: float = 3600.0,
+    hypo=None,
 ) -> Dict[str, np.ndarray]:
     """Run one fd3d_TSN forward evaluation for a 10-param ellipse model.
 
@@ -78,7 +79,7 @@ def run_tsn_forward(
     ``(nt, nxtT, nztT)`` float32.
     """
     work_dir = Path(run_cfg.work_dir)
-    t0, ts, dc = build_tsn_dynamic_fields(model, nli, nwi, grid)
+    t0, ts, dc = build_tsn_dynamic_fields(model, nli, nwi, grid, hypo=hypo)
     write_fd3d_tsn_forwardmodel(work_dir / "forwardmodel.dat", t0, ts, dc)
 
     (work_dir / "result").mkdir(parents=True, exist_ok=True)

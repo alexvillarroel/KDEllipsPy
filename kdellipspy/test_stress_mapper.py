@@ -147,3 +147,23 @@ if __name__ == "__main__":
     with tempfile.TemporaryDirectory() as td:
         test_forwardmodel_writer_roundtrip(Path(td))
     print("OK: EllipticalStressMapper matches legacy stressin.dat/peakin.dat")
+
+
+def test_mapper_nucleates_at_given_hypocentre():
+    from kdellipspy.core.geometry import tsn_hypocentre_coarse
+    # Big ellipse covering the grid, nucleation radius 1.5 at (4, 9).
+    model = np.array([20.0, 20.0, 8.0, 8.0, 0.0, 5.0, 1.2, 1.1, 1.5, 1.0], dtype=np.float32)
+    pre, peak = EllipticalStressMapper(16, 20, hypo=(4.0, 9.0)).fields(model)
+    over = pre > peak
+    i, j = np.nonzero(over)
+    assert over.any()
+    assert abs(i.mean() + 1 - 4.0) < 0.5 and abs(j.mean() + 1 - 9.0) < 0.5
+
+
+def test_hypocentre_coarse_counts_dip_from_deep_edge():
+    from types import SimpleNamespace
+    from kdellipspy.core.geometry import tsn_hypocentre_coarse
+    fp = SimpleNamespace(lx=32000.0, ly=40000.0, nx=16, ny=20, hx=16000.0, hy=0.0)
+    assert tsn_hypocentre_coarse(fp) == pytest.approx((16000 / (32000 / 15) + 1, 20.0))  # top edge -> last row
+    fp.hy = 40000.0
+    assert tsn_hypocentre_coarse(fp)[1] == pytest.approx(1.0)  # deep edge -> first row

@@ -47,8 +47,8 @@ def main():
         input_ctl_path=str(fd.CASE_DIR / "input.ctl"), data_dir=str(fd.CASE_DIR / "DATA"))
     inv = nd.FreeSubsetNA(
         config=cfg, observed_waveforms=observed, time_array=time_array,
-        tsn_run_cfg=TSNRunConfig(work_dir=fd.WORK, nxtT=fd.NXTT, nztT=fd.NZTT, dt_s=fd.DT),
-        tsn_grid=TSNFaultGridSpec(dh=fd.DH, dip_deg=cfg.source_position.dip, nztT=fd.NZTT, nabc=fd.NABC),
+        tsn_run_cfg=fd.tsn_run_cfg(),
+        tsn_grid=fd.tsn_grid(cfg),
     )
     inv.dynamic_fm.m0_target = nd.M0_TARGET
     free, misfit_na, source = best_free_model()
@@ -65,7 +65,7 @@ def main():
     area = rupt.sum() * fd.DH**2
     r_eq = np.sqrt(area / np.pi)
     te, dc = full[5] * k, full[9] * k
-    pts_km = fd.NXTT * fd.DH / 1e3 / 24  # tamaño de un punto de la grilla gruesa 25x25
+    pts_km = fd.NXTT * fd.DH / 1e3 / (cfg.fault_plane.nx - 1)  # tamaño de un punto de la grilla gruesa
 
     lines = [
         f"Caso {fd.CASE}   modelo desde {source}",
@@ -101,13 +101,12 @@ def main():
     fig.tight_layout()
     fig.savefig(rep / "traces.png", dpi=120)
 
-    # fd3d_TSN escribe las filas del dip de la más profunda a la más somera, y
-    # bin_slip_rate_to_subfaults las pasa SIN invertir a AXITRA (fila 0 = borde
-    # superior): el slip que genera los sintéticos es el espejo en dip del de
-    # fd3d. Se grafica tal como lo usa AXITRA: columna 0 de fd3d -> borde superior.
+    # fd3d_TSN cuenta las filas del dip desde la más profunda; AXITRA (y
+    # bin_slip_rate_to_subfaults) desde la más somera: se invierte para graficar
+    # con el borde superior arriba, igual que la malla de AXITRA.
     fig, axs = plt.subplots(figsize=(5.5, 5))
     ext = [0, fd.NXTT * fd.DH / 1e3, fd.NZTT * fd.DH / 1e3, 0]
-    im = axs.imshow(slip.T, extent=ext, cmap="hot_r", aspect="auto")
+    im = axs.imshow(slip[:, ::-1].T, extent=ext, cmap="hot_r", aspect="auto")
     fig.colorbar(im, label="slip (m)")
     fp = cfg.fault_plane
     axs.plot(fp.hx / 1e3, fp.hy / 1e3, "b*", ms=14, label="hipocentro")

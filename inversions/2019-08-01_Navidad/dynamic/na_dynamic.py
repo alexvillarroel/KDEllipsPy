@@ -22,37 +22,39 @@ import joblib
 import numpy as np
 
 import kdellipspy as kde
-from kdellipspy.core.geometry import TSNFaultGridSpec
-from kdellipspy.inversion.dynamic import DynamicNAInversionModel, TSNRunConfig
+from kdellipspy.core.geometry import tsn_hypocentre_coarse
+from kdellipspy.inversion.dynamic import DynamicNAInversionModel
 from kdellipspy.inversion.kinematic.model_na import NAConfig
 
-from forward_dynamic import CASE, CASE_DIR, DEFAULT_MODEL, DH, DT, HERE, NABC, NXTT, NZTT, WORK, setup_work_dir
+from forward_dynamic import _FP, CASE, CASE_DIR, DEFAULT_MODEL, HERE, setup_work_dir, tsn_grid, tsn_run_cfg
 
 M0_TARGET = float(os.environ["DYN_M0"]) if os.environ.get("DYN_M0") else None
 TE_REF = 3.0  # MPa, Te de referencia en modo M0 impuesto
 
 ALL_NAMES = ["a (pts)", "b (pts)", "u", "v", "phi (rad)", "Te (MPa)", "cte1", "Dc (m)", "dt0 (s)"]
 ALL_RANGES = np.array([
-    [2.0, 7.0],    # a    (semieje, ptos; > r)
-    [2.0, 5.0],    # b    (semieje, ptos; > r)
+    [2.0, 8.0],    # a    (semieje, ptos ~2.1 km; > r)
+    [2.0, 8.0],    # b    (semieje, ptos ~2.1 km; > r)
     [-0.7, 0.7],   # u
     [-0.7, 0.7],   # v
     [0.0, np.pi],  # phi  (rad)
     [1.0, 8.0],    # Te   (MPa)
     [1.05, 1.8],   # cte1 (pico = cte1*Te)
     [0.4, 2.5],    # Dc   (m); >=0.4 -> zona cohesiva >= ~2 celdas de 500 m
-    [-5.0, 5.0],   # dt0  (s)
+    [-3.0, 8.0],   # dt0  (s): cinemático ISC da ~+3.9 s; la nucleación dinámica suma retardo
 ])
 FREE = [i for i, n in enumerate(ALL_NAMES) if not (M0_TARGET and n.startswith("Te"))]
 NAMES = [ALL_NAMES[i] for i in FREE]
 RANGES = ALL_RANGES[FREE]
-# ~28 s/eval -> 1000 evals ~ 7.8 h
-NA = NAConfig(n_samples_initial=200, n_samples_iteration=50, n_iterations=16,
-              n_cells_resample=10, n_jobs=1, random_seed=0)
-# Mejor modelo del NA de NP1 (misfit 0.652): sanity check antes de gastar horas.
-REFERENCE_FULL = np.array([4.879, 3.571, 12.204, 10.127, 0.941, 3.029, 1.15, 1.1, 1.5, 1.0], np.float32)
-PREFLIGHT_MAX_MISFIT = 0.9
-HYPO = 25 // 2  # EllipticalStressMapper: nucleación en (nli//2, nwi//2)
+# ~15-20 s/eval con la malla 32x40 km -> 1500 evals ~ 7 h
+NA = NAConfig(n_samples_initial=300, n_samples_iteration=60, n_iterations=20,
+              n_cells_resample=12, n_jobs=1, random_seed=0)
+# Referencia para el chequeo previo: mejor modelo dinámico de loc_mid, en
+# parámetros relativos al hipocentro (válido para cualquier malla); se prueba
+# también con v invertido porque la convención del dip cambió (fd3d -> axitra).
+REFERENCE_FREE = {"a": 6.52, "b": 4.59, "u": 0.095, "v": 0.556, "phi": 1.442, "Te": 3.0, "cte1": 1.34, "Dc": 1.12}
+PREFLIGHT_MAX_MISFIT = float(os.environ.get("DYN_PREFLIGHT_MAX", "0.95"))
+HYPO_X, HYPO_Y = tsn_hypocentre_coarse(_FP)  # nucleación en el hipocentro del input.ctl
 
 
 def _as_dict(m_free):
@@ -71,7 +73,7 @@ def to_full_model(m_free):
     dx = xh * np.cos(phi) - yh * np.sin(phi)
     dy = xh * np.sin(phi) + yh * np.cos(phi)
     full = np.array(DEFAULT_MODEL, dtype=np.float32)
-    full[[0, 1, 2, 3, 4, 5, 6, 9]] = [a, b, HYPO - dx, HYPO - dy, phi, te, cte1, dc]
+    full[[0, 1, 2, 3, 4, 5, 6, 9]] = [a, b, HYPO_X - dx, HYPO_Y - dy, phi, te, cte1, dc]
     return full
 
 
@@ -86,17 +88,22 @@ class FreeSubsetNA(DynamicNAInversionModel):
 
 
 def preflight(inv):
-    """Referencia con dt0 = -5..5 s (un solo fd3d, gracias al caché del forward).
-    Aborta si nada ajusta: mejor perder 5 min que una noche."""
+    """Referencia (y su espejo en v) con dt0 = -2..8 s; un fd3d por variante
+    gracias al caché del forward. Aborta si nada ajusta: mejor perder minutos
+    que una noche."""
     rows = []
-    for dt0 in np.arange(-5.0, 5.5, 1.0):
-        inv.dynamic_fm.time_shift_s = dt0
-        rows.append((DynamicNAInversionModel._evaluate_model(inv, REFERENCE_FULL)[0], dt0))
-        print(f"[preflight] dt0={dt0:+.0f} s  misfit={rows[-1][0]:.4f}", flush=True)
+    for vsign in (1.0, -1.0):
+        ref = dict(REFERENCE_FREE, v=vsign * REFERENCE_FREE["v"])
+        if M0_TARGET:
+            ref["Te"] = TE_REF
+        for dt0 in np.arange(-2.0, 8.5, 1.0):
+            free = np.array([dict(ref, dt0=dt0)[n.split()[0]] for n in NAMES])
+            rows.append((FreeSubsetNA._evaluate_model(inv, free)[0], dt0, vsign))
+            print(f"[preflight] v*{vsign:+.0f} dt0={dt0:+.0f} s  misfit={rows[-1][0]:.4f}", flush=True)
     best = min(rows)
     if best[0] > PREFLIGHT_MAX_MISFIT:
         raise SystemExit(f"[preflight] ABORT: best reference misfit {best[0]:.3f} > {PREFLIGHT_MAX_MISFIT}")
-    print(f"[preflight] OK: best dt0={best[1]:+.0f} s misfit={best[0]:.4f}", flush=True)
+    print(f"[preflight] OK: best dt0={best[1]:+.0f} s (v*{best[2]:+.0f}) misfit={best[0]:.4f}", flush=True)
 
 
 def main():
@@ -106,8 +113,8 @@ def main():
         input_ctl_path=str(CASE_DIR / "input.ctl"), data_dir=str(CASE_DIR / "DATA"))
     inv = FreeSubsetNA(
         config=cfg, observed_waveforms=observed, time_array=time_array,
-        tsn_run_cfg=TSNRunConfig(work_dir=WORK, nxtT=NXTT, nztT=NZTT, dt_s=DT),
-        tsn_grid=TSNFaultGridSpec(dh=DH, dip_deg=cfg.source_position.dip, nztT=NZTT, nabc=NABC),
+        tsn_run_cfg=tsn_run_cfg(),
+        tsn_grid=tsn_grid(cfg),
     )
     inv.param_ranges = RANGES
     inv.param_names = list(NAMES)
@@ -141,8 +148,9 @@ def _check():
     rng = np.random.default_rng(1)
     for _ in range(500):
         m = to_full_model(rng.uniform(RANGES[:, 0], RANGES[:, 1]))  # dt0 no afecta la nucleación
-        pre, peak = EllipticalStressMapper(25, 25).fields(m)
-        assert pre[HYPO - 1, HYPO - 1] > peak[HYPO - 1, HYPO - 1], m  # nucleation patch above strength
+        pre, peak = EllipticalStressMapper(_FP.nx, _FP.ny, hypo=(HYPO_X, HYPO_Y)).fields(m)
+        i, j = int(round(HYPO_X)) - 1, int(round(HYPO_Y)) - 1
+        assert pre[i, j] > peak[i, j], m  # nucleation patch above strength
 
 
 if __name__ == "__main__":

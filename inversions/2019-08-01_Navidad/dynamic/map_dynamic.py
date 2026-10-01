@@ -46,11 +46,11 @@ def main():
 
     free = np.asarray(joblib.load(OUT / "na_result.joblib").best_model.model, float)
     full = nd.to_full_model(free)
-    grid = TSNFaultGridSpec(dh=fd.DH, dip_deg=sp.dip, nztT=fd.NZTT, nabc=fd.NABC)
-    rate = run_tsn_forward(full, nx, ny, grid, TSNRunConfig(work_dir=fd.WORK, nxtT=fd.NXTT, nztT=fd.NZTT, dt_s=fd.DT))
+    from kdellipspy.core.geometry import tsn_hypocentre_coarse
+    rate = run_tsn_forward(full, nx, ny, fd.tsn_grid(cfg), fd.tsn_run_cfg(), hypo=tsn_hypocentre_coarse(fp))
     slip_fine = np.hypot(rate["sliprateX"].sum(0), rate["sliprateZ"].sum(0)) * fd.DT  # (nxtT, nztT)
     fx, fz = fd.NXTT // nx, fd.NZTT // ny
-    slip_sub = slip_fine.reshape(nx, fx, ny, fz).mean(axis=(1, 3))  # (istk, idip), idip 0 = fila superior AXITRA
+    slip_sub = slip_fine.reshape(nx, fx, ny, fz).mean(axis=(1, 3))[:, ::-1]  # fd3d cuenta el dip desde abajo -> idip 0 = fila superior AXITRA
     lon, lat, sdyn = grid_of(g, slip_sub.T.ravel(), nx, ny)
 
     kin = joblib.load(KIN).best_model.model

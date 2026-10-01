@@ -1,6 +1,7 @@
 """Forward dinámico (fd3d_TSN) para Navidad 2019-08-01.
 
-Compila fd3d_TSN (gfortran, DIPSLIP) en tsn_work/ si falta, escribe
+Compila fd3d_TSN (gfortran, DIPSLIP + FSPACE: falla enterrada, bordes absorbentes
+arriba) en tsn_work/ si falta, escribe
 inputfd3d.dat / inputinv.dat / crustal.dat desde ../$DYN_CASE/input.ctl (np1 por
 defecto; p.ej. DYN_CASE=loc_mid), corre UN
 modelo de 10 parámetros y compara sintéticos vs observados (misfit + figura).
@@ -21,7 +22,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import kdellipspy as kde
-from kdellipspy.core.geometry import TSNFaultGridSpec
+from kdellipspy.core.geometry import TSNFaultGridSpec  # noqa: F401  (re-export para scripts)
 from kdellipspy.inversion.dynamic import DynamicNAInversionModel, TSNRunConfig
 
 HERE = Path(__file__).resolve().parent
@@ -30,25 +31,55 @@ CASE_DIR = HERE.parent / CASE
 WORK = HERE / os.environ.get("DYN_WORK", "tsn_work")  # un directorio por corrida simultánea
 FD3D_SRC = Path("/home/alex/fd3d_TSN/src")
 
-# Grilla FD fina: 50 km x 50 km a dh=500 m -> 100 x 100 (divisible por 25x25).
+# Grilla FD fina a dh=500 m sobre la falla del input.ctl (Lx x Ly), divisible
+# por la malla de subfallas (nx x ny).
 # ponytail: dh=500 m resuelve la zona cohesiva con ~3-4 celdas para Dc~1 m;
-# bajar a 250 m (200x200) si el slip-rate sale ruidoso.
-DH, NXTT, NZTT, NYTT, NABC = 500.0, 100, 100, 30, 10
+# bajar a 250 m si el slip-rate sale ruidoso.
+DH, NYTT, NABC = 500.0, 30, 10
+NFS = NABC  # -DFSPACE: fd3d_init.f90 usa nfs=nabc (sin superficie libre)
+BINARY = "fd3d_gnu_TSN_fspace"
+_FP = kde.ConfigParser(str(CASE_DIR / "input.ctl")).fault_plane
+NXTT, NZTT = int(round(_FP.lx / DH)), int(round(_FP.ly / DH))
+assert NXTT % _FP.nx == 0 and NZTT % _FP.ny == 0, "Lx/dh y Ly/dh deben ser múltiplos de nx, ny"
 DT, NT = 0.015, 2667  # 40 s; fd3d_TSN exige CFL=Vpmax*dt/dh < 0.25 (Vp<=6.32 km/s en la falla)
 
 # a, b, xo, yo, phi, Te[MPa], cte1, cte2, r, Dc[m]
 DEFAULT_MODEL = [5.0, 3.0, 12.0, 12.0, 0.0, 15.0, 1.15, 1.1, 1.5, 1.0]
 
 
+def tsn_grid(cfg):
+    return TSNFaultGridSpec(dh=DH, dip_deg=cfg.source_position.dip, nztT=NZTT, nabc=NABC, nfs=NFS)
+
+
+def tsn_run_cfg():
+    return TSNRunConfig(work_dir=WORK, nxtT=NXTT, nztT=NZTT, dt_s=DT, binary=BINARY)
+
+
+def fault_top_depth_km(cfg):
+    """Profundidad del borde superior de la falla (Hy se mide desde ahí)."""
+    sp, fp = cfg.source_position, cfg.fault_plane
+    return sp.depth - fp.hy / 1e3 * np.sin(np.radians(sp.dip))
+
+
+def crustal_rows(cfg):
+    """Capas (tope km, Vp, Vs, rho, Qp, Qs) desplazadas para que la profundidad
+    0 de fd3d_TSN (fila superior de la falla) sea el borde superior real."""
+    ztop = fault_top_depth_km(cfg)
+    layers = [(l.thickness / 1e3 - ztop, l.vp / 1e3, l.vs / 1e3, l.rho / 1e3, l.qp, l.qs)
+              for l in cfg.velocity_model.layers]
+    first = max(i for i, l in enumerate(layers) if l[0] <= 0.0)  # capa que contiene el borde superior
+    return [(0.0,) + layers[first][1:]] + layers[first + 1:]
+
+
 def setup_work_dir(cfg):
     WORK.mkdir(exist_ok=True)
     (WORK / "result").mkdir(exist_ok=True)
-    if not (WORK / "fd3d_gnu_TSN").exists():
+    if not (WORK / BINARY).exists():
         srcs = ["fd3d_init.f90", "fd3d_deriv.f90", "fd3d_theo.f90", "dynamicsolver.f90"]
         for f in srcs + ["inversion_com.f90"]:
             shutil.copy(FD3D_SRC / f, WORK / f)
-        subprocess.run(["gfortran", "-DDIPSLIP", "-O3", "-march=native", "-cpp",
-                        "-o", "fd3d_gnu_TSN", *srcs], cwd=WORK, check=True)
+        subprocess.run(["gfortran", "-DDIPSLIP", "-DFSPACE", "-O3", "-march=native", "-cpp",
+                        "-o", BINARY, *srcs], cwd=WORK, check=True)
 
     dip = cfg.source_position.dip
     (WORK / "inputfd3d.dat").write_text(
@@ -57,13 +88,13 @@ def setup_work_dir(cfg):
     nx, ny = cfg.fault_plane.nx, cfg.fault_plane.ny
     (WORK / "inputinv.dat").write_text(f"0\n{nx} {ny}\n")
 
-    # input.ctl trae el tope de cada capa (m) en la columna "thickness".
-    rows = "\n".join(f"{l.thickness/1e3:.3f} {l.vp/1e3:.3f} {l.vs/1e3:.3f} "
-                     f"{l.rho/1e3:.3f} {l.qp:.1f} {l.qs:.1f}"
-                     for l in cfg.velocity_model.layers)
+    # input.ctl trae el tope de cada capa (m) en la columna "thickness";
+    # se desplaza al borde superior real de la falla (ver crustal_rows).
+    layers = crustal_rows(cfg)
+    rows = "\n".join(f"{t:.3f} {vp:.3f} {vs:.3f} {rho:.3f} {qp:.1f} {qs:.1f}" for t, vp, vs, rho, qp, qs in layers)
     (WORK / "crustal.dat").write_text(
-        f"Crustal model Navidad\nnumber of layers\n{len(cfg.velocity_model.layers)}\n"
-        f"Parameters of the layers\ndepth(km) Vp Vs Rho Qp Qs\n{rows}\n")
+        f"Crustal model Navidad (z=0 en el borde superior de la falla, {fault_top_depth_km(cfg):.2f} km)\n"
+        f"number of layers\n{len(layers)}\nParameters of the layers\ndepth(km) Vp Vs Rho Qp Qs\n{rows}\n")
 
 
 def main():
@@ -80,8 +111,8 @@ def main():
         config=cfg,
         observed_waveforms=observed,
         time_array=time_array,
-        tsn_run_cfg=TSNRunConfig(work_dir=WORK, nxtT=NXTT, nztT=NZTT, dt_s=DT),
-        tsn_grid=TSNFaultGridSpec(dh=DH, dip_deg=cfg.source_position.dip, nztT=NZTT, nabc=NABC),
+        tsn_run_cfg=tsn_run_cfg(),
+        tsn_grid=tsn_grid(cfg),
     )
     misfit = inv.objective_function(model)
     syn = inv.best_synthetics

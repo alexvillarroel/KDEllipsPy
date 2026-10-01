@@ -822,12 +822,14 @@ class EllipticalStressMapper:
     STRBOUT = np.float32(-1.0e8)  # prestress outside the asperity (Pa)
     STRAOUT = np.float32(0.0)     # nucleation add outside the circle (Pa)
 
-    def __init__(self, nxt: int, nyt: int):
+    def __init__(self, nxt: int, nyt: int, hypo: Optional[Tuple[float, float]] = None):
         self.nxt = int(nxt)
         self.nyt = int(nyt)
-        # Nucleation centre fixed at the grid midpoint (Fortran integer division)
-        self.xa = np.float32(self.nxt // 2)
-        self.ya = np.float32(self.nyt // 2)
+        # Nucleation centre: legacy default is the grid midpoint (Fortran integer
+        # division); ``hypo`` = (i, j) 1-based grid coords puts it at the hypocentre.
+        xa, ya = hypo if hypo is not None else (self.nxt // 2, self.nyt // 2)
+        self.xa = np.float32(xa)
+        self.ya = np.float32(ya)
 
     def fields(self, model: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """Return ``(prestress, peak)`` float32 arrays of shape (nxt, nyt).
@@ -974,6 +976,7 @@ def build_tsn_dynamic_fields(
     nli: int,
     nwi: int,
     grid: TSNFaultGridSpec,
+    hypo: Optional[Tuple[float, float]] = None,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Map the 10-parameter elliptical model directly onto fd3d_TSN's
     coarse inversion grid, producing ``(T0I, TsI, DcI)`` ready for
@@ -989,9 +992,10 @@ def build_tsn_dynamic_fields(
     ``model`` uses (a,b,xo,yo,r) already expressed in **coarse** (nli, nwi)
     grid-point units — the caller is responsible for that scaling, since
     ``nli``/``nwi`` are a modelling choice independent of the legacy fine
-    grid the 10 params were originally defined on.
+    grid the 10 params were originally defined on. ``hypo``: nucleation
+    point in the same coarse coords (see :func:`tsn_hypocentre_coarse`).
     """
-    t0, peak_pa = EllipticalStressMapper(nli, nwi).fields(model)
+    t0, peak_pa = EllipticalStressMapper(nli, nwi, hypo=hypo).fields(model)
     # Legacy barrier (STRBOUT=-1e8 outside the ellipse) relies on indyna3d's
     # SIGNED check (tau > peak never true). fd3d_TSN compares the traction
     # MAGNITUDE (fd3d_theo.f90:319), so |-1e8| would rupture the whole
@@ -1003,6 +1007,18 @@ def build_tsn_dynamic_fields(
     ts = peak_pa / normstress[None, :]
     dc = np.full((nli, nwi), np.float32(model[9]), dtype=np.float32)
     return t0, ts, dc
+
+
+def tsn_hypocentre_coarse(fault_plane) -> Tuple[float, float]:
+    """Hypocentre (Hx, Hy from input.ctl) in fd3d_TSN coarse-grid coords:
+    1-based (i along strike, j along dip). fd3d_TSN's coarse grid spans the
+    fault with NLI x NWI NODES (spacing L/(NLI-1)) and counts dip rows from
+    the DEEP edge (inversion_modeltofd3d: ZS=0 at k=nabc+1), while Hy is
+    measured from the SHALLOW edge.
+    """
+    dl = fault_plane.lx / (fault_plane.nx - 1)
+    dw = fault_plane.ly / (fault_plane.ny - 1)
+    return fault_plane.hx / dl + 1.0, (fault_plane.ly - fault_plane.hy) / dw + 1.0
 
 
 def build_station_geometry(

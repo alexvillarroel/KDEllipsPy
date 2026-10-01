@@ -14,7 +14,7 @@ import numpy as np
 
 from ...core.config_parser import ConfigParser
 from ...core.forward_model import AxitraForwardModel
-from ...core.geometry import TSNFaultGridSpec
+from ...core.geometry import TSNFaultGridSpec, tsn_hypocentre_coarse
 from .dynamic_convolution import (
     bin_slip_rate_to_subfaults,
     convolve_dynamic_sources,
@@ -58,6 +58,8 @@ class DynamicForwardModel:
 
         self.nx = int(cfg.fault_plane.nx)
         self.ny = int(cfg.fault_plane.ny)
+        # Nucleation at the input.ctl hypocentre (fd3d coarse coords).
+        self.hypo_coarse = tsn_hypocentre_coarse(cfg.fault_plane)
         # Fixed mesh, all nx*ny subfaults, positions only (no slip applied).
         self.base_geometry = self.fm.build_geometry()
         self._mu_pa = float(np.mean([sf.mu_pa for sf in self.base_geometry.subfaults]))
@@ -115,7 +117,7 @@ class DynamicForwardModel:
         if self._last_run[0] == key:
             result = self._last_run[1]
         else:
-            result = run_tsn_forward(model, self.nx, self.ny, self.tsn_grid, self.tsn_run_cfg)
+            result = run_tsn_forward(model, self.nx, self.ny, self.tsn_grid, self.tsn_run_cfg, hypo=self.hypo_coarse)
             self._last_run = (key, result)
         slip_x, slip_z = result["sliprateX"], result["sliprateZ"]
 
