@@ -157,6 +157,10 @@ def main():
         data["figs"]["maule_navidad"] = png(NAV / "maule" / "maule_navidad.png")
         if (NAV / "maule" / "maule_navidad_gmt.png").exists():
             data["figs"]["maule_navidad_gmt"] = png(NAV / "maule" / "maule_navidad_gmt.png")
+    un = NAV / "uncertainty"
+    for n in ("derived_N1344", "corner_N1344", "derived_N336"):
+        if (un / f"{n}.png").exists():
+            data["figs"][n] = png(un / f"{n}.png")
     (OUT / "data.json").write_text(json.dumps(data, ensure_ascii=False))
     print("ok", round((OUT / "data.json").stat().st_size / 1e6, 2), "MB")
 

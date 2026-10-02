@@ -127,7 +127,7 @@ dialog::backdrop { background: rgba(5, 10, 12, 0.78); }
   <nav class="tabs" aria-label="Secciones">
     <a href="#resumen">Resumen</a><a href="#evolucion">Evolución del NA</a><a href="#parametros">Parámetros</a>
     <a href="#hipocentros">Hipocentros y velocidades</a><a href="#bandas">Bandas y estaciones</a>
-    <a href="#dinamico">Dinámico vs cinemático</a><a href="#okada">Deformación (Okada)</a><a href="#momento">Liberación de momento</a><a href="#pichilemu">Falla de Pichilemu</a><a href="#maule">Maule 2010</a><a href="#figuras">Figuras</a>
+    <a href="#dinamico">Dinámico vs cinemático</a><a href="#okada">Deformación (Okada)</a><a href="#momento">Liberación de momento</a><a href="#pichilemu">Falla de Pichilemu</a><a href="#maule">Maule 2010</a><a href="#incert">Incertidumbres</a><a href="#figuras">Figuras</a>
   </nav>
 
   <section id="resumen">
@@ -225,6 +225,15 @@ dialog::backdrop { background: rgba(5, 10, 12, 0.78); }
     <figure><img class="zoomable" data-fig="maule_navidad_gmt" alt="Mapa PyGMT de Navidad 2019 sobre Maule 2010"><figcaption>Versión PyGMT del mapa: slip de Maule interpolado y semitransparente sobre el relieve, con contornos cada 2 m.</figcaption></figure>
     <figure><img class="zoomable" data-fig="maule_navidad" alt="Navidad 2019 sobre el slip de Maule 2010"><figcaption>Izquierda: slip de Maule interpolado desde los nodos de cada subfalla (cruces), semitransparente y con contornos cada 2 m, con el slip de Navidad (cinemático en azul, dinámico B discontinuo), la falla de Pichilemu y su intersección con la interfaz. Derecha: slip en función de la profundidad en la fila de Maule que pasa por Navidad y en las vecinas, con el slip de Navidad multiplicado por 5.</figcaption></figure>
     <div class="panel"><p class="note">El parche de Navidad cae en una subfalla de Maule con ~8.8 m de slip a 26 km de profundidad, en el borde NE de la aspereza NW (16 m a 8–16 km) y justo hacia abajo del manteo de una subfalla con poco slip (2.1 m a 16 km). La resolución de Maule (40 km) es más gruesa que todo el parche de Navidad (~20 km), y otros modelos de Maule difieren en esta latitud.</p></div>
+  </section>
+
+  <section id="incert">
+    <div class="lede"><span class="eyebrow">NA-Bayes</span><h2>Incertidumbres del cinemático</h2>
+      <p>Remuestreo de Gibbs sobre las celdas de Voronoi de los 17 000 modelos ya evaluados (5 semillas; ISC, 1D regional, 0.05–0.30 Hz, sin M14L), sin forwards nuevos. Verosimilitud: log L = −N·misfit / (2·misfit mín.), con N = 2·0.25 Hz·128 s·21 trazas = 1344 datos independientes; la variante N/4 = 336 muestra la sensibilidad (intervalos ~2 veces más anchos). 4 cadenas × 20 000 pasos por caso.</p></div>
+    <figure><img class="zoomable" data-fig="derived_N1344" alt="Posteriores de magnitudes derivadas, N=1344"><figcaption>Magnitudes físicas derivadas (N = 1344): mediana [intervalo del 95 %]. Rojo: mejor modelo.</figcaption></figure>
+    <figure><img class="zoomable" data-fig="derived_N336" alt="Posteriores de magnitudes derivadas, N=336"><figcaption>Lo mismo con N = 336 (supuesto de ruido más conservador).</figcaption></figure>
+    <figure><img class="zoomable" data-fig="corner_N1344" alt="Corner plot de los parámetros"><figcaption>Parámetros crudos (N = 1344). Los ejes de la elipse son multimodales por sus simetrías (a1↔a2 con θ+½), así que hay que leer las magnitudes derivadas.</figcaption></figure>
+    <div class="panel"><p class="note">Con N = 1344 (95 %): Vr 1.56 [1.43–1.75] km/s; Mw 6.53 [6.44–6.60]; centroide a 25.1 [24.8–25.3] km de profundidad, 7.1 [6.1–8.2] km hacia abajo del manteo del hipocentro y −0.05 [−0.8, +0.8] km en el rumbo; dirección 90° [84–97°]. P(centroide hacia abajo del manteo) = 1.00; P(centroide al NNE) = 0.46. El dt0 se apoya en el borde del prior (+5 s), así que su intervalo superior está truncado.</p></div>
   </section>
 
   <section id="pichilemu">
