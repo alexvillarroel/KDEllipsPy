@@ -16,11 +16,11 @@
 #===============================================:===============================
 # 2. Source & Focal Mechanism          :     Values                   |
 #===============================================:===============================
- Event Name                                     :     Calama2020 np2 isola potin 2020 Intraplate
+ Event Name                                     :     Calama2020 np2 cat potin 2020 Intraplate
  Origin Time (UTC)                              :     2020-06-03T07:35:34.000Z
- Latitude                                       :   -23.2536
- Longitude                                      :   -68.4991
- Depth                                     (km) :      115.557
+ Latitude                                       :   -23.2470
+ Longitude                                      :   -68.5300
+ Depth                                     (km) :      123.400
  Strike                                  (deg.) :      143.0
  Dip                                     (deg.) :      27.0
  Rake                                    (deg.) :    -101.0
@@ -32,8 +32,8 @@
  Length along dip (Ly)                     (m)  : 40000.0
  Hypocenter position strike (Hx)           (m)  : 20000.0
  Hypocenter position dip (Hy)              (m)  : 20000.0
- Number of subfaults along strike (Nx)          :       40
- Number of subfaults along dip (Ny)             :       40
+ Number of subfaults along strike (Nx)          :       20
+ Number of subfaults along dip (Ny)             :       20
 
 #===============================================:===============================
 # 4. Ellipse Parameters & Frequency Band        :     Values                   |

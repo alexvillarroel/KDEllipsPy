@@ -32,6 +32,13 @@ CALAMA = HERE.parent
 TEMPLATE = CALAMA / "np1" / "input.ctl"
 CRUST16_SRC = CALAMA / "banda_0.02-0.1" / "input.ctl"
 
+# Subfallas por lado. La plantilla (np1/input.ctl) trae 40 -> 1 km, que a
+# 0.15 Hz está 29 veces sobremuestreado (Vs 4.4 km/s -> lambda_min ~29 km) y
+# hace que la base rápida de axitra cueste Nx*Ny convoluciones: 1600 en vez de
+# 400, ~80 min en vez de ~20 por caso. La matriz se corre a 20 (2 km, la misma
+# resolución que dyn_cases y que Navidad) y el caso base se corre además a 40
+# para medir que la malla no cambia el resultado.
+NSUB = 20
 PLANES = {"np1": (335.0, 63.0, -85.0), "np2": (143.0, 27.0, -101.0)}
 HYPOS = {"isola": (-23.2536, -68.4991, 115.557), "cat": (-23.2470, -68.5300, 123.400)}
 
@@ -64,12 +71,14 @@ def set_field(text, label, value):
     return text
 
 
-def case_name(plane, hypo, vel, band):
-    return f"{plane}_{hypo}_{vel}_b{band[0]:g}-{band[1]:g}"
+def case_name(plane, hypo, vel, band, nsub=NSUB):
+    return f"{plane}_{hypo}_{vel}_b{band[0]:g}-{band[1]:g}_n{nsub}"
 
 
-def write_case(plane, hypo, vel, band):
+def write_case(plane, hypo, vel, band, nsub=NSUB):
     text = TEMPLATE.read_text()
+    for label in ("Number of subfaults along strike (Nx)", "Number of subfaults along dip (Ny)"):
+        text = set_field(text, label, str(nsub))
     strike, dip, rake = PLANES[plane]
     lat, lon, dep = HYPOS[hypo]
     for label, val in [("Latitude", f"{lat:.4f}"), ("Longitude", f"{lon:.4f}"),
@@ -82,7 +91,7 @@ def write_case(plane, hypo, vel, band):
     if vel == "crust16":
         text = re.sub(LAYERS_RE, lambda m: m.group(1) + layer_block(CRUST16_SRC.read_text()), text, count=1)
 
-    out = HERE / case_name(plane, hypo, vel, band)
+    out = HERE / case_name(plane, hypo, vel, band, nsub)
     out.mkdir(exist_ok=True)
     (out / "input.ctl").write_text(text)
     link = out / "SAC"
@@ -92,12 +101,16 @@ def write_case(plane, hypo, vel, band):
     subprocess.run([sys.executable, "-m", "kdellipspy.prep_data", str(out)],
                    check=True, stdout=subprocess.DEVNULL)
     nlayers = text[re.search(LAYERS_RE, text).start():].split(":")[1].split()[0]
-    print(f"{out.name:34s} strike {strike:5.1f} dip {dip:4.1f} rake {rake:6.1f} "
-          f"z {dep:7.3f} km  {nlayers} capas  {band[0]}-{band[1]} Hz")
+    print(f"{out.name:40s} strike {strike:5.1f} dip {dip:4.1f} rake {rake:6.1f} "
+          f"z {dep:7.3f} km  {nlayers} capas  {band[0]}-{band[1]} Hz  {nsub}x{nsub} subfallas")
     return out.name
 
 
 if __name__ == "__main__":
-    wanted = sys.argv[1:]
-    names = [write_case(*c) for c in CASES if not wanted or case_name(*c) in wanted]
+    nsub = NSUB
+    args = sys.argv[1:]
+    if args and args[0].startswith("--nsub="):
+        nsub = int(args.pop(0).split("=")[1])
+    names = [write_case(*c, nsub=nsub) for c in CASES
+             if not args or case_name(*c, nsub=nsub) in args]
     print(f"\n{len(names)} casos en {HERE}")
