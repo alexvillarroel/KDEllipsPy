@@ -52,6 +52,11 @@ NSUB = 20
 # estado estacionario, así que barrer esa banda no significa nada. Si Vr se pega
 # también a 4.5, el supershear se prueba aparte con --vr=5.0,7.5, saltándose la
 # zona prohibida en vez de recorrerla.
+# Estaciones a descartar (--drop). A09F es la única mala en las TRES bandas y en
+# las tres componentes (total 1.8-3.6; radial 2.7 a 11.6): es la más al este,
+# la única pasado el arco, y ningún modelo 1D la va a reproducir. A08F tiene la
+# transversal mala en las tres bandas (1.52/2.20/1.30) pero R y Z buenas, así
+# que se descarta la componente, no la estación: --drop=A08F:E.
 VR_LABEL = "Param 7: Rupture velocity (Vr)"
 WIDE = {"Param 6: Maximum slip (Dmax)": (0.5, 10.0), VR_LABEL: (1.0, 4.5)}
 PLANES = {"np1": (335.0, 63.0, -85.0), "np2": (143.0, 27.0, -101.0)}
@@ -86,11 +91,54 @@ def set_field(text, label, value):
     return text
 
 
-def case_name(plane, hypo, vel, band, nsub=NSUB, wide=False, vr=None):
+def case_name(plane, hypo, vel, band, nsub=NSUB, wide=False, vr=None, drops=()):
     tag = "_wide" if wide else ""
     if vr:
         tag += f"_vr{vr[0]:g}-{vr[1]:g}"
+    if drops:
+        tag += "_no" + "".join(d.replace(":", "") for d in sorted(drops))
     return f"{plane}_{hypo}_{vel}_b{band[0]:g}-{band[1]:g}_n{nsub}" + tag
+
+
+def drop_stations(text, drops):
+    """Quita estaciones enteras (``A09F``) o apaga una componente (``A08F:E``)
+    del bloque de la sección 8, ajustando el conteo."""
+    whole = {d.upper() for d in drops if ":" not in d}
+    comps = {}
+    for d in drops:
+        if ":" in d:
+            sta, c = d.split(":")
+            comps.setdefault(sta.upper(), set()).add(c.upper())
+    lines, out, n_sta = text.splitlines(True), [], None
+    i = 0
+    while i < len(lines):
+        ln = lines[i]
+        if ln.strip().startswith("Number of stations"):
+            head = ln
+            i += 1
+            block = []
+            while i < len(lines) and lines[i].strip() and not lines[i].lstrip().startswith("#"):
+                f = lines[i].split()
+                name = f[3].upper()
+                if name in whole:
+                    i += 1
+                    continue
+                if name in comps:
+                    flags = {"N": 4, "E": 5, "Z": 6}
+                    for c in comps[name]:
+                        f[flags[c]] = "0"
+                    block.append(f"{f[0]} {f[1]} {f[2]} {f[3]:<6s} {f[4]} {f[5]} {f[6]}\n")
+                else:
+                    block.append(lines[i])
+                i += 1
+            n_sta = len(block)
+            out.append(head.split(":")[0] + f":       {n_sta}\n")
+            out.extend(block)
+            continue
+        out.append(ln)
+        i += 1
+    assert n_sta, "no se encontró la sección 8"
+    return "".join(out)
 
 
 def set_param_range(text, label, lo, hi):
@@ -101,7 +149,7 @@ def set_param_range(text, label, lo, hi):
     return text
 
 
-def write_case(plane, hypo, vel, band, nsub=NSUB, wide=False, vr=None):
+def write_case(plane, hypo, vel, band, nsub=NSUB, wide=False, vr=None, drops=()):
     text = TEMPLATE.read_text()
     for label in ("Number of subfaults along strike (Nx)", "Number of subfaults along dip (Ny)"):
         text = set_field(text, label, str(nsub))
@@ -119,10 +167,12 @@ def write_case(plane, hypo, vel, band, nsub=NSUB, wide=False, vr=None):
             text = set_param_range(text, label, lo, hi)
     if vr:
         text = set_param_range(text, VR_LABEL, vr[0], vr[1])
+    if drops:
+        text = drop_stations(text, drops)
     if vel == "crust16":
         text = re.sub(LAYERS_RE, lambda m: m.group(1) + layer_block(CRUST16_SRC.read_text()), text, count=1)
 
-    out = HERE / case_name(plane, hypo, vel, band, nsub, wide, vr)
+    out = HERE / case_name(plane, hypo, vel, band, nsub, wide, vr, drops)
     out.mkdir(exist_ok=True)
     (out / "input.ctl").write_text(text)
     link = out / "SAC"
@@ -138,7 +188,7 @@ def write_case(plane, hypo, vel, band, nsub=NSUB, wide=False, vr=None):
 
 
 if __name__ == "__main__":
-    nsub, wide, vr = NSUB, False, None
+    nsub, wide, vr, drops = NSUB, False, None, ()
     args = sys.argv[1:]
     while args and args[0].startswith("--"):
         a = args.pop(0)
@@ -148,6 +198,8 @@ if __name__ == "__main__":
             wide = True
         elif a.startswith("--vr="):
             vr = tuple(float(x) for x in a.split("=")[1].split(","))
-    names = [write_case(*c, nsub=nsub, wide=wide, vr=vr) for c in CASES
-             if not args or case_name(*c, nsub=nsub, wide=wide, vr=vr) in args]
+        elif a.startswith("--drop="):
+            drops = tuple(a.split("=")[1].split(","))
+    names = [write_case(*c, nsub=nsub, wide=wide, vr=vr, drops=drops) for c in CASES
+             if not args or case_name(*c, nsub=nsub, wide=wide, vr=vr, drops=drops) in args]
     print(f"\n{len(names)} casos en {HERE}")
