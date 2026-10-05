@@ -1,7 +1,7 @@
-"""Inversión NA dinámica (Navidad): geometría de la aspereza + fricción.
+"""Inversión NA dinámica (Calama 2020-06-03, intraslab): geometría de la aspereza + fricción.
 
 Libres : a, b, u, v, phi, Te, cte1, Dc
-         a, b = semiejes en ptos de la grilla 25x25 (~2.08 km)
+         a, b = semiejes en ptos de la grilla 20x20 de dyn_cases (2.0 km/pto)
          u, v = posición del hipocentro dentro de la elipse, en unidades de
                 (a-r, b-r): |u|,|v| <= 0.7 garantiza que la ruptura nuclea (el
                 parche de nucleación está fijo en el pto 12,12)
@@ -9,11 +9,22 @@ Libres : a, b, u, v, phi, Te, cte1, Dc
          dt0  = corrección de hora de origen (s, >0 = más tarde): loc_* usa
                 hipocentro movido con la hora de origen CSN -> desfase de ~3 s
 Fijos  : cte2=1.1, r=1.5
-Caso   : DYN_CASE (np1 por defecto), p.ej.  DYN_CASE=loc_mid python na_dynamic.py
+Caso   : DYN_CASE, p.ej.  DYN_CASE=dyn_cases/np1 python na_dynamic.py
 M0     : DYN_M0=<N·m> impone el momento escalar (análogo a mt_strict): Te queda
          fijo en TE_REF y sale de los libres; por autosemejanza del
          slip-weakening el modelo equivale a Te*k, Dc*k con k = M0/M0_simulado.
 Serie (n_jobs=1) dentro de cada corrida; DYN_WORK separa corridas simultáneas.
+
+Calama es una falla NORMAL: DynamicForwardModel.slip_sign invierte el vector de
+momento (rake + 180) porque fd3d_TSN siempre desliza hacia +Z. Ver
+check_polarity.py y la sección 5.1 de docs/dynamic_rupture_guide.md.
+
+Modo B (M0 impuesto), valor a usar:
+    DYN_M0=2.29e19   # USGS Mww 6.8, tensor W-phase de us6000a4yi
+El mejor doble par de ISOLA da 1.422e19 N·m (Mw 6.70), un factor 1.6 menos; se
+usa el de USGS por decisión del usuario. La diferencia se traslada entera a Te
+y Dc por la autosemejanza del slip-weakening, así que conviene reportar cuál se
+usó junto con el Te y el Dc reales.
 """
 
 import os
@@ -32,27 +43,36 @@ M0_TARGET = float(os.environ["DYN_M0"]) if os.environ.get("DYN_M0") else None
 TE_REF = 3.0  # MPa, Te de referencia en modo M0 impuesto
 
 ALL_NAMES = ["a (pts)", "b (pts)", "u", "v", "phi (rad)", "Te (MPa)", "cte1", "Dc (m)", "dt0 (s)"]
+# Rangos intraslab (guía, sección 5.4): las caídas de esfuerzo intraslab son
+# mayores que las interplaca, así que Te y Dc van más anchos que en Navidad
+# (Te [1,8] MPa, Dc [0.4,2.5] m). Revisar con traction_plots.py y Eshelby que
+# la caída final sea razonable, y ampliar si algún parámetro queda pegado al borde.
 ALL_RANGES = np.array([
-    [2.0, 8.0],    # a    (semieje, ptos ~2.1 km; > r)
-    [2.0, 8.0],    # b    (semieje, ptos ~2.1 km; > r)
+    [2.0, 8.0],    # a    (semieje, ptos de 2.0 km -> 4-16 km; > r)
+    [2.0, 8.0],    # b    (semieje, ptos de 2.0 km -> 4-16 km; > r)
     [-0.7, 0.7],   # u
     [-0.7, 0.7],   # v
     [0.0, np.pi],  # phi  (rad)
-    [1.0, 8.0],    # Te   (MPa)
+    [1.0, 20.0],   # Te   (MPa)
     [1.05, 1.8],   # cte1 (pico = cte1*Te)
-    [0.4, 2.5],    # Dc   (m); >=0.4 -> zona cohesiva >= ~2 celdas de 500 m
-    [-3.0, 8.0],   # dt0  (s): cinemático ISC da ~+3.9 s; la nucleación dinámica suma retardo
+    [0.4, 4.0],    # Dc   (m); >=0.4 -> zona cohesiva >= ~2 celdas de 500 m
+    [-3.0, 10.0],  # dt0  (s): el input.ctl ya trae T0=3 s; esto corrige encima
 ])
 FREE = [i for i, n in enumerate(ALL_NAMES) if not (M0_TARGET and n.startswith("Te"))]
 NAMES = [ALL_NAMES[i] for i in FREE]
 RANGES = ALL_RANGES[FREE]
 # ~15-20 s/eval con la malla 32x40 km -> 1500 evals ~ 7 h
+NA_SEED = int(os.environ.get("NA_SEED", "0"))
 NA = NAConfig(n_samples_initial=300, n_samples_iteration=60, n_iterations=20,
-              n_cells_resample=12, n_jobs=1, random_seed=0)
+              n_cells_resample=12, n_jobs=1, random_seed=NA_SEED)
 # Referencia para el chequeo previo: mejor modelo dinámico de loc_mid, en
 # parámetros relativos al hipocentro (válido para cualquier malla); se prueba
 # también con v invertido porque la convención del dip cambió (fd3d -> axitra).
-REFERENCE_FREE = {"a": 6.52, "b": 4.59, "u": 0.095, "v": 0.556, "phi": 1.442, "Te": 3.0, "cte1": 1.34, "Dc": 1.12}
+# Referencia del preflight: la elipse del cinemático de Calama (a1 5.93, a2 6.33
+# km -> ~3 ptos de 2 km), con fricción en mitad de rango. NO es el óptimo, solo
+# un modelo razonable con el que abortar temprano si el caso está mal armado.
+REFERENCE_FREE = {"a": 3.0, "b": 3.2, "u": 0.0, "v": 0.0, "phi": 0.75 * np.pi,
+                  "Te": 8.0, "cte1": 1.3, "Dc": 1.5}
 PREFLIGHT_MAX_MISFIT = float(os.environ.get("DYN_PREFLIGHT_MAX", "0.95"))
 HYPO_X, HYPO_Y = tsn_hypocentre_coarse(_FP)  # nucleación en el hipocentro del input.ctl
 
@@ -111,7 +131,7 @@ def preflight(inv):
         ref = dict(REFERENCE_FREE, v=vsign * REFERENCE_FREE["v"])
         if M0_TARGET:
             ref["Te"] = TE_REF
-        for dt0 in np.arange(-2.0, 8.5, 1.0):
+        for dt0 in np.arange(-3.0, 10.5, 1.0):
             free = np.array([dict(ref, dt0=dt0)[n.split()[0]] for n in NAMES])
             rows.append((FreeSubsetNA._evaluate_model(inv, free)[0], dt0, vsign))
             print(f"[preflight] v*{vsign:+.0f} dt0={dt0:+.0f} s  misfit={rows[-1][0]:.4f}", flush=True)
@@ -134,7 +154,7 @@ def main():
     inv.param_ranges = RANGES
     inv.param_names = list(NAMES)
     inv.dynamic_fm.m0_target = M0_TARGET
-    out = HERE / (f"na_output_{CASE_TAG}" + ("_M0" if M0_TARGET else ""))
+    out = HERE / (f"na_output_{CASE_TAG}" + ("_B" if M0_TARGET else "_A") + f"_s{NA_SEED}")
     out.mkdir(parents=True, exist_ok=True)
     inv.checkpoint_path = out / "best_model_live.txt"
 

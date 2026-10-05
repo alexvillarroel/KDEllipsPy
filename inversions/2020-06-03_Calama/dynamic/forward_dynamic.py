@@ -68,7 +68,10 @@ DT = 0.0145  # CFL 0.244 con Vp 8.415 km/s (Potin et al. 2024 a ~112 km)
 NT = int(round(DURATION_S / DT))
 
 # a, b, xo, yo, phi, Te[MPa], cte1, cte2, r, Dc[m]
-DEFAULT_MODEL = [6.0, 6.0, 20.0, 20.0, 0.0, 15.0, 1.15, 1.1, 1.5, 1.0]
+# a,b en ptos de la grilla gruesa (2 km/pto en dyn_cases): 3 ptos = 6 km de
+# semieje, que es lo que da el cinemático (a1 5.9, a2 6.3 km). xo, yo van en
+# el hipocentro -- tsn_hypocentre_coarse(_FP) = (10.5, 10.5) con 20x20.
+DEFAULT_MODEL = [3.0, 3.0, 10.5, 10.5, 0.0, 15.0, 1.15, 1.1, 1.5, 1.0]
 
 
 def tsn_grid(cfg):

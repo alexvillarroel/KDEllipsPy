@@ -16,7 +16,11 @@ y las compara con los observados: misfit, correlación, rake efectivo que sale
 de project_rake y signo del primer arribo P en la vertical. Si el flip es el
 correcto, slip_sign = -1 debe ganar en las cuatro métricas.
 
-Uso:  DYN_CASE=np1 python check_polarity.py
+Cada signo se evalúa en SU mejor dt0 (barrido), no en dt0 = 0: con un desfase
+de hora de origen el misfit satura en ~1 y la comparación no distingue nada
+(es el mismo motivo por el que el preflight de na_dynamic.py barre dt0).
+
+Uso:  DYN_CASE=dyn_cases/np1 python check_polarity.py
 """
 
 import os
@@ -36,7 +40,8 @@ from kdellipspy.inversion.dynamic.dynamic_convolution import (
 from forward_dynamic import (CASE, CASE_DIR, DEFAULT_MODEL, DH, HERE, NXTT, NZTT,
                              setup_work_dir, tsn_grid, tsn_run_cfg)
 
-P_WINDOW_S = 12.0  # ventana tras tP para medir el signo del primer arribo
+P_WINDOW_S = 12.0          # ventana tras tP para medir el signo del primer arribo
+DT0_SCAN = np.arange(-3.0, 10.1, 0.5)  # s, corrección de hora de origen
 
 
 def first_motion_sign(trace, t_p, dt, window_s=P_WINDOW_S):
@@ -65,12 +70,21 @@ def main():
           f"/ rake {rake_ctl:g}   slip_sign automático = {inv.dynamic_fm.slip_sign:+.0f}", flush=True)
 
     model = np.array(DEFAULT_MODEL, dtype=np.float32)
+    # _evaluate_model devuelve (misfit, sintéticos) de ESA evaluación;
+    # inv.best_synthetics es el mejor hasta ahora y no sirve para comparar.
+    # fd3d se cachea por modelo, así que todo el barrido cuesta un solo run.
     out = {}
     for sign in (+1.0, -1.0):
-        inv.dynamic_fm.slip_sign = sign  # el forward cachea fd3d: un solo run
-        misfit = inv.objective_function(model)
-        out[sign] = (misfit, np.asarray(inv.best_synthetics, float))
-        print(f"[slip_sign {sign:+.0f}] misfit = {misfit:.4f}", flush=True)
+        inv.dynamic_fm.slip_sign = sign
+        best = None
+        for dt0 in DT0_SCAN:
+            inv.dynamic_fm.time_shift_s = float(dt0)
+            misfit, syn = inv._evaluate_model(model)
+            if syn is not None and (best is None or misfit < best[0]):
+                best = (misfit, np.asarray(syn, float), float(dt0))
+        assert best is not None, f"ningún forward válido con slip_sign {sign:+.0f}"
+        out[sign] = best
+        print(f"[slip_sign {sign:+.0f}] mejor misfit = {best[0]:.4f} en dt0 = {best[2]:+.1f} s", flush=True)
 
     # Rake efectivo que sale del slip de fd3d, con y sin el flip.
     from kdellipspy.inversion.dynamic.tsn_bridge import read_tsn_fault_field
@@ -112,7 +126,8 @@ def main():
     print(f"cc media (ventana P, 25 s): +1 -> {ccm[+1.0]:+.3f}   -1 -> {ccm[-1.0]:+.3f}", flush=True)
     winner = -1.0 if (out[-1.0][0] < out[+1.0][0]) else +1.0
     print(f"\n==> gana slip_sign {winner:+.0f} "
-          f"(misfit {out[winner][0]:.4f} vs {out[-winner][0]:.4f}); "
+          f"(misfit {out[winner][0]:.4f} en dt0 {out[winner][2]:+.1f} s  vs  "
+          f"{out[-winner][0]:.4f} en dt0 {out[-winner][2]:+.1f} s); "
           f"automático = {np.sign(np.sin(np.radians(rake_ctl))):+.0f}", flush=True)
 
     fig, axes = plt.subplots(len(names), 3, figsize=(11, 1.5 * len(names)), sharex=True)
@@ -121,9 +136,11 @@ def main():
             ax = axes[i, c]
             ax.plot(time_array, observed[i, c], "k", lw=1.2, label="Observed" if i == 0 and c == 0 else None)
             ax.plot(time_array, out[+1.0][1][i, c], color="tab:orange", lw=1, ls="--",
-                    label="fd3d as-is (rake +90, reverse)" if i == 0 and c == 0 else None)
+                    label=f"fd3d as-is (rake +90, reverse), dt0 {out[+1.0][2]:+.1f} s"
+                    if i == 0 and c == 0 else None)
             ax.plot(time_array, out[-1.0][1][i, c], color="tab:red", lw=1,
-                    label="flipped (rake +180, normal)" if i == 0 and c == 0 else None)
+                    label=f"flipped (rake +180, normal), dt0 {out[-1.0][2]:+.1f} s"
+                    if i == 0 and c == 0 else None)
             ax.axvline(float(azt[i, 1]), color="0.6", lw=0.8)
             ax.set_yticks([])
             if c == 0:
