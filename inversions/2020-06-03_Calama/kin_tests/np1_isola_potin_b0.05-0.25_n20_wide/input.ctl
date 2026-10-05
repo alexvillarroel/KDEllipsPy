@@ -57,7 +57,7 @@
  Param 4: Position of the center np             :     0.0    1.0       1
  Param 5: Position of the center tp     (x 2pi) :     0.0    1.0       1
  Param 6: Maximum slip (Dmax)               (m) :     0.5     10.0    1
- Param 7: Rupture velocity (Vr)          (km/s) :     1.0     6.0     1
+ Param 7: Rupture velocity (Vr)          (km/s) :     1.0     4.5     1
 #===============================================:===============================
 # 6. Inversion Process Parameters               :     Values                   |
 #===============================================:===============================

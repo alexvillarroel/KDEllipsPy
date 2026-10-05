@@ -39,14 +39,21 @@ CRUST16_SRC = CALAMA / "banda_0.02-0.1" / "input.ctl"
 # resolución que dyn_cases y que Navidad) y el caso base se corre además a 40
 # para medir que la malla no cambia el resultado.
 NSUB = 20
-# Rangos ampliados (--wide). En la primera pasada Vr quedó pegado a 4.0 km/s en
-# los 5 casos y dmax rozó su tope de 4 m: con un parámetro clipeado no se puede
-# aplicar el criterio de la guía para elegir banda (subir f_max mientras Vr se
-# estabilice), porque la dispersión entre semillas solo mide cuánto baja la
-# cola. Vs a ~115 km es ~4.7 km/s, así que el tope de 6 km/s deja ver si de
-# verdad quiere supershear o si se detiene solo.
-WIDE = {"Param 6: Maximum slip (Dmax)": (0.5, 10.0),
-        "Param 7: Rupture velocity (Vr)": (1.0, 6.0)}
+# Rangos ampliados (--wide). En la primera pasada Vr quedó pegado a su tope de
+# 4.0 km/s en los 5 casos y Dmax rozó el suyo de 4 m. El tope de 4.0 no era un
+# límite físico sino un valor por defecto de sismos corticales (beta ~3.5 km/s,
+# donde 4.0 = 1.14 beta): a 115 km de profundidad beta es 4.77 km/s (Potin,
+# capa de 112.5 km), así que 4.0 son 0.84 beta -- POR DEBAJO de la hipótesis
+# sub-Rayleigh estándar de 0.9 beta = 4.29 km/s. El prior prohibía lo normal.
+#
+# Tope nuevo 4.5 km/s = 0.94 beta: cubre 0.9 beta con holgura y se queda bajo el
+# límite de Rayleigh (0.92 beta = 4.39 km/s). NO se usa un tope mayor dentro de
+# [beta, sqrt(2) beta] = [4.77, 6.75]: ahí la ruptura en modo II no es estable en
+# estado estacionario, así que barrer esa banda no significa nada. Si Vr se pega
+# también a 4.5, el supershear se prueba aparte con --vr=5.0,7.5, saltándose la
+# zona prohibida en vez de recorrerla.
+VR_LABEL = "Param 7: Rupture velocity (Vr)"
+WIDE = {"Param 6: Maximum slip (Dmax)": (0.5, 10.0), VR_LABEL: (1.0, 4.5)}
 PLANES = {"np1": (335.0, 63.0, -85.0), "np2": (143.0, 27.0, -101.0)}
 HYPOS = {"isola": (-23.2536, -68.4991, 115.557), "cat": (-23.2470, -68.5300, 123.400)}
 
@@ -79,8 +86,11 @@ def set_field(text, label, value):
     return text
 
 
-def case_name(plane, hypo, vel, band, nsub=NSUB, wide=False):
-    return f"{plane}_{hypo}_{vel}_b{band[0]:g}-{band[1]:g}_n{nsub}" + ("_wide" if wide else "")
+def case_name(plane, hypo, vel, band, nsub=NSUB, wide=False, vr=None):
+    tag = "_wide" if wide else ""
+    if vr:
+        tag += f"_vr{vr[0]:g}-{vr[1]:g}"
+    return f"{plane}_{hypo}_{vel}_b{band[0]:g}-{band[1]:g}_n{nsub}" + tag
 
 
 def set_param_range(text, label, lo, hi):
@@ -91,7 +101,7 @@ def set_param_range(text, label, lo, hi):
     return text
 
 
-def write_case(plane, hypo, vel, band, nsub=NSUB, wide=False):
+def write_case(plane, hypo, vel, band, nsub=NSUB, wide=False, vr=None):
     text = TEMPLATE.read_text()
     for label in ("Number of subfaults along strike (Nx)", "Number of subfaults along dip (Ny)"):
         text = set_field(text, label, str(nsub))
@@ -104,13 +114,15 @@ def write_case(plane, hypo, vel, band, nsub=NSUB, wide=False):
                        ("Frequency 2 (Freq2)", f"{band[1]:g}")]:
         text = set_field(text, label, val)
     text = set_field(text, "Event Name", f"Calama2020 {plane} {hypo} {vel}")
-    if wide:
+    if wide or vr:
         for label, (lo, hi) in WIDE.items():
             text = set_param_range(text, label, lo, hi)
+    if vr:
+        text = set_param_range(text, VR_LABEL, vr[0], vr[1])
     if vel == "crust16":
         text = re.sub(LAYERS_RE, lambda m: m.group(1) + layer_block(CRUST16_SRC.read_text()), text, count=1)
 
-    out = HERE / case_name(plane, hypo, vel, band, nsub, wide)
+    out = HERE / case_name(plane, hypo, vel, band, nsub, wide, vr)
     out.mkdir(exist_ok=True)
     (out / "input.ctl").write_text(text)
     link = out / "SAC"
@@ -126,7 +138,7 @@ def write_case(plane, hypo, vel, band, nsub=NSUB, wide=False):
 
 
 if __name__ == "__main__":
-    nsub, wide = NSUB, False
+    nsub, wide, vr = NSUB, False, None
     args = sys.argv[1:]
     while args and args[0].startswith("--"):
         a = args.pop(0)
@@ -134,6 +146,8 @@ if __name__ == "__main__":
             nsub = int(a.split("=")[1])
         elif a == "--wide":
             wide = True
-    names = [write_case(*c, nsub=nsub, wide=wide) for c in CASES
-             if not args or case_name(*c, nsub=nsub, wide=wide) in args]
+        elif a.startswith("--vr="):
+            vr = tuple(float(x) for x in a.split("=")[1].split(","))
+    names = [write_case(*c, nsub=nsub, wide=wide, vr=vr) for c in CASES
+             if not args or case_name(*c, nsub=nsub, wide=wide, vr=vr) in args]
     print(f"\n{len(names)} casos en {HERE}")
