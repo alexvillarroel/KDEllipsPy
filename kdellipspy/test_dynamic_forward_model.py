@@ -268,3 +268,43 @@ def test_dynamic_forward_m0_target_rescales_moment(monkeypatch, tmp_path):
     assert dyn_fm.last_m0_scale == pytest.approx(1.7e19 / m0_free, rel=1e-4)
     assert captured["mz"][:, -1].sum() == pytest.approx(1.7e19, rel=0.02)
     dyn_fm.clean()
+
+
+@needs_both_solvers
+@pytest.mark.parametrize("rake, want_sign", [(90.0, 1.0), (100.0, 1.0), (-85.0, -1.0), (-101.0, -1.0)])
+def test_normal_rake_flips_moment_handed_to_axitra(monkeypatch, tmp_path, rake, want_sign):
+    """fd3d_TSN is only told the dip angle, and the asperity prestress is +Te,
+    so DIPSLIP always slips towards local +Z, i.e. rake +90 (thrust). For a
+    NORMAL mechanism the whole moment vector has to be flipped (rake + 180),
+    or the synthetics come out with the polarity reversed. Checked on the
+    moment actually handed to axitra, for Navidad's thrust rake and both
+    Calama 2020 nodal planes.
+    """
+    import kdellipspy.inversion.dynamic.forward_model_dynamic as fmd
+
+    params = _base_params()
+    params["source_position"]["rake"] = rake
+    cfg = ConfigParser.from_dict(params)
+    grid = TSNFaultGridSpec(dh=DH, dip_deg=DIP_DEG, nztT=NZTT, nabc=NABC)
+    dt, nt = 0.05, 100
+    dyn_fm = DynamicForwardModel(cfg, TSNRunConfig(work_dir=tmp_path, nxtT=NXTT, nztT=NZTT, dt_s=dt), grid,
+                                 axitra_dir=str(AXITRA_DIR))
+    assert dyn_fm.slip_sign == want_sign
+
+    rate = np.zeros((nt, NXTT, NZTT), dtype=np.float32)
+    rate[: nt // 2] = 1.0  # fd3d always gives slip_z > 0 inside the asperity
+    monkeypatch.setattr(fmd, "run_tsn_forward", lambda *a, **k: {"sliprateX": 0 * rate, "sliprateZ": rate})
+    captured = {}
+
+    def fake_synthetics(basis, moment_x, moment_z, aw):
+        captured["mz"] = moment_z
+        return np.zeros((len(cfg.stations.stations), 3, moment_z.shape[1]))
+
+    monkeypatch.setattr(fmd, "synthetics_from_basis", fake_synthetics)
+    monkeypatch.setattr(dyn_fm, "ensure_basis", lambda unit: None)
+    dyn_fm.forward(np.zeros(10, dtype=np.float32))
+
+    cells_per_sub = (NXTT // NX_SUB) * (NZTT // NY_SUB)
+    m0_sub = dyn_fm._mu_pa * 2.5 * cells_per_sub * DH**2
+    assert captured["mz"][:, -1] == pytest.approx(want_sign * m0_sub, rel=0.02)
+    dyn_fm.clean()

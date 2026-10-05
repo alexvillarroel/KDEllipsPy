@@ -79,6 +79,15 @@ class DynamicForwardModel:
         # model is equivalent to Te*k, Dc*k. ``last_m0_scale`` keeps that k.
         self.m0_target: Optional[float] = None
         self.last_m0_scale = 1.0
+        # fd3d_TSN only knows the dip angle, never the rake: inside the asperity
+        # the prestress is +Te (EllipticalStressMapper), so DIPSLIP always slips
+        # towards local +Z, i.e. rake = +90 (thrust). For a NORMAL mechanism the
+        # whole moment vector has to be flipped (rake + 180), which the linear
+        # basis path does exactly by negating (Mx, Mz). sin(rake) < 0 <=> the
+        # target mechanism has a normal dip-slip component.
+        # ponytail: one sign, derived from the input.ctl rake; set slip_sign by
+        # hand if a mechanism ever needs a rake fd3d cannot reach by a flip.
+        self.slip_sign = -1.0 if np.sin(np.radians(float(cfg.source_position.rake))) < 0 else 1.0
 
     def ensure_basis(self, unit: int) -> np.ndarray:
         """Compute (once per output unit) the per-subfault axitra operator."""
@@ -124,6 +133,8 @@ class DynamicForwardModel:
         mrate_x, mrate_z = bin_slip_rate_to_subfaults(
             slip_x, slip_z, self.nx, self.ny, self.tsn_grid.dh, self._mu_pa
         )
+        if self.slip_sign < 0:  # normal mechanism: rake + 180 (see __init__)
+            mrate_x, mrate_z = -mrate_x, -mrate_z
         unit_val = int(self.cfg.observed_data.units) if unit is None else int(unit)
         dt_fd = self.tsn_run_cfg.dt_s
         dt_axitra = ap.duration / ap.npt
