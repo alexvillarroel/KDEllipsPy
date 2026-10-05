@@ -12,15 +12,20 @@ set -euo pipefail
 cd "$(dirname "$0")"
 PY=/home/alex/.conda/envs/kdellipspy/bin/python
 M0_USGS=2.29e19          # USGS Mww 6.8 (us6000a4yi, tensor W-phase)
+# Casos dinámicos: derivados del cinemático que ganó el paso 1 (hipocentro
+# ISOLA, modelo de Potin, banda 0.04-0.15 Hz, sin A09F ni la transversal de
+# A08F), con 20x20 subfallas. Ver make_dyn_case.py.
+SUF=_isola_potin_b0.04-0.15_n20_wide_noA08FEA09F
 SEEDS=("${@:-0 1 2}")
 read -ra SEEDS <<< "${SEEDS[*]}"
 MAXJOBS=${MAXJOBS:-6}    # 8 núcleos, cada corrida es n_jobs=1; dejar aire para el resto
 rm -f na_AB.pids
 
-for plane in np1 np2; do
+for plane in "np1${SUF}" "np2${SUF}"; do
   for seed in "${SEEDS[@]}"; do
     for mode in A B; do
-      tag="${plane}_${mode}_s${seed}"
+      short="${plane%%_*}"              # np1 / np2, para nombres de log y work
+      tag="${short}_${mode}_s${seed}"
       work="tsn_work_${tag}"
       [[ $mode == B ]] && m0env="DYN_M0=$M0_USGS" || m0env="DYN_M0="
       echo "=== lanzando $tag (work $work)"
