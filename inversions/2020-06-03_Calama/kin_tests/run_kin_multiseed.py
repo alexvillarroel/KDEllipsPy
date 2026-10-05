@@ -19,7 +19,9 @@ import kdellipspy as kde
 from kdellipspy.inversion.kinematic.model_na import NAConfig
 
 HERE = Path(__file__).resolve().parent
-CASE = HERE / os.environ["KIN_CASE"]
+# KIN_CASE puede venir relativo a kin_tests/ o al directorio del evento
+# (run_directivity.py lo pasa con el prefijo): se acepta cualquiera.
+CASE = HERE / os.environ["KIN_CASE"].removeprefix("kin_tests/")
 SEEDS = [int(s) for s in os.environ.get("NA_SEEDS", "0,1,2,3,4").split(",")]
 NA = dict(n_samples_initial=400, n_samples_iteration=100, n_iterations=30,
           n_cells_resample=20, n_jobs=1)
