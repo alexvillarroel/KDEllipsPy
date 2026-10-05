@@ -39,6 +39,14 @@ CRUST16_SRC = CALAMA / "banda_0.02-0.1" / "input.ctl"
 # resolución que dyn_cases y que Navidad) y el caso base se corre además a 40
 # para medir que la malla no cambia el resultado.
 NSUB = 20
+# Rangos ampliados (--wide). En la primera pasada Vr quedó pegado a 4.0 km/s en
+# los 5 casos y dmax rozó su tope de 4 m: con un parámetro clipeado no se puede
+# aplicar el criterio de la guía para elegir banda (subir f_max mientras Vr se
+# estabilice), porque la dispersión entre semillas solo mide cuánto baja la
+# cola. Vs a ~115 km es ~4.7 km/s, así que el tope de 6 km/s deja ver si de
+# verdad quiere supershear o si se detiene solo.
+WIDE = {"Param 6: Maximum slip (Dmax)": (0.5, 10.0),
+        "Param 7: Rupture velocity (Vr)": (1.0, 6.0)}
 PLANES = {"np1": (335.0, 63.0, -85.0), "np2": (143.0, 27.0, -101.0)}
 HYPOS = {"isola": (-23.2536, -68.4991, 115.557), "cat": (-23.2470, -68.5300, 123.400)}
 
@@ -71,11 +79,19 @@ def set_field(text, label, value):
     return text
 
 
-def case_name(plane, hypo, vel, band, nsub=NSUB):
-    return f"{plane}_{hypo}_{vel}_b{band[0]:g}-{band[1]:g}_n{nsub}"
+def case_name(plane, hypo, vel, band, nsub=NSUB, wide=False):
+    return f"{plane}_{hypo}_{vel}_b{band[0]:g}-{band[1]:g}_n{nsub}" + ("_wide" if wide else "")
 
 
-def write_case(plane, hypo, vel, band, nsub=NSUB):
+def set_param_range(text, label, lo, hi):
+    """Reemplaza min/max de una línea de la sección 5, dejando el flag."""
+    pat = re.compile(rf"^(\s*{re.escape(label)}[^:]*:\s*)\S+\s+\S+(\s+\d+)\s*$", re.M)
+    text, n = pat.subn(lambda m: f"{m.group(1)}{lo:<8.1f}{hi:<8.1f}{m.group(2).strip()}", text, count=1)
+    assert n == 1, f"no se pudo fijar el rango de {label!r}"
+    return text
+
+
+def write_case(plane, hypo, vel, band, nsub=NSUB, wide=False):
     text = TEMPLATE.read_text()
     for label in ("Number of subfaults along strike (Nx)", "Number of subfaults along dip (Ny)"):
         text = set_field(text, label, str(nsub))
@@ -88,10 +104,13 @@ def write_case(plane, hypo, vel, band, nsub=NSUB):
                        ("Frequency 2 (Freq2)", f"{band[1]:g}")]:
         text = set_field(text, label, val)
     text = set_field(text, "Event Name", f"Calama2020 {plane} {hypo} {vel}")
+    if wide:
+        for label, (lo, hi) in WIDE.items():
+            text = set_param_range(text, label, lo, hi)
     if vel == "crust16":
         text = re.sub(LAYERS_RE, lambda m: m.group(1) + layer_block(CRUST16_SRC.read_text()), text, count=1)
 
-    out = HERE / case_name(plane, hypo, vel, band, nsub)
+    out = HERE / case_name(plane, hypo, vel, band, nsub, wide)
     out.mkdir(exist_ok=True)
     (out / "input.ctl").write_text(text)
     link = out / "SAC"
@@ -107,10 +126,14 @@ def write_case(plane, hypo, vel, band, nsub=NSUB):
 
 
 if __name__ == "__main__":
-    nsub = NSUB
+    nsub, wide = NSUB, False
     args = sys.argv[1:]
-    if args and args[0].startswith("--nsub="):
-        nsub = int(args.pop(0).split("=")[1])
-    names = [write_case(*c, nsub=nsub) for c in CASES
-             if not args or case_name(*c, nsub=nsub) in args]
+    while args and args[0].startswith("--"):
+        a = args.pop(0)
+        if a.startswith("--nsub="):
+            nsub = int(a.split("=")[1])
+        elif a == "--wide":
+            wide = True
+    names = [write_case(*c, nsub=nsub, wide=wide) for c in CASES
+             if not args or case_name(*c, nsub=nsub, wide=wide) in args]
     print(f"\n{len(names)} casos en {HERE}")
