@@ -55,6 +55,12 @@ modelo elíptico (a, b, u, v, phi, Te, cte1, Dc, dt0)
 
 ## 3. Flujo para un evento nuevo
 
+0. **Datos observados: siempre `kde-prep`** (`python -m kdellipspy.prep_data <caso>`),
+   que integra desde la aceleración cruda (`SAC/ACC/`) con la cadena de ISOLA y la banda
+   del propio `input.ctl`. El `codigos/real_disp.py` de cada evento **no** sirve: lee
+   `SAC/DISP/` ya integrado, integra dos veces en el tiempo y filtra solo al final, lo que
+   deja energía antes de la llegada P. `kde-prep` necesita `integracion.py` en
+   `<caso>/codigos` o `<caso>/../codigos`.
 1. **Cinemático robusto primero** (de él salen la geometría, la banda, dt0 y Vr de referencia).
    - Probar hipocentros (ISC, CSN, NEIC), modelo de velocidades regional y bandas,
      con **5 semillas NA por configuración** (`vel_tests/run_kin_multiseed.py`).
@@ -96,16 +102,37 @@ modelo elíptico (a, b, u, v, phi, Te, cte1, Dc, dt0)
 
 ## 5. Diferencias para sismos intraslab (VERIFICAR antes de invertir)
 
-1. **Sentido del deslizamiento (lo más crítico).** El rake del dinámico **no**
-   sale del `input.ctl`: lo calcula `project_rake` a partir de la dirección del
-   slip de fd3d (eje X → rake 0, eje Z → rake 90). En Navidad (inverso, rake ≈ 100) salió bien.
-   Para fallas **normales** (rake ≈ −90) hay que confirmar que los sintéticos tengan la
-   polaridad correcta: comparar el rake resultante con el del mecanismo y la polaridad
-   de los primeros arribos. **No** invertir el sentido poniendo Te negativo: la
-   lógica de barrera trata T0 < 0 como barrera (T0 = 0) y mataría la aspereza. Si
-   hace falta, invertir el signo después de fd3d (rake + 180°) y agregar un test.
-2. **CFL.** A ~100 km de profundidad, Vp ≈ 8 km/s está al límite con dt = 0.015 s
-   (Vp·dt/dh = 0.24). Si el modelo pasa de 8.33 km/s, bajar dt (y subir NT).
+1. **Sentido del deslizamiento (lo más crítico). RESUELTO (Calama 2020, 2026-10-05).**
+   Confirmado: fd3d_TSN solo recibe el buzamiento y dentro de la aspereza el prestress
+   es +Te, así que con DIPSLIP el slip va **siempre** hacia +Z local → rake +90 (inverso).
+   Para un mecanismo normal hay que invertir el vector de momento completo (rake + 180).
+   Lo hace `DynamicForwardModel.slip_sign`: se deriva del rake del `input.ctl`
+   (`sin(rake) < 0 → −1`) y niega `(Mx, Mz)` después de `bin_slip_rate_to_subfaults`.
+   En el camino rápido (`use_basis`, el de por defecto) **no** interviene `project_rake`:
+   los sintéticos son `base(rake 0)·Mx + base(rake 90)·Mz`, lineal, así que negar ambos
+   es exactamente rake + 180. Navidad (rake +100) mantiene +1 y queda bit-idéntico.
+   Test: `test_normal_rake_flips_moment_handed_to_axitra` (+90, +100, −85, −101).
+   Verificación en datos (`inversions/2020-06-03_Calama/dynamic/check_polarity.py`,
+   np1, un forward de fd3d, cada signo en su mejor dt0):
+
+   | | misfit | dt0 | rake efectivo | cc media (ventana P) |
+   |---|---|---|---|---|
+   | fd3d tal cual (+1) | 0.688 | −2.0 s | +90.0° | +0.667 |
+   | con flip (−1) | **0.403** | +3.0 s | **−90.0°** | **+0.870** |
+
+   La cc es mayor con el flip en las 9 estaciones. **No** usar el signo del primer
+   arribo P como métrica: los dos sintéticos son negativos exactos uno del otro, los
+   conteos suman siempre el número de estaciones y no discrimina (dio 4/9 vs 5/9).
+   **No** invertir el sentido poniendo Te negativo: la lógica de barrera trata T0 < 0
+   como barrera (T0 = 0) y mataría la aspereza.
+2. **CFL. VERIFICADO: sí se viola en Calama 2020.** No manda el Vp del hipocentro
+   sino el **máximo** que ve fd3d. Con el modelo de Potin et al. (2024) la falla de
+   np1 va de 97.7 a 133.4 km y la de np2 de 106.5 a 124.6 km, y ambas incluyen la
+   capa de 112.5 km con **Vp = 8.415 km/s** → dt = 0.015 s da CFL **0.2524 > 0.25**.
+   Se usa **dt = 0.0145 s** (CFL 0.2440) y NT = 2759 para los mismos 40 s.
+   `forward_dynamic.cfl_dt_max(cfg)` lo recalcula desde `crustal_rows` del caso y lo
+   verifica con un `assert` en `setup_work_dir`, para que no se cuele en silencio al
+   cambiar de hipocentro o de modelo 1D.
 3. **Esfuerzo normal.** `normstress` crece con la distancia desde el borde superior
    de la falla, no con la profundidad absoluta. Para slip-weakening con resistencia
    de pico explícita (cte1·Te) no debería importar, pero hay que tenerlo presente si se interpreta μ.
@@ -113,6 +140,9 @@ modelo elíptico (a, b, u, v, phi, Te, cte1, Dc, dt0)
    y revisar Dc. Comprobar la caída de esfuerzo final con Eshelby y la tracción (`traction_plots.py`).
 5. **Plano nodal.** Hay ambigüedad entre np1 y np2 (el caso Calama 2020 ya tiene
    `np1/` y `np2/`): invertir ambos con el mismo protocolo y comparar misfits entre semillas.
+   Ojo: `np1/` y `np2/` **no están trackeados** en git (solo `input.ctl`, `event.ctl` y
+   `README.md`), así que un `input.ctl` sobrescrito se pierde sin dejar rastro. Pasó:
+   el de np2 tenía la geometría de np1 y la correcta solo sobrevivía en `output/run.log`.
 6. **Velocidades.** Comprobar que el modelo 1D cubra la profundidad de la falla y
    que `crustal_rows` encuentre la capa que contiene el borde superior.
 7. **Directividad.** La geometría de estaciones decide qué se resuelve (en Navidad,
