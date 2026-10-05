@@ -68,12 +68,17 @@ NA = NAConfig(n_samples_initial=300, n_samples_iteration=60, n_iterations=20,
 # Referencia para el chequeo previo: mejor modelo dinámico de loc_mid, en
 # parámetros relativos al hipocentro (válido para cualquier malla); se prueba
 # también con v invertido porque la convención del dip cambió (fd3d -> axitra).
-# Referencia del preflight: la elipse del cinemático de Calama (a1 5.93, a2 6.33
-# km -> ~3 ptos de 2 km), con fricción en mitad de rango. NO es el óptimo, solo
-# un modelo razonable con el que abortar temprano si el caso está mal armado.
-REFERENCE_FREE = {"a": 3.0, "b": 3.2, "u": 0.0, "v": 0.0, "phi": 0.75 * np.pi,
-                  "Te": 8.0, "cte1": 1.3, "Dc": 1.5}
-PREFLIGHT_MAX_MISFIT = float(os.environ.get("DYN_PREFLIGHT_MAX", "0.95"))
+# Referencia del preflight. La primera versión (Te 8 MPa, Dc 1.5 m, phi 0.75 pi)
+# daba 0.8904, a un pelo del umbral de aborto de 0.95: un preflight que casi
+# aborta con un caso sano no filtra nada. Se usa el modelo del test de
+# polaridad (check_polarity.py, DEFAULT_MODEL), que en el mismo caso da ~0.40.
+# NO es el óptimo: es un modelo razonable con el que abortar temprano si el
+# caso está mal armado.
+REFERENCE_FREE = {"a": 3.0, "b": 3.0, "u": 0.0, "v": 0.0, "phi": 0.0,
+                  "Te": 15.0, "cte1": 1.15, "Dc": 1.0}
+# Con la referencia de arriba un caso sano da ~0.40: 0.70 deja margen de sobra
+# y sigue atajando un caso mal armado, que satura cerca de 1.
+PREFLIGHT_MAX_MISFIT = float(os.environ.get("DYN_PREFLIGHT_MAX", "0.70"))
 HYPO_X, HYPO_Y = tsn_hypocentre_coarse(_FP)  # nucleación en el hipocentro del input.ctl
 
 
