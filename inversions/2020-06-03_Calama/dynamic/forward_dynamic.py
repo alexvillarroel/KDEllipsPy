@@ -53,7 +53,13 @@ BINARY = "fd3d_gnu_TSN_fspace"
 _FP = kde.ConfigParser(str(CASE_DIR / "input.ctl")).fault_plane
 NXTT, NZTT = int(round(_FP.lx / DH)), int(round(_FP.ly / DH))
 assert NXTT % _FP.nx == 0 and NZTT % _FP.ny == 0, "Lx/dh y Ly/dh deben ser múltiplos de nx, ny"
-DURATION_S = 40.0
+# 20 s, no los 40 de Navidad. Medido con tail_frac: la cola de momento más allá
+# de 20 s es 0.00% para (a=b=8, Te=2), 0.00% para (a=b=5, Te=8) y 0.41% para
+# (a=b=3, Te=15), que es la región donde cae la solución esperada (Mw ~6.6).
+# El único rincón afectado es (a=b=8, Te=20): 6.5% de cola, pero ese modelo da
+# del orden de Mw 7.5 contra los 6.8 observados, y YA estaba truncado con 40 s
+# (t99 = 37.2 s). fd3d pasa de 23 a 13 s por evaluación.
+DURATION_S = 20.0
 CFL_MAX = 0.25  # fd3d_TSN exige Vpmax*dt/dh < 0.25
 
 

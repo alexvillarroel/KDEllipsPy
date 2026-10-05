@@ -146,6 +146,30 @@ def preflight(inv):
     print(f"[preflight] OK: best dt0={best[1]:+.0f} s (v*{best[2]:+.0f}) misfit={best[0]:.4f}", flush=True)
 
 
+def report_moment_tail(inv):
+    """Cuánto momento del MEJOR modelo quedó pegado al final de la ventana.
+
+    La ventana es de 20 s (ver DURATION_S en forward_dynamic.py), elegida
+    porque la cola de los modelos cercanos a la solución es <0.5%. Esto lo
+    verifica a posteriori en el modelo que efectivamente ganó, en vez de
+    dejarlo como supuesto: si sale >2%, el resultado está truncado y hay que
+    repetir con la ventana más larga.
+    """
+    from forward_dynamic import DH, NXTT, NZTT, WORK  # noqa: F401
+    from kdellipspy.inversion.dynamic.tsn_bridge import read_tsn_fault_field
+    try:
+        srz = read_tsn_fault_field(WORK / "result" / "sliprateZ.res", NXTT, NZTT)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[cola] no se pudo leer sliprateZ.res: {exc}", flush=True)
+        return
+    mr = np.abs(srz).sum(axis=(1, 2))
+    c = np.cumsum(mr) / mr.sum()
+    n = mr.size
+    tail = 1.0 - c[int(0.75 * n)]  # último cuarto de la ventana
+    print(f"[cola] momento liberado en el último 25% de la ventana: {100 * tail:.2f}% "
+          f"({'OK' if tail < 0.02 else 'ATENCION: el modelo puede estar truncado'})", flush=True)
+
+
 def main():
     cfg = kde.ConfigParser(str(CASE_DIR / "input.ctl"))
     setup_work_dir(cfg)
@@ -173,6 +197,7 @@ def main():
     np.save(out / "best_synthetics.npy", inv.best_synthetics)
     np.save(out / "best_full_model.npy", to_full_model(result.best_model.model))
     print("best misfit", result.best_model.misfit, flush=True)
+    report_moment_tail(inv)
     if M0_TARGET:
         inv._evaluate_model(result.best_model.model)  # recomputa k del mejor modelo
         k = inv.dynamic_fm.last_m0_scale
