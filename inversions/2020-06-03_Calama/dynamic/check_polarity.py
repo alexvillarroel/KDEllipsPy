@@ -12,9 +12,13 @@ convenciones (el mismo slip, solo cambia el signo del vector de momento):
     slip_sign = +1  ->  lo que hacía el código de Navidad (rake +90, inverso)
     slip_sign = -1  ->  rake + 180 = -90, el sentido normal
 
-y las compara con los observados: misfit, correlación, rake efectivo que sale
-de project_rake y signo del primer arribo P en la vertical. Si el flip es el
-correcto, slip_sign = -1 debe ganar en las cuatro métricas.
+y las compara con los observados: misfit, rake efectivo que sale de
+project_rake, y correlación por estación en la ventana P.
+
+NO se usa el signo del primer arribo P: los dos sintéticos son negativos
+exactos uno del otro, así que los conteos de coincidencia suman siempre el
+número de estaciones y la métrica no puede discriminar (en np1 dio 4/9 vs 5/9
+mientras la cc daba +0.67 vs +0.87). La evidencia es el rake efectivo y la cc.
 
 Cada signo se evalúa en SU mejor dt0 (barrido), no en dt0 = 0: con un desfase
 de hora de origen el misfit satura en ~1 y la comparación no distingue nada
@@ -40,20 +44,7 @@ from kdellipspy.inversion.dynamic.dynamic_convolution import (
 from forward_dynamic import (CASE, CASE_DIR, DEFAULT_MODEL, DH, HERE, NXTT, NZTT,
                              setup_work_dir, tsn_grid, tsn_run_cfg)
 
-P_WINDOW_S = 12.0          # ventana tras tP para medir el signo del primer arribo
 DT0_SCAN = np.arange(-3.0, 10.1, 0.5)  # s, corrección de hora de origen
-
-
-def first_motion_sign(trace, t_p, dt, window_s=P_WINDOW_S):
-    """Signo de la primera excursión significativa tras tP (10% del máximo de
-    la ventana): el estimador robusto de polaridad a esta banda, donde el
-    arribo es emergente."""
-    i0 = max(0, int(round(t_p / dt)))
-    seg = np.asarray(trace[i0:i0 + max(2, int(round(window_s / dt)))], float)
-    if seg.size == 0 or not np.any(np.abs(seg) > 0):
-        return 0
-    k = np.argmax(np.abs(seg) > 0.10 * np.abs(seg).max())
-    return int(np.sign(seg[k]))
 
 
 def main():
@@ -105,25 +96,21 @@ def main():
     # Polaridad del primer arribo P en la vertical y correlación, por estación.
     names = [s.name for s in cfg.stations.stations]
     dt = float(time_array[1] - time_array[0])
-    print(f"\n{'sta':<7s}{'tP(s)':>7s}{'obs':>5s}{'syn+1':>7s}{'syn-1':>7s}"
-          f"{'cc+1':>8s}{'cc-1':>8s}", flush=True)
+    print(f"\n{'sta':<7s}{'tP(s)':>7s}{'cc+1':>8s}{'cc-1':>8s}{'mejor':>7s}", flush=True)
     rows = []
     for j, n in enumerate(names):
         tp = float(azt[j, 1])
-        so = first_motion_sign(observed[j, 2], tp, dt)
-        s_p = first_motion_sign(out[+1.0][1][j, 2], tp, dt)
-        s_m = first_motion_sign(out[-1.0][1][j, 2], tp, dt)
         i0, i1 = max(0, int(tp / dt)), min(len(time_array), int((tp + 25.0) / dt))
         cc = {s: float(np.corrcoef(observed[j, 2, i0:i1], out[s][1][j, 2, i0:i1])[0, 1])
               for s in (+1.0, -1.0)}
-        rows.append((n, so, s_p, s_m, cc[+1.0], cc[-1.0]))
-        print(f"{n:<7s}{tp:7.1f}{so:5d}{s_p:7d}{s_m:7d}{cc[+1.0]:8.3f}{cc[-1.0]:8.3f}", flush=True)
+        rows.append((n, cc[+1.0], cc[-1.0]))
+        print(f"{n:<7s}{tp:7.1f}{cc[+1.0]:8.3f}{cc[-1.0]:8.3f}"
+              f"{('-1' if cc[-1.0] > cc[+1.0] else '+1'):>7s}", flush=True)
 
-    agree = {s: sum(1 for r in rows if r[1] != 0 and r[1] == r[2 if s > 0 else 3]) for s in (+1.0, -1.0)}
-    ccm = {s: float(np.nanmean([r[4 if s > 0 else 5] for r in rows])) for s in (+1.0, -1.0)}
-    print(f"\npolaridad P coincidente: slip_sign +1 -> {agree[+1.0]}/{len(rows)}   "
-          f"slip_sign -1 -> {agree[-1.0]}/{len(rows)}", flush=True)
-    print(f"cc media (ventana P, 25 s): +1 -> {ccm[+1.0]:+.3f}   -1 -> {ccm[-1.0]:+.3f}", flush=True)
+    ccm = {s: float(np.nanmean([r[1 if s > 0 else 2] for r in rows])) for s in (+1.0, -1.0)}
+    nwin = sum(1 for r in rows if r[2] > r[1])
+    print(f"\ncc media (ventana P, 25 s): +1 -> {ccm[+1.0]:+.3f}   -1 -> {ccm[-1.0]:+.3f}"
+          f"   (el flip gana en {nwin}/{len(rows)} estaciones)", flush=True)
     winner = -1.0 if (out[-1.0][0] < out[+1.0][0]) else +1.0
     print(f"\n==> gana slip_sign {winner:+.0f} "
           f"(misfit {out[winner][0]:.4f} en dt0 {out[winner][2]:+.1f} s  vs  "
